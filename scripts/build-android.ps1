@@ -13,7 +13,7 @@ try {
   $env:GRADLE_USER_HOME = Join-Path $workspaceRoot '.gradle-user-home'
   $env:Path = (Join-Path $env:JAVA_HOME 'bin') + ';' + $env:Path
   if (-not $SkipWebBuild) { & npm.cmd run build -- --mode android; if ($LASTEXITCODE -ne 0) { throw 'Web build failed.' } }
-  & npx.cmd cap sync android
+  & (Join-Path $workspaceRoot 'node_modules/.bin/cap.cmd') sync android
   if ($LASTEXITCODE -ne 0) { throw 'Capacitor sync failed.' }
   & (Join-Path $workspaceRoot 'android/gradlew.bat') -p android assembleDebug --no-daemon --max-workers=2
   if ($LASTEXITCODE -ne 0) { throw 'Android build failed.' }

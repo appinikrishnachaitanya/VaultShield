@@ -19,3 +19,6 @@ artifacts/
 android/app/google-services.json
 android/.idea/
 android/.kotlin/
+
+# Keep Android assets separate from Firebase Hosting output.
+dist-android/

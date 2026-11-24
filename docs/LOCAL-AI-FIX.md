@@ -22,7 +22,12 @@ Chrome completed Gemma 4 CPU inference with three tactic entries. The adapter re
 Manual production-preview checks confirmed masked text, explicit provenance, editing resets consent, and failure preserves the private result. Hosted checks confirmed normal-message zero rule matches, review controls and graceful cloud failure. The real hosted cloud attempt returned quota unavailable (429), not a successful verification. This automation browser does not expose working Chrome local inference, so successful hosted AI must be checked in the user's model-enabled Chrome profile.
 
 ## Deployment
-Corrected web build deployed to https://vaultshield-2ace9.web.app . Updated Python backend still requires a separate Cloud Run redeploy. The client accepts both legacy and new inbox records during rollout; requests remain compatible with the previous backend.
+Corrected web build deployed to https://vaultshield-2ace9.web.app . The existing GitHub-to-Cloud Run pipeline deployed the pushed Python changes; live health and new validation responses are verified. The client accepts both legacy and new inbox records during rollout; requests remain compatible with the previous backend.
 
 ## Live acceptance still pending
-Successful hosted AI in model-enabled Chrome; capable-device screenshot inference; successful real cloud response after quota recovery; two-session family pairing and FCM; supported-device Android inference and attestation. No simulated verification substitutes for these checks.
+Successful hosted AI in model-enabled Chrome; capable-device screenshot inference; successful real cloud response after quota recovery; OS notification toast/click behavior; supported-device Android inference and attestation. No simulated verification substitutes for these checks.
+
+## Subsequent live family acceptance
+Two initially unpaired anonymous sessions completed invite/join, both membership views, and 4/4 alert inbox delivery. Notification registration succeeded. A subsequent alert was accepted by FCM and the recipient displayed the service-worker push notice. The test pairing was removed from both sessions afterward. OS notification toast/click behavior was not visually observed. Screenshot file-picker automation timed out, so no successful image inference is claimed.
+
+Android assets now build to dist-android; Firebase Hosting continues to use dist. This prevents APK builds from replacing the PWA deployment output.

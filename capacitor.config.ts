@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "in.vaultshield.app",
   appName: "VaultShield",
-  webDir: "dist",
+  webDir: "dist-android",
   server: { hostname: "vaultshield.localhost" },
   android: { allowMixedContent: false, loggingBehavior: "none" },
 };

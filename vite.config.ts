@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig(({ mode }) => ({
   build: {
+    outDir: mode === "android" ? "dist-android" : "dist",
     rollupOptions: {
       output: {
         manualChunks(id) {
