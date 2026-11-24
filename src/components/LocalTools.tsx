@@ -72,15 +72,14 @@ export default function LocalTools({ text }: { text: SanitizedText }) {
         <span className="badge local">OPTIONAL · ON-DEVICE</span>
         <h2>A little more clarity. Still private.</h2>
         <p>
-          Proofread your own English reply locally. Message summaries are in Maa
-          Mode above.
+          Improve spelling and grammar in your English reply on this device.
         </p>
       </div>
       <div className="reply-tool-layout">
         <section className="local-tool">
           <h3>
             <PenLine size={20} />
-            Prepare your own reply
+            Polish your reply
           </h3>
           <p>
             Polish spelling and grammar in your reply. Suspicious evidence is
@@ -111,7 +110,7 @@ export default function LocalTools({ text }: { text: SanitizedText }) {
               }
               onClick={() => void run("proof")}
             >
-              Proofread locally
+              Polish my reply
             </button>
             <button
               className="secondary"
@@ -124,8 +123,8 @@ export default function LocalTools({ text }: { text: SanitizedText }) {
           </div>
           {(!support.proofreader || proofStatus === "unavailable") && (
             <p className="tool-hint">
-              Chrome reports that local proofreading is unavailable. Your draft
-              is preserved; you can edit and copy it manually. If the model
+              Reply polishing is unavailable on this device. Your draft is
+              preserved; you can edit and copy it manually. If the model
               crashed, close other AI tabs, restart Chrome, and check
               chrome://on-device-internals before retrying. Nothing is sent to
               the cloud.

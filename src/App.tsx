@@ -21,11 +21,7 @@ import {
   FileText,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
-import {
-  checkWithLocalFallback,
-  checkTextWithLocalRules,
-  verifyWithCloud,
-} from "./lib/firebase/ai";
+import { checkWithLocalFallback, verifyWithCloud } from "./lib/firebase/ai";
 import { androidAI, usesAndroidModel } from "./services/androidNano";
 import {
   capabilityLabel,
@@ -181,15 +177,13 @@ export default function App() {
       setBusy("");
     }
   }
-  async function analyze(basic = false) {
+  async function analyze() {
     await task("Checking on your device", async () => {
       setResult(undefined);
       setCloud(undefined);
       setConsent(false);
       setLocalProgress("Preparing the on-device check...");
-      const r = basic
-        ? checkTextWithLocalRules(input)
-        : await checkWithLocalFallback(input, image, setLocalProgress);
+      const r = await checkWithLocalFallback(input, image, setLocalProgress);
       setCoolOffUntil(
         r.stages.filter((stage) => stage.found).length >= 3
           ? Date.now() + 600_000
@@ -580,15 +574,6 @@ export default function App() {
                         {localProgress}
                       </p>
                     )}
-                    {input.trim() && !image && (
-                      <button
-                        className="secondary basic-check-button"
-                        disabled={!!busy}
-                        onClick={() => void analyze(true)}
-                      >
-                        Run basic text check
-                      </button>
-                    )}
                     {image && error && (
                       <p className="local-progress">{screenshotUnavailable}</p>
                     )}
@@ -891,9 +876,7 @@ export default function App() {
                         </section>
                       )}
                       <details className="local-tools-drawer">
-                        <summary>
-                          Optional local tools · Reply proofreading & comparison
-                        </summary>
+                        <summary>Polish your reply · Optional</summary>
                         <LocalTools
                           key={`local-tools:${result.text}`}
                           text={result.text}
