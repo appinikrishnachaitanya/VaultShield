@@ -70,7 +70,12 @@ it.each(["hybrid", "public-sources"] as const)(
       source: "IN_CLOUD",
     });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [, request] = fetchSpy.mock.calls[0];
+    const [url, request] = fetchSpy.mock.calls[0];
+    // A Developer API request omits locations; assert the actual SDK route,
+    // not just the configured model or a source badge.
+    expect(String(url)).toContain(
+      "/projects/demo-vaultshield/locations/us-central1/publishers/google/models/gemini-3.5-flash-lite:generateContent",
+    );
     const body = JSON.parse(String(request.body));
     if (purpose === "public-sources")
       expect(body.tools).toEqual([{ googleSearch: {} }]);
