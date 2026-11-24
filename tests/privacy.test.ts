@@ -40,6 +40,55 @@ beforeEach(() => {
   });
 });
 describe("privacy firewall", () => {
+  it.each(["", "[REDACTED]"])(
+    "keeps an unreadable screenshot as an incomplete check, not a safe result: %s",
+    async (redactedText) => {
+      mocks.generateContent.mockResolvedValue({
+        response: {
+          inferenceSource: "on_device",
+          text: () =>
+            JSON.stringify({
+              redactedText,
+              stages: {
+                Authority: "CBI",
+                Fear: "arrest",
+                Urgency: "pay now",
+                Secrecy: "secret",
+              },
+              imageMismatches: ["invented mismatch"],
+            }),
+        },
+      });
+      const result = await checkLocally("", {
+        data: "AA==",
+        mimeType: "image/png",
+      });
+      expect(result.source).toBe("ON_DEVICE");
+      expect(result.text).toBe(redactedText);
+      expect(
+        result.stages.every(
+          (stage) => !stage.found && stage.assessedByAI === false,
+        ),
+      ).toBe(true);
+      expect(result.imageMismatches).toBeUndefined();
+    },
+  );
+  it.each(["hybrid", "public-sources"] as const)(
+    "blocks placeholder-only verification before the %s SDK model exists",
+    async (purpose) => {
+      await expect(
+        verifyWithCloud(
+          maskIdentifiers("[REDACTED]").text,
+          true,
+          undefined,
+          purpose,
+        ),
+      ).rejects.toThrow("No readable message");
+      expect(mocks.model).not.toHaveBeenCalled();
+      expect(mocks.generateContent).not.toHaveBeenCalled();
+    },
+  );
+
   it("allows a cold Chrome availability check longer than the former ten-second limit", async () => {
     vi.useFakeTimers();
     try {

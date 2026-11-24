@@ -43,3 +43,19 @@ export function maskIdentifiers(input: string): {
     .replace(/\b(?:name|customer|account holder)\s*:\s*[^\n,;]+/gi, replace);
   return { text: text as SanitizedText, count };
 }
+
+/** A placeholder or a list of identifier labels is not evidence to verify. */
+export function hasAssessableText(input: string): boolean {
+  const remaining = maskIdentifiers(input)
+    .text.replace(/\[(?:REDACTED|MASKED|HIDDEN|[•*]+)\]/gi, "")
+    .replace(
+      /^\s*(?:name|phone(?: number)?|mobile(?: number)?|aadhaar(?: number)?|pan|email|upi(?: id)?|account(?: number| no\.?)?|address)\s*[:|—-]?\s*$/gim,
+      "",
+    )
+    .replace(
+      /\b(?:name|phone(?: number)?|mobile(?: number)?|aadhaar(?: number)?|pan|email|upi(?: id)?|account(?: number| no\.?)?|address)\s*:/gi,
+      "",
+    )
+    .replace(/[\s\p{P}\p{S}]/gu, "");
+  return /[\p{L}\p{N}]/u.test(remaining);
+}

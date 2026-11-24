@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { maskIdentifiers } from "../src/lib/privacy";
+import { hasAssessableText, maskIdentifiers } from "../src/lib/privacy";
 
 describe("Indian identifier masking", () => {
   it.each([
@@ -46,5 +46,30 @@ describe("Indian identifier masking", () => {
     const input =
       "Your parcel arrives today. Pay within 10 minutes. Do not tell your family.";
     expect(maskIdentifiers(input).text).toBe(input);
+  });
+});
+
+describe("usable reviewed content", () => {
+  it.each([
+    "",
+    "  ",
+    "[REDACTED]",
+    "[REDACTED] — [REDACTED]",
+    "Phone: [REDACTED]\nPAN: [REDACTED]",
+    "Phone: [REDACTED] | PAN: [REDACTED]",
+    "9876543210",
+    "[MASKED]",
+    "!!! ₹",
+  ])("rejects empty or identifier-only content %s", (text) => {
+    expect(hasAssessableText(text)).toBe(false);
+  });
+  it.each([
+    "Pay within 10 minutes to [REDACTED]",
+    "Your parcel arrives today.",
+    "अभी पैसे भेजो",
+    "பணம் அனுப்புங்கள்",
+    "Call [REDACTED] to verify.",
+  ])("retains actual message wording %s", (text) => {
+    expect(hasAssessableText(text)).toBe(true);
   });
 });

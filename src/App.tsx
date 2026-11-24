@@ -33,7 +33,7 @@ import {
   useAICapability,
   localAIDiagnostics,
 } from "./services/aiCapability";
-import { maskIdentifiers } from "./lib/privacy";
+import { maskIdentifiers, hasAssessableText } from "./lib/privacy";
 import {
   createInvite,
   joinFamily,
@@ -730,20 +730,24 @@ export default function App() {
                         {(result.durationMs / 1000).toFixed(2)}s
                       </span>
                       <h2>
-                        {count === 0
-                          ? result.source === "LOCAL_RULES"
-                            ? "No common pressure phrases matched"
-                            : result.ruleAssisted
-                              ? "AI assessment incomplete"
-                              : "No pressure tactics found"
-                          : `${count} of 4 pressure tactics found`}
+                        {!hasAssessableText(result.text)
+                          ? "No readable message to assess"
+                          : count === 0
+                            ? result.source === "LOCAL_RULES"
+                              ? "No common pressure phrases matched"
+                              : result.ruleAssisted
+                                ? "AI assessment incomplete"
+                                : "No pressure tactics found"
+                            : `${count} of 4 pressure tactics found`}
                       </h2>
                       <p>
-                        {result.source === "LOCAL_RULES"
-                          ? "This basic check matches common phrases and masks recognizable identifiers. Review for missed pressure signals and private details."
-                          : count === 0
-                            ? "This is not a guarantee of safety. Verify payment requests independently."
-                            : "Pause before you pay. Here’s how this message is applying pressure."}
+                        {!hasAssessableText(result.text)
+                          ? "The image may have no readable message, or masking removed all usable text. This is not a safety assessment. Upload a clearer screenshot or paste the message."
+                          : result.source === "LOCAL_RULES"
+                            ? "This basic check matches common phrases and masks recognizable identifiers. Review for missed pressure signals and private details."
+                            : count === 0
+                              ? "This is not a guarantee of safety. Verify payment requests independently."
+                              : "Pause before you pay. Here’s how this message is applying pressure."}
                       </p>
                       <p className="tool-hint">
                         This count measures pressure tactics, not fraud
@@ -808,90 +812,95 @@ export default function App() {
                       )}
                     </div>
                   )}
-                  <PressureEvidence result={result} />
-                  {result.ruleAssisted && (
-                    <p className="tool-hint">
-                      Local AI returned a partial assessment. Its findings are
-                      preserved. Missing categories were checked separately with
-                      local phrase rules; a missing AI assessment does not mean
-                      no pressure.
-                    </p>
-                  )}
-                  {result.preparationMs !== undefined &&
-                    result.generationMs !== undefined && (
-                      <p className="tool-hint">
-                        Preparation: {(result.preparationMs / 1000).toFixed(1)}s
-                        · Analysis: {(result.generationMs / 1000).toFixed(1)}s.
-                        Measured on this device.
-                      </p>
-                    )}
-                  <FamilySafety
-                    key={`family-safety:${result.text}`}
-                    result={result}
-                    coolOffUntil={coolOffUntil}
-                  />
-                  <div className="stage-grid">
-                    {result.stages.map((s) => (
-                      <div
-                        key={s.name}
-                        className={`stage ${s.found ? "found" : ""}`}
-                      >
-                        <div className="stage-title">
-                          <span>
-                            {s.found
-                              ? "!"
-                              : s.assessedByAI === false
-                                ? "?"
-                                : "✓"}
-                          </span>
-                          <h3>{s.name}</h3>
-                          <small>
-                            {s.found
-                              ? "Detected"
-                              : s.assessedByAI === false
-                                ? "No phrase match"
-                                : "Not detected"}
-                          </small>
-                        </div>
+                  {hasAssessableText(result.text) && (
+                    <>
+                      <PressureEvidence result={result} />
+                      {result.ruleAssisted && (
                         <p className="tool-hint">
-                          {s.assessmentSource === "LOCAL_RULES"
-                            ? result.source === "ON_DEVICE"
-                              ? "Not assessed by AI · LOCAL RULES"
-                              : "LOCAL RULES · NOT AI"
-                            : "ON-DEVICE AI"}
+                          Local AI returned a partial assessment. Its findings
+                          are preserved. Missing categories were checked
+                          separately with local phrase rules; a missing AI
+                          assessment does not mean no pressure.
                         </p>
-                        {s.found && (
-                          <>
-                            <blockquote>“{s.evidence}”</blockquote>
-                            <p>{s.action}</p>
-                          </>
+                      )}
+                      {result.preparationMs !== undefined &&
+                        result.generationMs !== undefined && (
+                          <p className="tool-hint">
+                            Preparation:{" "}
+                            {(result.preparationMs / 1000).toFixed(1)}s ·
+                            Analysis: {(result.generationMs / 1000).toFixed(1)}
+                            s. Measured on this device.
+                          </p>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                  {!!result.imageMismatches?.length && (
-                    <section className="card family-safety">
-                      <h3>Possible screenshot mismatches</h3>
-                      <p>
-                        These are observations from the image. Verify them
-                        independently.
-                      </p>
-                      <ul>
-                        {result.imageMismatches.map((item, index) => (
-                          <li key={index}>{item}</li>
+                      <FamilySafety
+                        key={`family-safety:${result.text}`}
+                        result={result}
+                        coolOffUntil={coolOffUntil}
+                      />
+                      <div className="stage-grid">
+                        {result.stages.map((s) => (
+                          <div
+                            key={s.name}
+                            className={`stage ${s.found ? "found" : ""}`}
+                          >
+                            <div className="stage-title">
+                              <span>
+                                {s.found
+                                  ? "!"
+                                  : s.assessedByAI === false
+                                    ? "?"
+                                    : "✓"}
+                              </span>
+                              <h3>{s.name}</h3>
+                              <small>
+                                {s.found
+                                  ? "Detected"
+                                  : s.assessedByAI === false
+                                    ? "No phrase match"
+                                    : "Not detected"}
+                              </small>
+                            </div>
+                            <p className="tool-hint">
+                              {s.assessmentSource === "LOCAL_RULES"
+                                ? result.source === "ON_DEVICE"
+                                  ? "Not assessed by AI · LOCAL RULES"
+                                  : "LOCAL RULES · NOT AI"
+                                : "ON-DEVICE AI"}
+                            </p>
+                            {s.found && (
+                              <>
+                                <blockquote>“{s.evidence}”</blockquote>
+                                <p>{s.action}</p>
+                              </>
+                            )}
+                          </div>
                         ))}
-                      </ul>
-                    </section>
+                      </div>
+                      {!!result.imageMismatches?.length && (
+                        <section className="card family-safety">
+                          <h3>Possible screenshot mismatches</h3>
+                          <p>
+                            These are observations from the image. Verify them
+                            independently.
+                          </p>
+                          <ul>
+                            {result.imageMismatches.map((item, index) => (
+                              <li key={index}>{item}</li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+                      <details className="local-tools-drawer">
+                        <summary>
+                          Optional local tools · Reply proofreading & comparison
+                        </summary>
+                        <LocalTools
+                          key={`local-tools:${result.text}`}
+                          text={result.text}
+                        />
+                      </details>
+                    </>
                   )}
-                  <details className="local-tools-drawer">
-                    <summary>
-                      Optional local tools · Reply proofreading & comparison
-                    </summary>
-                    <LocalTools
-                      key={`local-tools:${result.text}`}
-                      text={result.text}
-                    />
-                  </details>
                   <div className="card cloud-invite">
                     <Cloud size={28} />
                     <div>
@@ -900,11 +909,14 @@ export default function App() {
                         Automated masking can miss details. Please check the
                         redacted text carefully before approving. Choose a
                         hybrid second opinion or a cloud check of public
-                        sources.
+                        sources.{" "}
+                        {!hasAssessableText(result.text) &&
+                          "Verification is unavailable because no readable message remains. Your image has not been uploaded."}
                       </p>
                     </div>
                     <button
                       className="primary"
+                      disabled={!!busy || !hasAssessableText(result.text)}
                       onClick={() => {
                         setReview(true);
                         setConsent(false);
@@ -1254,11 +1266,18 @@ export default function App() {
                 setConsent(false);
               }}
             />
+            {!hasAssessableText(edit) && (
+              <p className="local-progress" role="status">
+                There is no readable message left to verify—only masked details
+                or empty text. Add the message wording before approving. Your
+                screenshot stays on this device.
+              </p>
+            )}
             <label className="consent">
               <input
                 type="checkbox"
                 checked={consent}
-                disabled={!!busy}
+                disabled={!!busy || !hasAssessableText(edit)}
                 onChange={(e) => setConsent(e.target.checked)}
               />
               {verificationPurpose === "public-sources"
@@ -1267,7 +1286,7 @@ export default function App() {
             </label>
             <button
               className="primary"
-              disabled={!consent || !!busy || !edit.trim()}
+              disabled={!consent || !!busy || !hasAssessableText(edit)}
               onClick={submitReviewedText}
             >
               <Cloud size={18} />
