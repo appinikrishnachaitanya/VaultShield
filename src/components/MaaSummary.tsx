@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { AlignLeft, Volume2 } from "lucide-react";
+import { AlignLeft, Volume2, Square } from "lucide-react";
 import {
   optionalLocalSupport,
   summarizeForFamily,
   type FamilySummaryResult,
 } from "../lib/firebase/ai";
 import { familyLanguages, type FamilyLanguage } from "../lib/familyGuidance";
-import { readWithLocalVoice } from "../lib/localVoice";
-import { useLocalVoice } from "../lib/useLocalVoice";
+import { readWithLocalVoice, stopLocalReading } from "../lib/localVoice";
+import { useLocalVoice, useLocalReading } from "../lib/useLocalVoice";
 import type { SanitizedText } from "../types/privacy";
 
 export default function MaaSummary({
@@ -23,6 +23,7 @@ export default function MaaSummary({
 }) {
   const [summary, setSummary] = useState<FamilySummaryResult>();
   const canReadSummary = useLocalVoice(summary?.language ?? language);
+  const reading = useLocalReading();
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -34,12 +35,13 @@ export default function MaaSummary({
     active.current = true;
     return () => {
       active.current = false;
-      window.speechSynthesis?.cancel();
+      stopLocalReading();
     };
   }, []);
   async function summarize() {
     if (running.current) return;
     running.current = true;
+    stopLocalReading();
     setBusy(true);
     setError("");
     setAudioNotice("");
@@ -92,17 +94,28 @@ export default function MaaSummary({
         >
           {busy ? "Preparing summary…" : "Summarize in my language"}
         </button>
-        {summary && canReadSummary && (
+        {((summary && canReadSummary) || reading) && (
           <button
             type="button"
             className="secondary"
-            disabled={disabled || busy}
+            disabled={!reading && (disabled || busy)}
             onClick={() =>
-              readWithLocalVoice(summary.text, summary.language, setAudioNotice)
+              reading
+                ? stopLocalReading()
+                : summary &&
+                  readWithLocalVoice(
+                    summary.text,
+                    summary.language,
+                    setAudioNotice,
+                  )
             }
           >
-            <Volume2 size={17} aria-hidden="true" />
-            Read summary aloud
+            {reading ? (
+              <Square size={17} aria-hidden="true" />
+            ) : (
+              <Volume2 size={17} aria-hidden="true" />
+            )}
+            {reading ? "Stop reading" : "Read summary aloud"}
           </button>
         )}
       </div>
@@ -141,14 +154,6 @@ export default function MaaSummary({
             AI can omit details or mistranslate. Compare deadlines, amounts and
             obligations with the source; this is not a legal assessment.
           </p>
-          {summary.language !== "en" && (
-            <details className="source-details">
-              <summary>Compare with English summary</summary>
-              <p lang="en" className="preserve-lines">
-                {summary.englishText}
-              </p>
-            </details>
-          )}
         </div>
       )}
       {audioNotice && (

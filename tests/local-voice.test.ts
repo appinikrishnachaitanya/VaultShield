@@ -3,8 +3,14 @@ import {
   readWithLocalVoice,
   hasLocalVoice,
   subscribeLocalVoices,
+  stopLocalReading,
+  isLocalReading,
+  subscribeLocalReading,
 } from "../src/lib/localVoice";
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  stopLocalReading();
+  vi.unstubAllGlobals();
+});
 it("only exposes read-aloud for an installed local voice matching the language", () => {
   vi.stubGlobal("SpeechSynthesisUtterance", class {});
   vi.stubGlobal("window", {
@@ -62,4 +68,57 @@ it("reads the summary using the actual output language's local voice", () => {
   expect(speak).toHaveBeenCalledWith(
     expect.objectContaining({ text: "रुकिए।", lang: "hi-IN", voice: hindi }),
   );
+});
+
+function speechFixture() {
+  const speak = vi.fn();
+  const cancel = vi.fn();
+  vi.stubGlobal("window", {
+    speechSynthesis: {
+      getVoices: () => [{ lang: "en-IN", localService: true }],
+      speak,
+      cancel,
+    },
+  });
+  vi.stubGlobal(
+    "SpeechSynthesisUtterance",
+    class {
+      constructor(public text: string) {}
+    },
+  );
+  return { speak, cancel };
+}
+it("stops reading immediately and notifies the UI without treating cancellation as failure", () => {
+  const { speak, cancel } = speechFixture();
+  const listener = vi.fn();
+  const notify = vi.fn();
+  const unsubscribe = subscribeLocalReading(listener);
+  readWithLocalVoice("Pause before paying.", "en", notify);
+  const utterance = speak.mock.calls[0][0];
+  expect(isLocalReading()).toBe(true);
+  stopLocalReading();
+  expect(isLocalReading()).toBe(false);
+  expect(cancel).toHaveBeenCalledTimes(2);
+  utterance.onerror();
+  expect(notify).toHaveBeenCalledTimes(1);
+  expect(listener).toHaveBeenCalledTimes(3);
+  unsubscribe();
+});
+it("resets the reading control at natural completion and permits another reading", () => {
+  const { speak } = speechFixture();
+  readWithLocalVoice("First.", "en", vi.fn());
+  speak.mock.calls[0][0].onend();
+  expect(isLocalReading()).toBe(false);
+  readWithLocalVoice("Again.", "en", vi.fn());
+  expect(isLocalReading()).toBe(true);
+  expect(speak).toHaveBeenCalledTimes(2);
+});
+it("ignores stale completion from a replaced utterance", () => {
+  const { speak } = speechFixture();
+  readWithLocalVoice("First.", "en", vi.fn());
+  readWithLocalVoice("Second.", "en", vi.fn());
+  speak.mock.calls[0][0].onend();
+  expect(isLocalReading()).toBe(true);
+  speak.mock.calls[1][0].onerror();
+  expect(isLocalReading()).toBe(false);
 });

@@ -57,7 +57,7 @@ describe("verification presentation", () => {
     expect(html).toContain("No public sources were returned");
     expect(html).toContain("Local summarization is unavailable");
     expect(html).toContain("5.15");
-    expect(html).not.toContain("Assessment with public sources");
+    expect(html).not.toContain("Search-assisted assessment");
   });
   it("separates returned grounding sources and ignores invalid source URLs", () => {
     const html = renderToStaticMarkup(
@@ -78,9 +78,32 @@ describe("verification presentation", () => {
         }}
       />,
     );
-    expect(html).toContain("Assessment with public sources");
+    expect(html).toContain("Search-assisted assessment");
     expect(html).toContain("Official advice");
     expect(html).not.toContain("javascript:");
     expect(html).not.toContain(">Unsafe<");
+  });
+  it("does not promote a GitHub result to authoritative verification", () => {
+    const html = renderToStaticMarkup(
+      <CloudAssessment
+        cloud={{
+          ...assessment,
+          metadata: {
+            groundingChunks: [
+              {
+                web: {
+                  uri: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/example",
+                  title: "github.com",
+                },
+              },
+            ],
+          },
+        }}
+      />,
+    );
+    expect(html).toContain("Official-source verification remains inconclusive");
+    expect(html).toContain("Code/community host");
+    expect(html).toContain("Publisher label supplied by Search");
+    expect(html).not.toContain("Compare with English summary");
   });
 });

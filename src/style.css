@@ -2125,3 +2125,12 @@ blockquote {
     scroll-margin-top: 96px;
   }
 }
+
+.source-quality-notice {
+  padding: 16px;
+  border: 1px solid #fcd34d;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #78350f;
+  line-height: 1.7;
+}

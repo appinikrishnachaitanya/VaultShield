@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock3, HeartHandshake, Phone, Volume2 } from "lucide-react";
+import { Clock3, HeartHandshake, Phone, Volume2, Square } from "lucide-react";
 import {
   familyGuidance,
   familyLanguages,
@@ -12,8 +12,8 @@ import {
 } from "../lib/firebase/ai";
 import type { LocalResult } from "../types/privacy";
 import MaaSummary from "./MaaSummary";
-import { readWithLocalVoice } from "../lib/localVoice";
-import { useLocalVoice } from "../lib/useLocalVoice";
+import { readWithLocalVoice, stopLocalReading } from "../lib/localVoice";
+import { useLocalVoice, useLocalReading } from "../lib/useLocalVoice";
 
 export function FamilySafety({
   result,
@@ -24,6 +24,7 @@ export function FamilySafety({
 }) {
   const [language, setLanguage] = useState<FamilyLanguage>("hi");
   const canReadAloud = useLocalVoice(language);
+  const reading = useLocalReading();
   const [audioNotice, setAudioNotice] = useState("");
   const [now, setNow] = useState(Date.now);
   const content = familyGuidance(language, result.stages);
@@ -79,7 +80,7 @@ export function FamilySafety({
     return () => window.clearInterval(timer);
   }, [coolOffUntil]);
 
-  useEffect(() => () => window.speechSynthesis?.cancel(), []);
+  useEffect(() => () => stopLocalReading(), []);
 
   function speak() {
     readWithLocalVoice(lines.join(" "), language, setAudioNotice);
@@ -120,7 +121,7 @@ export function FamilySafety({
             value={language}
             disabled={!!localTask}
             onChange={(event) => {
-              window.speechSynthesis?.cancel();
+              stopLocalReading();
               setLanguage(event.target.value as FamilyLanguage);
               setAudioNotice("");
               setTranslation(undefined);
@@ -146,9 +147,18 @@ export function FamilySafety({
         role="group"
         aria-label="Voice and translation"
       >
-        {canReadAloud && (
-          <button type="button" className="secondary" onClick={speak}>
-            <Volume2 size={17} aria-hidden="true" /> Read aloud
+        {(canReadAloud || reading) && (
+          <button
+            type="button"
+            className="secondary"
+            onClick={reading ? stopLocalReading : speak}
+          >
+            {reading ? (
+              <Square size={17} aria-hidden="true" />
+            ) : (
+              <Volume2 size={17} aria-hidden="true" />
+            )}
+            {reading ? "Stop reading" : "Read aloud"}
           </button>
         )}
         {support.translator && language !== "en" && (

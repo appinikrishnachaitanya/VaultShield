@@ -5,6 +5,7 @@ import { maskIdentifiers } from "../lib/privacy";
 import { familyLanguages, type FamilyLanguage } from "../lib/familyGuidance";
 import MaaSummary from "./MaaSummary";
 import AssessmentMarkdown from "./AssessmentMarkdown";
+import { groundingSources } from "../lib/groundingSources";
 
 type Assessment = Awaited<ReturnType<typeof verifyWithCloud>>;
 export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
@@ -14,10 +15,7 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
     report.current?.focus({ preventScroll: true });
   }, []);
   const [language, setLanguage] = useState<FamilyLanguage>("hi");
-  const sources =
-    cloud.metadata?.groundingChunks?.flatMap((chunk) =>
-      chunk.web?.uri && /^https?:\/\//i.test(chunk.web.uri) ? [chunk.web] : [],
-    ) ?? [];
+  const sources = groundingSources(cloud.metadata);
   const local = cloud.source === "ON_DEVICE";
   return (
     <section
@@ -50,7 +48,7 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
           {local
             ? "Your local second opinion"
             : sources.length
-              ? "Assessment with public sources"
+              ? "Search-assisted assessment"
               : "Assessment · no sources returned"}
         </h3>
       </div>
@@ -111,14 +109,22 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
         >
           <h3>
             {sources.length
-              ? "Check the sources yourself"
+              ? "Evidence returned by search"
               : "No public sources were returned"}
           </h3>
           <p>
             {sources.length
-              ? "These links were returned by search grounding. Check their relevance and dates."
+              ? "Search results are not a verification badge. Check the page, its publisher, relevance and date before relying on it."
               : "Treat this as an AI explanation, not a confirmed public-source finding."}
           </p>
+          {sources.length > 0 &&
+            sources.every((source) => source.community) && (
+              <p className="source-quality-notice" role="status">
+                Only code or community-hosted results were identified. These do
+                not establish an official fraud warning. Official-source
+                verification remains inconclusive.
+              </p>
+            )}
           {sources.length > 0 && (
             <ul>
               {sources.map((source, index) => (
@@ -131,6 +137,27 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
                     {source.title || "Open public source"}
                     <span aria-hidden="true"> ↗</span>
                   </a>
+                  <p className="tool-hint">
+                    {source.community
+                      ? "Code/community host · not authoritative evidence for financial or police claims."
+                      : "Returned by search · relevance not independently checked."}
+                    {source.redirected &&
+                      " Publisher label supplied by Search; destination not independently checked."}
+                  </p>
+                  {source.excerpts.length > 0 ? (
+                    <details className="source-details">
+                      <summary>
+                        Which part of the answer used this source?
+                      </summary>
+                      {source.excerpts.map((excerpt, i) => (
+                        <p key={i}>{excerpt}</p>
+                      ))}
+                    </details>
+                  ) : (
+                    <p className="tool-hint">
+                      No claim-to-source excerpt was supplied.
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
