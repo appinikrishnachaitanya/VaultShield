@@ -1,0 +1,21 @@
+{
+  "conditions": [],
+  "parameters": {
+    "cloud_model_name": {
+      "defaultValue": { "value": "gemini-3.5-flash-lite" },
+      "valueType": "STRING",
+      "description": "Cloud-only verification model. Local checks always use ONLY_ON_DEVICE."
+    },
+    "enable_search_grounding": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Offer public Search grounding during explicitly consented cloud verification."
+    },
+    "strict_privacy_mode": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Privacy policy indicator. Local redaction and explicit consent remain mandatory in code."
+    }
+  },
+  "parameterGroups": {}
+}

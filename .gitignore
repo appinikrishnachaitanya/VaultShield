@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env*
+!.env.example
+__pycache__/
+.venv/
+*.tsbuildinfo
+# Service account JSON and Firebase Admin credentials
+*service-account*.json
+.gradle-user-home/
+.android-toolchain/
+artifacts/
+.firebase/
+*.log
+*.jks
+*.keystore
+*.p12
+*.pem
+android/app/google-services.json
+android/.idea/
+android/.kotlin/
