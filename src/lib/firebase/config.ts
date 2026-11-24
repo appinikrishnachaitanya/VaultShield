@@ -62,7 +62,7 @@ export const appCheck =
     : null;
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
-export const ai = app ? getAI(app, { backend: new VertexAIBackend() }) : null;
+export const ai = app ? getAI(app, { backend: new VertexAIBackend("global") }) : null;
 const defaults = {
   cloud_model_name: "gemini-3.5-flash-lite",
   enable_search_grounding: true,

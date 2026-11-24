@@ -12,7 +12,7 @@ vi.mock("../src/lib/firebase/config", async () => {
     "cloud-payload-test",
   );
   return {
-    ai: getAI(app, { backend: new VertexAIBackend() }),
+    ai: getAI(app, { backend: new VertexAIBackend("global") }),
     settings: () => ({ model: "gemini-3.5-flash-lite", grounding: true }),
   };
 });
@@ -74,7 +74,7 @@ it.each(["hybrid", "public-sources"] as const)(
     // A Developer API request omits locations; assert the actual SDK route,
     // not just the configured model or a source badge.
     expect(String(url)).toContain(
-      "/projects/demo-vaultshield/locations/us-central1/publishers/google/models/gemini-3.5-flash-lite:generateContent",
+      "/projects/demo-vaultshield/locations/global/publishers/google/models/gemini-3.5-flash-lite:generateContent",
     );
     const body = JSON.parse(String(request.body));
     if (purpose === "public-sources")
