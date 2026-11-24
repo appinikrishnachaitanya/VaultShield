@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 vi.mock("../src/lib/firebase/config", async () => {
   const { initializeApp } = await import("firebase/app");
-  const { getAI, GoogleAIBackend } = await import("firebase/ai");
+  const { getAI, VertexAIBackend } = await import("firebase/ai");
   const app = initializeApp(
     {
       projectId: "demo-vaultshield",
@@ -12,7 +12,7 @@ vi.mock("../src/lib/firebase/config", async () => {
     "cloud-payload-test",
   );
   return {
-    ai: getAI(app, { backend: new GoogleAIBackend() }),
+    ai: getAI(app, { backend: new VertexAIBackend() }),
     settings: () => ({ model: "gemini-3.5-flash-lite", grounding: true }),
   };
 });
