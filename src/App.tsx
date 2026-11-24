@@ -31,6 +31,7 @@ import {
   capabilityLabel,
   screenshotUnavailable,
   useAICapability,
+  localAIDiagnostics,
 } from "./services/aiCapability";
 import { maskIdentifiers } from "./lib/privacy";
 import {
@@ -102,6 +103,9 @@ export default function App() {
   const taskRunning = useRef(false);
   const [localProgress, setLocalProgress] = useState("");
   const capability = useAICapability();
+  const [localDiagnostics, setLocalDiagnostics] =
+    useState<Awaited<ReturnType<typeof localAIDiagnostics>>>();
+  const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
   const messageEditor = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting securely…");
@@ -720,14 +724,17 @@ export default function App() {
                           ? "LOCAL RULES · NOT AI"
                           : usesAndroidModel
                             ? "NATIVE ON-DEVICE AI"
-                            : "ON-DEVICE AI"}{" "}
-                        · {(result.durationMs / 1000).toFixed(2)}s
+                            : "ON-DEVICE AI"}
+                        {result.ruleAssisted ? " + LOCAL RULES" : ""} ·{" "}
+                        {(result.durationMs / 1000).toFixed(2)}s
                       </span>
                       <h2>
                         {count === 0
                           ? result.source === "LOCAL_RULES"
                             ? "No common pressure phrases matched"
-                            : "No pressure tactics found"
+                            : result.ruleAssisted
+                              ? "AI assessment incomplete"
+                              : "No pressure tactics found"
                           : `${count} of 4 pressure tactics found`}
                       </h2>
                       <p>
@@ -759,7 +766,64 @@ export default function App() {
                       Alert family
                     </button>
                   </div>
+                  {result.fallbackReason && (
+                    <div className="local-progress" role="status">
+                      <p>{result.fallbackReason}</p>
+                      <p>
+                        Last step: {result.fallbackStage}. Error code:{" "}
+                        {result.fallbackCode}.
+                      </p>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={diagnosticsBusy || !!busy}
+                        onClick={async () => {
+                          setDiagnosticsBusy(true);
+                          try {
+                            setLocalDiagnostics(await localAIDiagnostics());
+                          } finally {
+                            setDiagnosticsBusy(false);
+                          }
+                        }}
+                      >
+                        {diagnosticsBusy
+                          ? "Checking browser support…"
+                          : "Check local AI support"}
+                      </button>
+                      {localDiagnostics && (
+                        <ul>
+                          <li>Platform: {localDiagnostics.platform}</li>
+                          <li>
+                            Secure page:{" "}
+                            {localDiagnostics.securePage ? "yes" : "no"}
+                          </li>
+                          <li>
+                            Chrome Prompt API exposed:{" "}
+                            {localDiagnostics.promptApiExposed ? "yes" : "no"}
+                          </li>
+                          <li>Text model: {localDiagnostics.text}</li>
+                          <li>Image model: {localDiagnostics.image}</li>
+                        </ul>
+                      )}
+                    </div>
+                  )}
                   <PressureEvidence result={result} />
+                  {result.ruleAssisted && (
+                    <p className="tool-hint">
+                      Local AI returned a partial assessment. Its findings are
+                      preserved. Missing categories were checked separately with
+                      local phrase rules; a missing AI assessment does not mean
+                      no pressure.
+                    </p>
+                  )}
+                  {result.preparationMs !== undefined &&
+                    result.generationMs !== undefined && (
+                      <p className="tool-hint">
+                        Preparation: {(result.preparationMs / 1000).toFixed(1)}s
+                        · Analysis: {(result.generationMs / 1000).toFixed(1)}s.
+                        Measured on this device.
+                      </p>
+                    )}
                   <FamilySafety
                     key={`family-safety:${result.text}`}
                     result={result}
@@ -772,10 +836,29 @@ export default function App() {
                         className={`stage ${s.found ? "found" : ""}`}
                       >
                         <div className="stage-title">
-                          <span>{s.found ? "!" : "✓"}</span>
+                          <span>
+                            {s.found
+                              ? "!"
+                              : s.assessedByAI === false
+                                ? "?"
+                                : "✓"}
+                          </span>
                           <h3>{s.name}</h3>
-                          <small>{s.found ? "Detected" : "Not detected"}</small>
+                          <small>
+                            {s.found
+                              ? "Detected"
+                              : s.assessedByAI === false
+                                ? "No phrase match"
+                                : "Not detected"}
+                          </small>
                         </div>
+                        <p className="tool-hint">
+                          {s.assessmentSource === "LOCAL_RULES"
+                            ? result.source === "ON_DEVICE"
+                              ? "Not assessed by AI · LOCAL RULES"
+                              : "LOCAL RULES · NOT AI"
+                            : "ON-DEVICE AI"}
+                        </p>
                         {s.found && (
                           <>
                             <blockquote>“{s.evidence}”</blockquote>
@@ -813,8 +896,10 @@ export default function App() {
                     <div>
                       <h3>Want a second layer of verification?</h3>
                       <p>
-                        Review the redacted text, then choose a hybrid second
-                        opinion or a cloud check of public sources.
+                        Automated masking can miss details. Please check the
+                        redacted text carefully before approving. Choose a
+                        hybrid second opinion or a cloud check of public
+                        sources.
                       </p>
                     </div>
                     <button

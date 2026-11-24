@@ -80,20 +80,43 @@ export function watchFamily(
     (s) => onMembers(s.docs.map((d) => d.id)),
     onError,
   );
-  const b = onSnapshot(
-    query(
-      collection(db, "users", auth.currentUser.uid, "alerts"),
-      orderBy("createdAt", "desc"),
-      limit(10),
-    ),
-    (s) =>
-      onAlerts(
-        s.docs.slice(0, 10).map((d) => ({ id: d.id, stages: d.data().stages })),
+  // Read both schema versions during the backend rollout; all writes remain server-only.
+  type InboxItem = { id: string; stages: number; time: number };
+  const inbox = new Map<string, InboxItem[]>();
+  const subscriptions = ["timestamp", "createdAt"].map((field) =>
+    onSnapshot(
+      query(
+        collection(db!, "users", auth!.currentUser!.uid, "alerts"),
+        orderBy(field, "desc"),
+        limit(10),
       ),
-    onError,
+      (snapshot) => {
+        inbox.set(
+          field,
+          snapshot.docs.map((doc) => {
+            const value = doc.data();
+            return {
+              id: doc.id,
+              stages: value.tacticCount ?? value.stages ?? 0,
+              time: value[field]?.toMillis?.() ?? 0,
+            };
+          }),
+        );
+        const unique = new Map(
+          [...inbox.values()].flat().map((item) => [item.id, item]),
+        );
+        onAlerts(
+          [...unique.values()]
+            .sort((left, right) => right.time - left.time)
+            .slice(0, 10)
+            .map(({ id, stages }) => ({ id, stages })),
+        );
+      },
+      onError,
+    ),
   );
   return () => {
     a();
-    b();
+    subscriptions.forEach((unsubscribe) => unsubscribe());
   };
 }

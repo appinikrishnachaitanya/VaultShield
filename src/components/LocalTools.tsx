@@ -169,7 +169,8 @@ export default function LocalTools({ text }: { text: SanitizedText }) {
       </details>
       {busy && (
         <p role="status" className="local-progress">
-          {progress}
+          {progress} Local models may take a minute or more on CPU, especially
+          after a specialist fails. Your reply stays on this device.
         </p>
       )}
       {error && (

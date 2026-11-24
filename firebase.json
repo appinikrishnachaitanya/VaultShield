@@ -11,21 +11,21 @@
         "source": "/pair/**",
         "run": {
           "serviceId": "vaultshield-api",
-          "region": "asia-south1"
+          "region": "europe-west1"
         }
       },
       {
         "source": "/alerts",
         "run": {
           "serviceId": "vaultshield-api",
-          "region": "asia-south1"
+          "region": "europe-west1"
         }
       },
       {
         "source": "/notifications/**",
         "run": {
           "serviceId": "vaultshield-api",
-          "region": "asia-south1"
+          "region": "europe-west1"
         }
       },
       {

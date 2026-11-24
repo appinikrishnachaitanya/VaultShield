@@ -1,0 +1,27 @@
+{
+  "scope": "Firestore rules source review and backend privacy contract",
+  "score": 9,
+  "summary": "Owner-only family and alert reads; all client writes denied. Source review only, not an emulator authorization certification.",
+  "findings": [
+    {
+      "severity": "info",
+      "status": "verified-source",
+      "description": "Default deny and owner-scoped family/alerts reads; no client write grants."
+    },
+    {
+      "severity": "medium",
+      "status": "fixed-tested-not-deployed",
+      "description": "Backend validation no longer echoes rejected inputs. Alert records use the explicit metadata whitelist."
+    },
+    {
+      "severity": "medium",
+      "status": "fixed-tested-not-deployed",
+      "description": "Transactional per-user rate limits and bounded push fanout."
+    },
+    {
+      "severity": "info",
+      "status": "pending-live",
+      "description": "Admin SDK bypasses Firestore rules. Production attestation, rules emulator checks, and FCM delivery still require live acceptance."
+    }
+  ]
+}

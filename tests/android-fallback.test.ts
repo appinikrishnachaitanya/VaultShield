@@ -36,7 +36,7 @@ describe("Android model error 606", () => {
       text: "Police: pay now and call [REDACTED].",
     });
     expect(mocks.analyze).toHaveBeenCalledWith({
-      text: expect.stringContaining(original),
+      text: expect.stringContaining("Police: pay now and call [REDACTED]."),
       imageBase64: undefined,
     });
     expect(mocks.cloudModel).not.toHaveBeenCalled();
@@ -44,7 +44,7 @@ describe("Android model error 606", () => {
 
   it("blocks screenshots on native scan error 606", async () => {
     await expect(checkWithLocalFallback(original, screenshot)).rejects.toThrow(
-      "FEATURE_NOT_FOUND",
+      "Screenshot check needs On-Device AI",
     );
     expect(mocks.analyze).toHaveBeenCalledWith({
       text: expect.any(String),
@@ -59,7 +59,7 @@ describe("Android model error 606", () => {
       source: "LOCAL_RULES",
     });
     await expect(checkWithLocalFallback(original, screenshot)).rejects.toThrow(
-      "unavailable",
+      "Screenshot check needs On-Device AI",
     );
     expect(mocks.analyze).not.toHaveBeenCalled();
     expect(mocks.cloudModel).not.toHaveBeenCalled();

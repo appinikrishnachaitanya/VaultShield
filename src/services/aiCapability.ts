@@ -51,7 +51,34 @@ export function chromeModelOptions(image: boolean) {
   };
 }
 
-export async function chromeAvailability(image: boolean): Promise<ModelStatus> {
+export async function localAIDiagnostics() {
+  const model =
+    typeof window === "undefined"
+      ? undefined
+      : (
+          window as Window & {
+            LanguageModel?: { create?: unknown; availability?: unknown };
+          }
+        ).LanguageModel;
+  const [text, image] = await Promise.all([
+    chromeAvailability(false),
+    chromeAvailability(true),
+  ]);
+  return {
+    platform: detectAIPlatform(),
+    securePage: typeof window !== "undefined" && window.isSecureContext,
+    promptApiExposed:
+      typeof model?.create === "function" &&
+      typeof model?.availability === "function",
+    text,
+    image,
+  };
+}
+
+export async function chromeAvailability(
+  image: boolean,
+  explainFailure = false,
+): Promise<ModelStatus> {
   if (
     detectAIPlatform() !== "desktop-chrome" ||
     !ai ||
@@ -76,9 +103,21 @@ export async function chromeAvailability(image: boolean): Promise<ModelStatus> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const status = await Promise.race([
-      model.availability(chromeModelOptions(image)),
-      new Promise<"unavailable">((resolve) => {
-        timer = setTimeout(() => resolve("unavailable"), 10000);
+      model
+        .availability(chromeModelOptions(image))
+        .catch(() => model.availability!(chromeModelOptions(image))),
+      new Promise<"unavailable">((resolve, reject) => {
+        timer = setTimeout(
+          () =>
+            explainFailure
+              ? reject(
+                  new Error(
+                    "Local AI availability check timed out. Retry the private check.",
+                  ),
+                )
+              : resolve("unavailable"),
+          30000,
+        );
       }),
     ]);
     return status === "available" ||
@@ -86,7 +125,13 @@ export async function chromeAvailability(image: boolean): Promise<ModelStatus> {
       status === "downloading"
       ? status
       : "unavailable";
-  } catch {
+  } catch (error) {
+    if (explainFailure)
+      throw new Error(
+        error instanceof Error && /timed out/.test(error.message)
+          ? "Local AI availability check timed out. Retry the private check."
+          : "The browser could not check local AI availability. Retry the private check.",
+      );
     return "unavailable";
   } finally {
     clearTimeout(timer);

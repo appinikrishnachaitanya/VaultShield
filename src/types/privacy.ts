@@ -4,6 +4,8 @@ export type Stage = {
   found: boolean;
   evidence: string;
   action: string;
+  assessmentSource?: "ON_DEVICE" | "LOCAL_RULES";
+  assessedByAI?: boolean;
 };
 export type LocalResult = {
   text: SanitizedText;
@@ -12,4 +14,10 @@ export type LocalResult = {
   imageMismatches?: string[];
   durationMs: number;
   source: "ON_DEVICE" | "LOCAL_RULES";
+  fallbackReason?: string;
+  fallbackStage?: string;
+  fallbackCode?: string;
+  ruleAssisted?: boolean;
+  preparationMs?: number;
+  generationMs?: number;
 };

@@ -40,6 +40,144 @@ beforeEach(() => {
   });
 });
 describe("privacy firewall", () => {
+  it("allows a cold Chrome availability check longer than the former ten-second limit", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(
+        (
+          window as unknown as {
+            LanguageModel: { availability: ReturnType<typeof vi.fn> };
+          }
+        ).LanguageModel.availability,
+      ).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve("available"), 12000),
+          ),
+      );
+      const pending = chromeAvailability(false, true);
+      await vi.advanceTimersByTimeAsync(12000);
+      expect(await pending).toBe("available");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("retains valid findings when a different category is malformed", async () => {
+    mocks.generateContent.mockResolvedValue({
+      response: {
+        inferenceSource: "on_device",
+        text: () =>
+          JSON.stringify({
+            redactedText: "Police: pay now.",
+            stages: [
+              { name: "Authority", found: true, evidence: "Police" },
+              { name: "Fear", found: "false", evidence: 42 },
+            ],
+          }),
+      },
+    });
+    const result = await checkLocally("Police: pay now.");
+    expect(result.source).toBe("ON_DEVICE");
+    expect(
+      result.stages.find((s) => s.name === "Authority")?.assessedByAI,
+    ).toBe(true);
+    expect(result.stages.find((s) => s.name === "Fear")?.assessedByAI).toBe(
+      false,
+    );
+  });
+  it("preserves a completed three-stage AI response and labels the missing stage as rules", async () => {
+    mocks.generateContent.mockResolvedValue({
+      response: {
+        inferenceSource: "on_device",
+        text: () =>
+          JSON.stringify({
+            redactedText:
+              "CBI: pay within 10 minutes. Do not tell your family.",
+            stages: ["Authority", "Fear", "Urgency"].map((name) => ({
+              name,
+              found: true,
+              evidence: name === "Authority" ? "CBI" : "pay within 10 minutes",
+            })),
+          }),
+      },
+    });
+    const result = await checkWithLocalFallback(
+      "CBI: pay within 10 minutes. Do not tell your family.",
+    );
+    expect(result.source).toBe("ON_DEVICE");
+    expect(result.ruleAssisted).toBe(true);
+    expect(result.stages.find((s) => s.name === "Authority")).toMatchObject({
+      assessedByAI: true,
+      assessmentSource: "ON_DEVICE",
+    });
+    expect(result.stages.find((s) => s.name === "Secrecy")).toMatchObject({
+      found: true,
+      assessedByAI: false,
+      assessmentSource: "LOCAL_RULES",
+    });
+    expect(result.generationMs).toBeGreaterThanOrEqual(0);
+  });
+  it("does not turn a missing AI assessment into a negative AI finding", async () => {
+    mocks.generateContent.mockResolvedValue({
+      response: {
+        inferenceSource: "on_device",
+        text: () =>
+          JSON.stringify({
+            redactedText: "Your parcel arrives today.",
+            stages: { Authority: "" },
+          }),
+      },
+    });
+    const result = await checkLocally("Your parcel arrives today.");
+    expect(result.stages.find((s) => s.name === "Secrecy")).toMatchObject({
+      found: false,
+      assessedByAI: false,
+      assessmentSource: "LOCAL_RULES",
+    });
+    expect(result.source).toBe("ON_DEVICE");
+    expect(
+      mocks.model.mock.calls[0][1].onDeviceParams.promptOptions
+        .responseConstraint,
+    ).toBeDefined();
+    expect(
+      mocks.model.mock.results[0].value.initializeDeviceModel,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("accepts local JSON fenced with surrounding whitespace instead of falling back", async () => {
+    mocks.generateContent.mockResolvedValue({
+      response: {
+        inferenceSource: "on_device",
+        text: () =>
+          "\n  ```json\n" +
+          JSON.stringify({
+            redactedText: "Call [REDACTED].",
+            stages: ["Authority", "Fear", "Urgency", "Secrecy"].map((name) => ({
+              name,
+              found: false,
+              evidence: "",
+            })),
+          }) +
+          "\n```  \n",
+      },
+    });
+    expect(await checkWithLocalFallback("Call 9876543210.")).toMatchObject({
+      source: "ON_DEVICE",
+      text: "Call [REDACTED].",
+    });
+  });
+  it("reports cancellation safely without repeating private SDK error contents", async () => {
+    mocks.generateContent.mockRejectedValue(
+      new DOMException(
+        "Request was cancelled: secret-original-9876543210",
+        "AbortError",
+      ),
+    );
+    const result = await checkWithLocalFallback("Call 9876543210.");
+    expect(result.fallbackReason).toContain("cancelled");
+    expect(JSON.stringify(result)).not.toContain("secret-original");
+    expect(JSON.stringify(result)).not.toContain("9876543210");
+  });
   it("masks labeled short accounts and alphanumeric payment references", () => {
     const result = maskIdentifiers(
       "Account no: 12345678\nA/c: 4567 1234\nUTR: HDFC1234567890\nTransaction ID: TXN34567890\nPay within 10 minutes.",
@@ -68,7 +206,7 @@ describe("privacy firewall", () => {
         },
       });
       const pending = chromeAvailability(false);
-      await vi.advanceTimersByTimeAsync(10000);
+      await vi.advanceTimersByTimeAsync(30000);
       expect(await pending).toBe("unavailable");
       expect(mocks.model).not.toHaveBeenCalled();
     } finally {
@@ -147,6 +285,13 @@ describe("privacy firewall", () => {
   });
 
   it("does not send content when local model preparation fails", async () => {
+    vi.mocked(
+      (
+        window as unknown as {
+          LanguageModel: { availability: ReturnType<typeof vi.fn> };
+        }
+      ).LanguageModel.availability,
+    ).mockResolvedValue("downloadable");
     mocks.model.mockReturnValue({
       initializeDeviceModel: vi
         .fn()

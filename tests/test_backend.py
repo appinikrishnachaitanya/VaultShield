@@ -25,7 +25,8 @@ class FamilyRoutes(unittest.TestCase):
         self.assertEqual(response.status_code,401)
 
     def test_invite_stores_hash_not_bearer_secret(self):
-        response = self.client.post('/pair/invite')
+        with patch.object(service.firestore,'transactional',lambda f:f):
+            response = self.client.post('/pair/invite')
         self.assertEqual(response.status_code,200)
         code = response.json()['code']
         self.assertGreaterEqual(len(code),32)
@@ -37,14 +38,33 @@ class FamilyRoutes(unittest.TestCase):
         self.assertEqual(self.client.post('/alerts',json={'stages':5}).status_code,422)
         self.assertEqual(self.client.post('/alerts',json={'stages':4,'transcript':'private'}).status_code,422)
 
+    def test_validation_never_echoes_rejected_private_content(self):
+        response=self.client.post('/alerts',json={'stages':4,'transcript':'private-bank-message'})
+        self.assertEqual(response.status_code,422)
+        self.assertNotIn('private-bank-message',response.text)
+        self.assertEqual(response.json(),{'detail':'Invalid request payload'})
+
+    def test_rejects_arbitrary_tactic_content(self):
+        response=self.client.post('/alerts',json={'stages':1,'tacticTypes':['private-bank-message']})
+        self.assertEqual(response.status_code,422)
+        self.assertNotIn('private-bank-message',response.text)
+
+    def test_invite_rate_limit_is_enforced(self):
+        snap=self.db.collection.return_value.document.return_value.get.return_value
+        snap.exists=True
+        snap.to_dict.return_value={'last':service.now()-timedelta(seconds=1)}
+        with patch.object(service.firestore,'transactional',lambda f:f):
+            response=self.client.post('/pair/invite')
+        self.assertEqual(response.status_code,429)
+
     def test_unpaired_sender_cannot_alert(self):
-        self.db.collection.return_value.document.return_value.collection.return_value.stream.return_value=[]
+        self.db.collection.return_value.document.return_value.collection.return_value.limit.return_value.stream.return_value=[]
         self.assertEqual(self.client.post('/alerts',json={'stages':4}).status_code,409)
 
     def test_alert_stores_only_minimal_payload(self):
         member=MagicMock(id='relative')
         family=self.db.collection.return_value.document.return_value.collection.return_value
-        family.stream.side_effect=[[member],[]]
+        family.limit.return_value.stream.side_effect=[[member],[]]
         rate=self.db.collection.return_value.document.return_value
         rate.get.return_value.exists=False
         with patch.object(service.firestore,'transactional',lambda f:f):
@@ -52,10 +72,10 @@ class FamilyRoutes(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json(),{'inboxes':1,'pushNotifications':0})
         value=family.add.call_args.args[0]
-        self.assertEqual(set(value),{'sender','stages','createdAt'})
+        self.assertEqual(set(value),{'tacticCount','tacticTypes','timestamp','familyCircleId','status'})
 
     def test_rate_limit_blocks_repeated_alert(self):
-        self.db.collection.return_value.document.return_value.collection.return_value.stream.return_value=[MagicMock(id='relative')]
+        self.db.collection.return_value.document.return_value.collection.return_value.limit.return_value.stream.return_value=[MagicMock(id='relative')]
         snap=self.db.collection.return_value.document.return_value.get.return_value
         snap.exists=True
         snap.to_dict.return_value={'last':service.now()-timedelta(seconds=2)}
