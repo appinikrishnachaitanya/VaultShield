@@ -2134,3 +2134,54 @@ blockquote {
   color: #78350f;
   line-height: 1.7;
 }
+
+/* The language preference is always visible and usable at narrow widths. */
+.app-language {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+.app-language select {
+  min-height: 44px;
+  padding: 0.5rem 1.8rem 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+html[lang="hi"] body {
+  line-height: 1.75;
+}
+html[lang="hi"] h1,
+html[lang="hi"] h2,
+html[lang="hi"] h3 {
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+.topbar {
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .app-language {
+    margin-right: auto;
+  }
+  .topbar .breadcrumb {
+    display: none;
+  }
+}
+
+.language-note {
+  color: #475569;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  margin: 0 0 1rem;
+}
+.language-result-note {
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #f0fdfa;
+  margin-bottom: 1rem;
+}

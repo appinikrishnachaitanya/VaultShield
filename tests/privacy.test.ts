@@ -563,3 +563,97 @@ describe("privacy firewall", () => {
     );
   });
 });
+it.each(["none", "false", "not detected", "No evidence found"])(
+  "does not count absent compact evidence %s as pressure",
+  async (absent) => {
+    mocks.generateContent.mockResolvedValue({
+      response: {
+        inferenceSource: "on_device",
+        text: () =>
+          JSON.stringify({
+            redactedText: "Your parcel arrives tomorrow. No payment is needed.",
+            stages: {
+              Authority: absent,
+              Fear: absent,
+              Urgency: absent,
+              Secrecy: absent,
+            },
+          }),
+      },
+    });
+    const result = await checkLocally(
+      "Your parcel arrives tomorrow. No payment is needed.",
+    );
+    expect(result.stages.filter((s) => s.found)).toHaveLength(0);
+    expect(result.stages.every((s) => s.assessedByAI)).toBe(true);
+  },
+);
+it("rejects invented or example-derived quotes without discarding other model findings", async () => {
+  mocks.generateContent.mockResolvedValue({
+    response: {
+      inferenceSource: "on_device",
+      text: () =>
+        JSON.stringify({
+          redactedText: "Please send the fee right now.",
+          stages: {
+            Authority: "I am a police officer",
+            Fear: "you will be arrested",
+            Urgency: "right now",
+            Secrecy: "Do not tell your family",
+          },
+        }),
+    },
+  });
+  const result = await checkLocally("Please send the fee right now.");
+  expect(result.stages.filter((s) => s.found).map((s) => s.name)).toEqual([
+    "Urgency",
+  ]);
+  expect(result.stages.find((s) => s.name === "Urgency")?.assessedByAI).toBe(
+    true,
+  );
+  expect(result.stages.find((s) => s.name === "Fear")?.assessedByAI).toBe(
+    false,
+  );
+  expect(result.ruleAssisted).toBe(true);
+});
+it("does not ground evidence solely in text invented by the local model", async () => {
+  mocks.generateContent.mockResolvedValue({
+    response: {
+      inferenceSource: "on_device",
+      text: () =>
+        JSON.stringify({
+          redactedText: "You will be arrested. Your parcel arrives tomorrow.",
+          stages: {
+            Authority: "",
+            Fear: "You will be arrested",
+            Urgency: "",
+            Secrecy: "",
+          },
+        }),
+    },
+  });
+  const result = await checkLocally("Your parcel arrives tomorrow.");
+  expect(result.stages.some((s) => s.found)).toBe(false);
+  expect(result.stages.find((s) => s.name === "Fear")?.assessedByAI).toBe(
+    false,
+  );
+});
+it("does not count a positive flag with empty evidence", async () => {
+  mocks.generateContent.mockResolvedValue({
+    response: {
+      inferenceSource: "on_device",
+      text: () =>
+        JSON.stringify({
+          redactedText: "Your parcel arrives tomorrow.",
+          stages: ["Authority", "Fear", "Urgency", "Secrecy"].map((name) => ({
+            name,
+            found: true,
+            evidence: "",
+          })),
+        }),
+    },
+  });
+  const result = await checkLocally("Your parcel arrives tomorrow.");
+  expect(result.stages.some((s) => s.found)).toBe(false);
+  expect(result.ruleAssisted).toBe(true);
+});

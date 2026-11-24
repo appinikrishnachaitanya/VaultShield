@@ -1,20 +1,70 @@
+import { t, useAppLanguage } from "../lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { HeartHandshake, ShieldCheck, BookOpen } from "lucide-react";
-import type { verifyWithCloud } from "../lib/firebase/ai";
+import {
+  translateFamilyGuidance,
+  type verifyWithCloud,
+} from "../lib/firebase/ai";
 import { maskIdentifiers } from "../lib/privacy";
 import { familyLanguages, type FamilyLanguage } from "../lib/familyGuidance";
 import MaaSummary from "./MaaSummary";
 import AssessmentMarkdown from "./AssessmentMarkdown";
 import { groundingSources } from "../lib/groundingSources";
 
-type Assessment = Awaited<ReturnType<typeof verifyWithCloud>>;
+type Assessment = Omit<
+  Awaited<ReturnType<typeof verifyWithCloud>>,
+  "language"
+> & { language?: "en" | "hi" };
 export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
   const report = useRef<HTMLElement>(null);
   useEffect(() => {
     report.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     report.current?.focus({ preventScroll: true });
   }, []);
-  const [language, setLanguage] = useState<FamilyLanguage>("hi");
+  const appLanguage = useAppLanguage();
+  const [language, setLanguage] = useState<FamilyLanguage>(appLanguage);
+  useEffect(() => {
+    setLanguage(appLanguage);
+  }, [appLanguage]);
+  const [translated, setTranslated] = useState<{
+    text: string;
+    language: "en" | "hi";
+  }>();
+  const [translating, setTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState("");
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const reportLanguage = cloud.language ?? "en";
+  const display =
+    translated?.language === appLanguage
+      ? translated
+      : { text: cloud.text, language: reportLanguage };
+  async function translateReport() {
+    if (translating) return;
+    setTranslating(true);
+    setTranslationError("");
+    const target = appLanguage;
+    try {
+      const [text] = await translateFamilyGuidance(
+        [cloud.text],
+        target,
+        reportLanguage,
+      );
+      if (active.current) setTranslated({ text, language: target });
+    } catch {
+      if (active.current)
+        setTranslationError(
+          "Local translation is unavailable. The original result is preserved; no cloud request was made.",
+        );
+    } finally {
+      if (active.current) setTranslating(false);
+    }
+  }
   const sources = groundingSources(cloud.metadata);
   const local = cloud.source === "ON_DEVICE";
   return (
@@ -22,60 +72,88 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
       ref={report}
       tabIndex={-1}
       className="card cloud-result"
-      aria-label="Verification result"
+      aria-label={t("Verification result")}
     >
       <span className={`badge ${local ? "local" : "cloud"}`}>
         {local
-          ? "HYBRID · ON-DEVICE"
+          ? t("HYBRID · ON-DEVICE")
           : cloud.purpose === "public-sources"
-            ? "CLOUD · PUBLIC-SOURCE CHECK"
-            : "HYBRID · CLOUD FALLBACK"}
+            ? t("CLOUD · PUBLIC-SOURCE CHECK")
+            : t("HYBRID · CLOUD FALLBACK")}
         {" · "}
         {(cloud.durationMs / 1000).toFixed(2)}s
       </span>
-      <h2>Your verification, explained clearly.</h2>
+      <h2>{t("Your verification, explained clearly.")}</h2>
       <p className="tool-hint">
         {local
-          ? "Reviewed text analyzed on this device. No live web search."
-          : `${cloud.model} · Approved redacted text only.`}
+          ? t("Reviewed text analyzed on this device. No live web search.")
+          : `${cloud.model} · ${t("Approved redacted text only.")}`}
       </p>
       <a className="assessment-maa-shortcut" href="#assessment-maa">
-        Make this simpler in my language ↓
+        {t(" Make this simpler in my language ↓ ")}
       </a>
       <div className="assessment-detail-heading">
         <BookOpen size={21} aria-hidden="true" />
         <h3>
           {local
-            ? "Your local second opinion"
+            ? t("Your local second opinion")
             : sources.length
-              ? "Search-assisted assessment"
-              : "Assessment · no sources returned"}
+              ? t("Search-assisted assessment")
+              : t("Assessment · no sources returned")}
         </h3>
       </div>
-      <AssessmentMarkdown text={cloud.text} />
+      {display.language !== appLanguage && (
+        <div className="language-result-note">
+          <p>
+            {t(
+              "This result was written in a different language. Translate it locally, or approve a new verification in your selected language.",
+            )}
+          </p>
+          <button
+            className="secondary"
+            disabled={translating}
+            onClick={() => void translateReport()}
+          >
+            {t(
+              translating
+                ? "Translating on this device…"
+                : "Translate this result on this device",
+            )}
+          </button>
+        </div>
+      )}
+      {translationError && <p role="status">{t(translationError)}</p>}
+      {display === translated && (
+        <p className="tool-hint">
+          {t("Locally translated · check wording against the original result.")}
+        </p>
+      )}
+      <div lang={display.language}>
+        <AssessmentMarkdown text={display.text} />
+      </div>
       <div className="assessment-pause">
         <ShieldCheck size={24} aria-hidden="true" />
         <div>
-          <h3>Before you act, verify independently</h3>
+          <h3>{t("Before you act, verify independently")}</h3>
           <p>
-            For a payment or urgent request, pause and contact the person or
-            organisation using a saved number, bank card or known official
-            website.
+            {t(
+              " For a payment or urgent request, pause and contact the person or organisation using a saved number, bank card or known official website. ",
+            )}
           </p>
         </div>
       </div>
       <section
         className="assessment-maa"
         id="assessment-maa"
-        aria-label="Maa Mode for this assessment"
+        aria-label={t("Maa Mode for this assessment")}
       >
         <div className="safety-heading">
           <h3>
-            <HeartHandshake size={22} aria-hidden="true" /> Maa Mode · Make this
-            easier
+            <HeartHandshake size={22} aria-hidden="true" />
+            {t(" Maa Mode · Make this easier ")}
           </h3>
           <label htmlFor="assessment-language">
-            Your language
+            {t(" Your language ")}
             <select
               id="assessment-language"
               value={language}
@@ -92,37 +170,43 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
           </label>
         </div>
         <MaaSummary
-          key={`${language}:${cloud.text}`}
-          text={maskIdentifiers(cloud.text).text}
+          key={`${language}:${display.text}`}
+          text={maskIdentifiers(display.text).text}
+          sourceLanguage={display.language}
           language={language}
           contentKind="assessment"
         />
       </section>
       <p className="tool-hint assessment-caveat">
-        AI guidance can be wrong. This assessment does not authenticate the
-        sender or establish legal validity.
+        {t(
+          " AI guidance can be wrong. This assessment does not authenticate the sender or establish legal validity. ",
+        )}
       </p>
       {!local && (
         <section
           className="assessment-sources"
-          aria-label="Returned public sources"
+          aria-label={t("Returned public sources")}
         >
           <h3>
             {sources.length
-              ? "Evidence returned by search"
-              : "No public sources were returned"}
+              ? t("Evidence returned by search")
+              : t("No public sources were returned")}
           </h3>
           <p>
             {sources.length
-              ? "Search results are not a verification badge. Check the page, its publisher, relevance and date before relying on it."
-              : "Treat this as an AI explanation, not a confirmed public-source finding."}
+              ? t(
+                  "Search results are not a verification badge. Check the page, its publisher, relevance and date before relying on it.",
+                )
+              : t(
+                  "Treat this as an AI explanation, not a confirmed public-source finding.",
+                )}
           </p>
           {sources.length > 0 &&
             sources.every((source) => source.community) && (
               <p className="source-quality-notice" role="status">
-                Only code or community-hosted results were identified. These do
-                not establish an official fraud warning. Official-source
-                verification remains inconclusive.
+                {t(
+                  " Only code or community-hosted results were identified. These do not establish an official fraud warning. Official-source verification remains inconclusive. ",
+                )}
               </p>
             )}
           {sources.length > 0 && (
@@ -134,20 +218,26 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {source.title || "Open public source"}
+                    {source.title || t("Open public source")}
                     <span aria-hidden="true"> ↗</span>
                   </a>
                   <p className="tool-hint">
                     {source.community
-                      ? "Code/community host · not authoritative evidence for financial or police claims."
-                      : "Returned by search · relevance not independently checked."}
+                      ? t(
+                          "Code/community host · not authoritative evidence for financial or police claims.",
+                        )
+                      : t(
+                          "Returned by search · relevance not independently checked.",
+                        )}
                     {source.redirected &&
-                      " Publisher label supplied by Search; destination not independently checked."}
+                      t(
+                        " Publisher label supplied by Search; destination not independently checked.",
+                      )}
                   </p>
                   {source.excerpts.length > 0 ? (
                     <details className="source-details">
                       <summary>
-                        Which part of the answer used this source?
+                        {t(" Which part of the answer used this source? ")}
                       </summary>
                       {source.excerpts.map((excerpt, i) => (
                         <p key={i}>{excerpt}</p>
@@ -155,7 +245,7 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
                     </details>
                   ) : (
                     <p className="tool-hint">
-                      No claim-to-source excerpt was supplied.
+                      {t(" No claim-to-source excerpt was supplied. ")}
                     </p>
                   )}
                 </li>
@@ -166,7 +256,7 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
       )}
       {cloud.metadata?.searchEntryPoint?.renderedContent && (
         <iframe
-          title="Google Search suggestions"
+          title={t("Google Search suggestions")}
           sandbox="allow-popups allow-popups-to-escape-sandbox"
           srcDoc={cloud.metadata.searchEntryPoint.renderedContent}
           className="search-suggestions"

@@ -93,3 +93,37 @@ it.each(["hybrid", "public-sources"] as const)(
     }
   },
 );
+it("requests a Hindi explanation through the real Firebase SDK without leaking original input", async () => {
+  vi.stubGlobal("window", {});
+  vi.stubGlobal("navigator", { onLine: true });
+  const fetchSpy = vi
+    .fn()
+    .mockResolvedValue(
+      Response.json({
+        candidates: [
+          {
+            content: {
+              role: "model",
+              parts: [{ text: "पैसे भेजने से पहले पुष्टि करें।" }],
+            },
+          },
+        ],
+      }),
+    );
+  vi.stubGlobal("fetch", fetchSpy);
+  const original = "CBI: pay now. Phone 9876543210";
+  const reviewed = maskIdentifiers(original).text;
+  const result = await verifyWithCloud(
+    reviewed,
+    true,
+    original,
+    "public-sources",
+    "hi",
+  );
+  expect(result.language).toBe("hi");
+  expect(result.source).toBe("IN_CLOUD");
+  const body = String(fetchSpy.mock.calls[0][1].body);
+  expect(body).toContain("simple Hindi (Devanagari)");
+  expect(body).not.toContain("9876543210");
+  expect(body).not.toContain(original);
+});

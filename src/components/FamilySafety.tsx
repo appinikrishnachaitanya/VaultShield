@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { t, useAppLanguage } from "../lib/i18n";
+import { useEffect, useRef, useState } from "react";
 import { Clock3, HeartHandshake, Phone, Volume2, Square } from "lucide-react";
 import {
   familyGuidance,
@@ -22,7 +23,15 @@ export function FamilySafety({
   result: LocalResult;
   coolOffUntil: number | null;
 }) {
-  const [language, setLanguage] = useState<FamilyLanguage>("hi");
+  const appLanguage = useAppLanguage();
+  const [language, setLanguage] = useState<FamilyLanguage>(appLanguage);
+  const latestLanguage = useRef<FamilyLanguage>(appLanguage);
+  useEffect(() => {
+    latestLanguage.current = appLanguage;
+    setLanguage(appLanguage);
+    setTranslation(undefined);
+    setReplyDraft(undefined);
+  }, [appLanguage]);
   const canReadAloud = useLocalVoice(language);
   const reading = useLocalReading();
   const [audioNotice, setAudioNotice] = useState("");
@@ -42,27 +51,27 @@ export function FamilySafety({
     setToolNotice("");
     try {
       if (kind === "translation" && language !== "en") {
-        setTranslation(
-          await translateFamilyGuidance(
-            familyGuidance("en", result.stages).lines,
-            language,
-          ),
+        const value = await translateFamilyGuidance(
+          familyGuidance("en", result.stages).lines,
+          language,
         );
+        if (latestLanguage.current === language) setTranslation(value);
       } else if (kind === "reply") {
-        setReplyDraft(
-          await draftLocalReply(
-            result.stages
-              .filter((stage) => stage.found)
-              .map((stage) => stage.name),
-          ),
+        const value = await draftLocalReply(
+          result.stages
+            .filter((stage) => stage.found)
+            .map((stage) => stage.name),
+          language,
         );
+        if (latestLanguage.current === language) setReplyDraft(value);
       }
     } catch (error) {
-      setToolNotice(
-        error instanceof Error
-          ? error.message
-          : "The built-in guidance is still available.",
-      );
+      if (latestLanguage.current === language)
+        setToolNotice(
+          error instanceof Error
+            ? error.message
+            : "The built-in guidance is still available.",
+        );
     } finally {
       setLocalTask(null);
     }
@@ -97,15 +106,17 @@ export function FamilySafety({
             <Clock3 size={22} aria-hidden="true" />
           </span>
           <div>
-            <h3>10-minute Cool-Off Shield</h3>
+            <h3>{t("10-minute Cool-Off Shield")}</h3>
             <p>
               {seconds
-                ? "Pause before paying. Breathe slowly and call someone you trust."
-                : "Pause complete. Verify the request before paying."}
+                ? t(
+                    "Pause before paying. Breathe slowly and call someone you trust.",
+                  )
+                : t("Pause complete. Verify the request before paying.")}
             </p>
           </div>
           {seconds > 0 && (
-            <time role="timer" aria-label="Time remaining">
+            <time role="timer" aria-label={t("Time remaining")}>
               {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}
             </time>
           )}
@@ -113,15 +124,17 @@ export function FamilySafety({
       )}
       <div className="safety-heading">
         <h3>
-          <HeartHandshake size={20} aria-hidden="true" /> Maa Mode
+          <HeartHandshake size={20} aria-hidden="true" />
+          {t(" Maa Mode ")}
         </h3>
         <label>
-          Language
+          {t(" Language ")}
           <select
             value={language}
             disabled={!!localTask}
             onChange={(event) => {
               stopLocalReading();
+              latestLanguage.current = event.target.value as FamilyLanguage;
               setLanguage(event.target.value as FamilyLanguage);
               setAudioNotice("");
               setTranslation(undefined);
@@ -145,7 +158,7 @@ export function FamilySafety({
       <div
         className="safety-actions"
         role="group"
-        aria-label="Voice and translation"
+        aria-label={t("Voice and translation")}
       >
         {(canReadAloud || reading) && (
           <button
@@ -158,7 +171,7 @@ export function FamilySafety({
             ) : (
               <Volume2 size={17} aria-hidden="true" />
             )}
-            {reading ? "Stop reading" : "Read aloud"}
+            {reading ? t("Stop reading") : t("Read aloud")}
           </button>
         )}
         {support.translator && language !== "en" && (
@@ -172,35 +185,37 @@ export function FamilySafety({
             }}
           >
             {translation
-              ? "Use built-in guidance"
+              ? t("Use built-in guidance")
               : localTask === "translation"
-                ? "Preparing translation…"
-                : "Translate with local AI"}
+                ? t("Preparing translation…")
+                : t("Translate with local AI")}
           </button>
         )}
       </div>
       {translation && (
         <p>
-          This version was translated on-device. You can switch back to built-in
-          guidance.
+          {t(
+            " This version was translated on-device. You can switch back to built-in guidance. ",
+          )}
         </p>
       )}
-      {toolNotice && <p role="status">{toolNotice}</p>}
-      {audioNotice && <p role="status">{audioNotice}</p>}
+      {toolNotice && <p role="status">{t(toolNotice)}</p>}
+      {audioNotice && <p role="status">{t(audioNotice)}</p>}
       <MaaSummary
         key={`${language}:${result.text}`}
+        sourceLanguage={/[\u0900-\u097F]/u.test(result.text) ? "hi" : "en"}
         text={result.text}
         language={language}
         disabled={!!localTask}
       />
       <details className="safety-scripts">
-        <summary>Safe reply and verification call script</summary>
+        <summary>{t("Safe reply and verification call script")}</summary>
         <p>
-          You do not need to reply to the sender. Verify independently using a
-          contact you already trust. If you choose to reply, review this draft
-          first.
+          {t(
+            " You do not need to reply to the sender. Verify independently using a contact you already trust. If you choose to reply, review this draft first. ",
+          )}
         </p>
-        <h4>Reply draft</h4>
+        <h4>{t("Reply draft")}</h4>
         <p lang={language}>{replyDraft ?? content.reply}</p>
         {support.writer && language === "en" && (
           <button
@@ -209,11 +224,11 @@ export function FamilySafety({
             disabled={!!localTask}
             onClick={() => void runLocalTool("reply")}
           >
-            {localTask === "reply" ? "Drafting…" : "Draft with local AI"}
+            {localTask === "reply" ? "Drafting…" : t("Draft with local AI")}
           </button>
         )}
-        {replyDraft && <p>Review this draft before replying.</p>}
-        <h4>What to ask on the call</h4>
+        {replyDraft && <p>{t("Review this draft before replying.")}</p>}
+        <h4>{t("What to ask on the call")}</h4>
         <p lang={language}>{content.call}</p>
       </details>
     </section>
@@ -225,20 +240,24 @@ export function AlreadyPaid({ result }: { result?: LocalResult }) {
   return (
     <details className="card already-paid">
       <summary>
-        <Phone size={18} aria-hidden="true" /> I already paid
+        <Phone size={18} aria-hidden="true" />
+        {t(" I already paid ")}
       </summary>
       <ol>
         <li>
-          In India, <a href="tel:1930">call 1930</a> to report financial cyber
-          fraud.
+          {t(" In India, ")}
+          <a href="tel:1930">{t("call 1930")}</a>
+          {t(" to report financial cyber fraud. ")}
         </li>
         <li>
-          Call your bank through the number on your card or its official app.
-          Ask how to secure your account and report the payment.
+          {t(
+            " Call your bank through the number on your card or its official app. Ask how to secure your account and report the payment. ",
+          )}
         </li>
         <li>
-          Keep the chat, screenshots, and transaction receipt. Report the
-          incident at{" "}
+          {t(
+            " Keep the chat, screenshots, and transaction receipt. Report the incident at",
+          )}{" "}
           <a href="https://cybercrime.gov.in/" target="_blank" rel="noreferrer">
             cybercrime.gov.in
           </a>
@@ -251,24 +270,28 @@ export function AlreadyPaid({ result }: { result?: LocalResult }) {
         onClick={() =>
           setDraft(
             [
-              "Subject: Suspected fraudulent payment",
+              t("Subject: Suspected fraudulent payment"),
               "",
-              "I am reporting a payment made after a suspicious request. Please review the transaction and tell me what steps I should take.",
+              t(
+                "I am reporting a payment made after a suspicious request. Please review the transaction and tell me what steps I should take.",
+              ),
               "",
-              "Date and time: [fill in]",
-              "Transaction reference: [fill in for your bank or official complaint]",
+              t("Date and time: [fill in]"),
+              t(
+                "Transaction reference: [fill in for your bank or official complaint]",
+              ),
               ...(result
-                ? ["", "Context from my redacted report:", result.text]
+                ? ["", t("Context from my redacted report:"), result.text]
                 : []),
             ].join("\n"),
           )
         }
       >
-        Prepare complaint draft
+        {t(" Prepare complaint draft ")}
       </button>
       {draft !== undefined && (
         <label className="complaint-draft">
-          Review your draft before sharing
+          {t(" Review your draft before sharing ")}
           <textarea
             rows={7}
             value={draft}

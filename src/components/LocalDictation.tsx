@@ -1,3 +1,4 @@
+import { t, useAppLanguage } from "../lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { Mic, Square } from "lucide-react";
 import {
@@ -12,8 +13,9 @@ export default function LocalDictation({
   disabled: boolean;
   onUse: (text: string) => void;
 }) {
+  const appLanguage = useAppLanguage();
   const supported = optionalLocalSupport().speech;
-  const [language, setLanguage] = useState("en-IN");
+  const [language, setLanguage] = useState(`${appLanguage}-IN`);
   const [prepared, setPrepared] = useState("");
   const [transcript, setTranscript] = useState("");
   const [state, setState] = useState("");
@@ -26,6 +28,14 @@ export default function LocalDictation({
   const operation = useRef(0);
   const mounted = useRef(true);
   const transcriptRef = useRef("");
+  useEffect(() => {
+    operation.current++;
+    recorder.current?.abort();
+    recorder.current = null;
+    setListening(false);
+    setLanguage(`${appLanguage}-IN`);
+    setPrepared("");
+  }, [appLanguage]);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -125,21 +135,24 @@ export default function LocalDictation({
     >
       <summary>
         <Mic size={17} />
-        Prefer speaking? Try local dictation <span>Optional</span>
+        {t(" Prefer speaking? Try local dictation ")}
+        <span>{t("Optional")}</span>
       </summary>
       <div className="dictation-content">
         <p>
-          Dictate what happened, or read the message aloud. Audio stays local.
-          Review the transcript before adding it to your check.
+          {t(
+            " Dictate what happened, or read the message aloud. Audio stays local. Review the transcript before adding it to your check. ",
+          )}
         </p>
         {!supported ? (
           <p className="tool-hint">
-            Strictly local speech recognition is unavailable in this browser.
-            Type or paste your message instead.
+            {t(
+              " Strictly local speech recognition is unavailable in this browser. Type or paste your message instead. ",
+            )}
           </p>
         ) : (
           <>
-            <label htmlFor="speech-language">Dictation language</label>
+            <label htmlFor="speech-language">{t("Dictation language")}</label>
             <select
               id="speech-language"
               value={language}
@@ -151,9 +164,9 @@ export default function LocalDictation({
                 setError("");
               }}
             >
-              <option value="en-IN">English · India</option>
-              <option value="hi-IN">Hindi · India (if supported)</option>
-              <option value="en-US">English · US</option>
+              <option value="en-IN">{t("English · India")}</option>
+              <option value="hi-IN">{t("Hindi · India (if supported)")}</option>
+              <option value="en-US">{t("English · US")}</option>
             </select>
             <div className="tool-actions">
               <button
@@ -162,10 +175,10 @@ export default function LocalDictation({
                 onClick={() => void prepare()}
               >
                 {preparing
-                  ? "Preparing speech pack…"
+                  ? t("Preparing speech pack…")
                   : prepared === language
-                    ? "Check speech pack"
-                    : "Prepare local speech pack"}
+                    ? t("Check speech pack")
+                    : t("Prepare local speech pack")}
               </button>
               {listening ? (
                 <button
@@ -175,7 +188,7 @@ export default function LocalDictation({
                   }}
                 >
                   <Square size={16} />
-                  Stop dictation
+                  {t(" Stop dictation ")}
                 </button>
               ) : (
                 <button
@@ -184,11 +197,13 @@ export default function LocalDictation({
                   onClick={() => void start()}
                 >
                   <Mic size={16} />
-                  Start local dictation
+                  {t(" Start local dictation ")}
                 </button>
               )}
             </div>
-            <label htmlFor="speech-transcript">Review your transcript</label>
+            <label htmlFor="speech-transcript">
+              {t("Review your transcript")}
+            </label>
             <textarea
               id="speech-transcript"
               value={transcript}
@@ -198,7 +213,9 @@ export default function LocalDictation({
                 transcriptRef.current = event.target.value;
                 setTranscript(event.target.value);
               }}
-              placeholder="Your words will appear here. Check names, amounts and numbers carefully."
+              placeholder={t(
+                "Your words will appear here. Check names, amounts and numbers carefully.",
+              )}
             />
             <button
               className="secondary"
@@ -210,23 +227,23 @@ export default function LocalDictation({
                 );
               }}
             >
-              Add transcript to message
+              {t(" Add transcript to message ")}
             </button>
             <p className="tool-hint">
-              Microphone permission is requested only when you start dictation.
-              Recording stops when you leave this tab or after 60 seconds.
-              Language availability is checked on your device.
+              {t(
+                " Microphone permission is requested only when you start dictation. Recording stops when you leave this tab or after 60 seconds. Language availability is checked on your device. ",
+              )}
             </p>
           </>
         )}
         {state && (
           <p role="status" className="local-progress">
-            {state}
+            {t(state)}
           </p>
         )}
         {error && (
           <p role="alert" className="tool-error">
-            {error}
+            {t(error)}
           </p>
         )}
       </div>

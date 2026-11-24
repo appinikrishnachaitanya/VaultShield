@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy, PenLine } from "lucide-react";
 import {
@@ -66,26 +67,29 @@ export default function LocalTools({ text }: { text: SanitizedText }) {
   return (
     <section
       className="optional-tools card"
-      aria-label="Optional on-device tools"
+      aria-label={t("Optional on-device tools")}
     >
       <div className="optional-title">
-        <span className="badge local">OPTIONAL · ON-DEVICE</span>
-        <h2>A little more clarity. Still private.</h2>
+        <span className="badge local">{t("OPTIONAL · ON-DEVICE")}</span>
+        <h2>{t("A little more clarity. Still private.")}</h2>
         <p>
-          Improve spelling and grammar in your English reply on this device.
+          {t(
+            " Improve spelling and grammar in your English reply on this device. ",
+          )}
         </p>
       </div>
       <div className="reply-tool-layout">
         <section className="local-tool">
           <h3>
             <PenLine size={20} />
-            Polish your reply
+            {t(" Polish your reply ")}
           </h3>
           <p>
-            Polish spelling and grammar in your reply. Suspicious evidence is
-            never rewritten.
+            {t(
+              " Polish spelling and grammar in your reply. Suspicious evidence is never rewritten. ",
+            )}
           </p>
-          <label htmlFor="reply-draft">Your reply · English</label>
+          <label htmlFor="reply-draft">{t("Your reply · English")}</label>
           <textarea
             id="reply-draft"
             value={draft}
@@ -110,7 +114,7 @@ export default function LocalTools({ text }: { text: SanitizedText }) {
               }
               onClick={() => void run("proof")}
             >
-              Polish my reply
+              {t(" Polish my reply ")}
             </button>
             <button
               className="secondary"
@@ -118,34 +122,35 @@ export default function LocalTools({ text }: { text: SanitizedText }) {
               onClick={() => void copy(draft)}
             >
               <Copy size={16} />
-              Copy reply
+              {t(" Copy reply ")}
             </button>
           </div>
           {(!support.proofreader || proofStatus === "unavailable") && (
             <p className="tool-hint">
-              Reply polishing is unavailable on this device. Your draft is
-              preserved; you can edit and copy it manually. If the model
-              crashed, close other AI tabs, restart Chrome, and check
-              chrome://on-device-internals before retrying. Nothing is sent to
-              the cloud.
+              {t(
+                "Reply polishing is unavailable on this device. Your draft is preserved; you can edit and copy it manually. If the model crashed, close other AI tabs, restart Chrome, and check chrome://on-device-internals before retrying. Nothing is sent to the cloud.",
+              )}
             </p>
           )}
           {corrected && (
             <div className="tool-output">
               <span className="badge local">
-                ON-DEVICE · {(corrected.durationMs / 1000).toFixed(2)}s
+                {t(" ON-DEVICE · ")}
+                {(corrected.durationMs / 1000).toFixed(2)}s
               </span>
-              <h4>Suggested correction</h4>
+              <h4>{t("Suggested correction")}</h4>
               {corrected.engine && (
                 <p className="tool-hint">
-                  Chrome Proofreader cancelled; this suggestion used{" "}
-                  {corrected.engine} AI.
+                  {t(" Chrome Proofreader cancelled; this suggestion used")}{" "}
+                  {corrected.engine}
+                  {t(" AI. ")}
                 </p>
               )}
               <p className="preserve-lines">{corrected.text}</p>
               <p className="tool-hint">
-                Check that names, numbers and meaning remain correct before
-                accepting.
+                {t(
+                  " Check that names, numbers and meaning remain correct before accepting. ",
+                )}
               </p>
               <button
                 className="secondary"
@@ -156,30 +161,32 @@ export default function LocalTools({ text }: { text: SanitizedText }) {
                 }}
               >
                 <Check size={16} />
-                Use this correction
+                {t(" Use this correction ")}
               </button>
             </div>
           )}
         </section>
       </div>
       <details className="source-details">
-        <summary>Compare with the redacted message</summary>
+        <summary>{t("Compare with the redacted message")}</summary>
         <p className="preserve-lines">{text}</p>
       </details>
       {busy && (
         <p role="status" className="local-progress">
-          {progress} Local models may take a minute or more on CPU, especially
-          after a specialist fails. Your reply stays on this device.
+          {t(progress)}
+          {t(
+            " Local models may take a minute or more on CPU, especially after a specialist fails. Your reply stays on this device. ",
+          )}
         </p>
       )}
       {error && (
         <p role="alert" className="tool-error">
-          {error}
+          {t(error)}
         </p>
       )}
       {notice && (
         <p role="status" className="tool-hint">
-          {notice}
+          {t(notice)}
         </p>
       )}
     </section>

@@ -1,26 +1,29 @@
+import { t } from "../lib/i18n";
 import { useState } from "react";
 import { pressureEvidenceParts } from "../lib/pressureEvidence";
 import type { LocalResult } from "../types/privacy";
 
 export default function PressureEvidence({ result }: { result: LocalResult }) {
   const [copyNotice, setCopyNotice] = useState("");
-  const help =
-    "Please call me on my saved number. I received a suspicious request and want help verifying it before taking any action.";
+  const help = t(
+    "Please call me on my saved number. I received a suspicious request and want help verifying it before taking any action.",
+  );
   return (
     <section
       className="card pressure-evidence"
-      aria-label="Redacted message and trusted verification"
+      aria-label={t("Redacted message and trusted verification")}
     >
-      <h3>Pause & understand</h3>
+      <h3>{t("Pause & understand")}</h3>
       <p>
-        Review this redacted preview for missed private details. Highlights mark
-        matching evidence, not proof of fraud.
+        {t(
+          " Review this redacted preview for missed private details. Highlights mark matching evidence, not proof of fraud. ",
+        )}
       </p>
       <div className="evidence-message">
         {pressureEvidenceParts(result.text, result.stages).map((part, index) =>
           part.stage ? (
             <mark key={index} className={`tactic-${part.stage.toLowerCase()}`}>
-              <span className="tactic-label">{part.stage}: </span>
+              <span className="tactic-label">{t(part.stage)}: </span>
               {part.text}
             </mark>
           ) : (
@@ -29,32 +32,36 @@ export default function PressureEvidence({ result }: { result: LocalResult }) {
         )}
       </div>
       <details className="source-details">
-        <summary>How to find a trusted contact</summary>
+        <summary>{t("How to find a trusted contact")}</summary>
         <ul>
           <li>
-            For a bank, open its app yourself or use the number printed on your
-            bank card.
+            {t(
+              " For a bank, open its app yourself or use the number printed on your bank card. ",
+            )}
           </li>
           <li>
-            For an organisation, type its known official website. Do not trust a
-            number just because it appears in a search result or AI answer.
+            {t(
+              " For an organisation, type its known official website. Do not trust a number just because it appears in a search result or AI answer. ",
+            )}
           </li>
           <li>
-            For a family emergency, call their saved number and ask your agreed
-            family safe-word.
+            {t(
+              " For a family emergency, call their saved number and ask your agreed family safe-word. ",
+            )}
           </li>
         </ul>
         <p>
-          Do not use the suspicious message’s number or link as your
-          verification route.
+          {t(
+            " Do not use the suspicious message’s number or link as your verification route. ",
+          )}
         </p>
       </details>
       <details className="source-details">
-        <summary>Ask for help another way</summary>
+        <summary>{t("Ask for help another way")}</summary>
         <p>
-          If family pairing or notifications are unavailable, copy this message
-          and send it yourself to someone you trust. Copying does not send
-          anything.
+          {t(
+            " If family pairing or notifications are unavailable, copy this message and send it yourself to someone you trust. Copying does not send anything. ",
+          )}
         </p>
         <p className="help-message">{help}</p>
         <div className="tool-actions">
@@ -74,10 +81,10 @@ export default function PressureEvidence({ result }: { result: LocalResult }) {
               }
             }}
           >
-            Copy help message
+            {t(" Copy help message ")}
           </button>
         </div>
-        {copyNotice && <p role="status">{copyNotice}</p>}
+        {copyNotice && <p role="status">{t(copyNotice)}</p>}
       </details>
     </section>
   );

@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { AlignLeft, Volume2, Square } from "lucide-react";
 import {
@@ -15,11 +16,13 @@ export default function MaaSummary({
   language,
   disabled = false,
   contentKind = "message",
+  sourceLanguage = "en",
 }: {
   text: SanitizedText;
   language: FamilyLanguage;
   disabled?: boolean;
   contentKind?: "message" | "assessment";
+  sourceLanguage?: "en" | "hi";
 }) {
   const [summary, setSummary] = useState<FamilySummaryResult>();
   const canReadSummary = useLocalVoice(summary?.language ?? language);
@@ -46,9 +49,14 @@ export default function MaaSummary({
     setError("");
     setAudioNotice("");
     try {
-      const value = await summarizeForFamily(text, language, (message) => {
-        if (active.current) setProgress(message);
-      });
+      const value = await summarizeForFamily(
+        text,
+        language,
+        (message) => {
+          if (active.current) setProgress(message);
+        },
+        sourceLanguage,
+      );
       if (active.current) setSummary(value);
     } catch (error) {
       if (active.current)
@@ -72,18 +80,25 @@ export default function MaaSummary({
   return (
     <section
       className="maa-summary"
-      aria-label={`Maa Mode ${contentKind} summary`}
+      aria-label={`${t("Maa Mode")} ${t(contentKind)} ${t("summary")}`}
     >
       <h4>
-        <AlignLeft size={19} aria-hidden="true" /> Understand this {contentKind}{" "}
-        · {familyLanguages[language]}
+        <AlignLeft size={19} aria-hidden="true" />
+        {t(" Understand this ")}
+        {t(contentKind)} · {familyLanguages[language]}
       </h4>
       <p>
         {contentKind === "assessment"
-          ? "A short, simple explanation in your language, created privately on this device when supported. No additional cloud request."
-          : "Summarize the redacted message locally, then translate it into your Maa Mode language when supported."}
+          ? t(
+              "A short, simple explanation in your language, created privately on this device when supported. No additional cloud request.",
+            )
+          : t(
+              "Summarize the redacted message locally, then translate it into your Maa Mode language when supported.",
+            )}
         {contentKind === "message" &&
-          " English source text is currently required by the summarizer."}
+          t(
+            " Local summarization uses English internally. Hindi source text is translated on-device when supported.",
+          )}
       </p>
       <div className="tool-actions">
         <button
@@ -92,7 +107,7 @@ export default function MaaSummary({
           disabled={disabled || busy || !support.summarizer}
           onClick={() => void summarize()}
         >
-          {busy ? "Preparing summary…" : "Summarize in my language"}
+          {busy ? t("Preparing summary…") : t("Summarize in my language")}
         </button>
         {summary && (canReadSummary || reading) && (
           <button
@@ -115,58 +130,64 @@ export default function MaaSummary({
             ) : (
               <Volume2 size={17} aria-hidden="true" />
             )}
-            {reading ? "Stop reading" : "Read summary aloud"}
+            {reading ? t("Stop reading") : t("Read summary aloud")}
           </button>
         )}
       </div>
       {!support.summarizer && (
         <p className="tool-hint">
           {contentKind === "assessment"
-            ? "Local summarization is unavailable in this browser. The full assessment above is still available. No cloud translation was used."
-            : "Local summarization is unavailable in this browser. The Maa Mode safety guidance above is still available."}
+            ? t(
+                "Local summarization is unavailable in this browser. The full assessment above is still available. No cloud translation was used.",
+              )
+            : t(
+                "Local summarization is unavailable in this browser. The Maa Mode safety guidance above is still available.",
+              )}
         </p>
       )}
       {busy && (
         <p role="status" className="local-progress">
-          {progress}
+          {t(progress)}
         </p>
       )}
       {error && (
         <p role="alert" className="tool-error">
-          {error}
+          {t(error)}
         </p>
       )}
       {summary && (
         <div className="tool-output">
           <span className="badge local">
-            ON-DEVICE · {(summary.durationMs / 1000).toFixed(2)}s ·{" "}
+            {t(" ON-DEVICE · ")}
+            {(summary.durationMs / 1000).toFixed(2)}s ·{" "}
             {familyLanguages[summary.language]}
           </span>
           {summary.notice && (
             <p role="status" className="tool-hint">
-              {summary.notice}
+              {t(summary.notice)}
             </p>
           )}
           <p lang={summary.language} className="preserve-lines">
             {summary.text}
           </p>
           <p className="tool-hint">
-            AI can omit details or mistranslate. Compare deadlines, amounts and
-            obligations with the source; this is not a legal assessment.
+            {t(
+              " AI can omit details or mistranslate. Compare deadlines, amounts and obligations with the source; this is not a legal assessment. ",
+            )}
           </p>
         </div>
       )}
       {audioNotice && (
         <p role="status" className="tool-hint">
-          {audioNotice}
+          {t(audioNotice)}
         </p>
       )}
       <details className="source-details">
         <summary>
-          Compare with the{" "}
+          {t(" Compare with the")}{" "}
           {contentKind === "assessment"
-            ? "full assessment"
-            : "redacted message"}
+            ? t("full assessment")
+            : t("redacted message")}
         </summary>
         <p className="preserve-lines">{text}</p>
       </details>

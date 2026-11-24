@@ -76,12 +76,10 @@ describe("optional local AI boundary", () => {
     vi.stubGlobal("window", {
       Summarizer: {
         availability: vi.fn().mockResolvedValue("available"),
-        create: vi
-          .fn()
-          .mockResolvedValue({
-            summarize: vi.fn().mockResolvedValue("Payment requested."),
-            destroy: vi.fn(),
-          }),
+        create: vi.fn().mockResolvedValue({
+          summarize: vi.fn().mockResolvedValue("Payment requested."),
+          destroy: vi.fn(),
+        }),
       },
       Translator: {
         availability: vi.fn().mockResolvedValue("unavailable"),
@@ -103,12 +101,10 @@ describe("optional local AI boundary", () => {
     vi.stubGlobal("window", {
       Summarizer: {
         availability: vi.fn().mockResolvedValue("available"),
-        create: vi
-          .fn()
-          .mockResolvedValue({
-            summarize: vi.fn().mockResolvedValue("Payment requested."),
-            destroy: vi.fn(),
-          }),
+        create: vi.fn().mockResolvedValue({
+          summarize: vi.fn().mockResolvedValue("Payment requested."),
+          destroy: vi.fn(),
+        }),
       },
       Translator: { availability: vi.fn(), create },
     });
@@ -354,4 +350,51 @@ describe("optional local AI boundary", () => {
     expect(vi.getTimerCount()).toBe(0);
     expect(fetch).not.toHaveBeenCalled();
   });
+});
+it("translates Hindi source locally before English summarization, then returns Hindi without cloud", async () => {
+  const translations = [
+    {
+      translate: vi.fn().mockResolvedValue("A demand for urgent payment."),
+      destroy: vi.fn(),
+    },
+    {
+      translate: vi.fn().mockResolvedValue("पैसे भेजने की जल्दबाज़ी कराई जा रही है।"),
+      destroy: vi.fn(),
+    },
+  ];
+  const create = vi
+    .fn()
+    .mockResolvedValueOnce(translations[0])
+    .mockResolvedValueOnce(translations[1]);
+  const summarize = vi.fn().mockResolvedValue("Pause before sending money.");
+  vi.stubGlobal("window", {
+    Translator: {
+      availability: vi.fn().mockResolvedValue("available"),
+      create,
+    },
+    Summarizer: {
+      availability: vi.fn().mockResolvedValue("available"),
+      create: vi.fn().mockResolvedValue({ summarize, destroy: vi.fn() }),
+    },
+  });
+  const result = await summarizeForFamily(
+    maskIdentifiers("अभी पैसे भेजो।").text,
+    "hi",
+    undefined,
+    "hi",
+  );
+  expect(create.mock.calls[0][0]).toMatchObject({
+    sourceLanguage: "hi",
+    targetLanguage: "en",
+  });
+  expect(create.mock.calls[1][0]).toMatchObject({
+    sourceLanguage: "en",
+    targetLanguage: "hi",
+  });
+  expect(summarize.mock.calls[0][0]).toBe("A demand for urgent payment.");
+  expect(result.language).toBe("hi");
+  expect(result.text).toContain("जल्दबाज़ी");
+  expect(fetch).not.toHaveBeenCalled();
+  expect(translations[0].destroy).toHaveBeenCalledOnce();
+  expect(translations[1].destroy).toHaveBeenCalledOnce();
 });

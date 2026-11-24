@@ -1,3 +1,5 @@
+import { stopLocalReading } from "./lib/localVoice";
+import { t, useAppLanguage, setLanguage, tacticCount } from "./lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ShieldCheck,
@@ -74,6 +76,10 @@ const examples = [
   },
 ];
 export default function App() {
+  const appLanguage = useAppLanguage();
+  useEffect(() => {
+    document.documentElement.lang = appLanguage;
+  }, [appLanguage]);
   const [tab, setTab] = useState<"check" | "family" | "privacy">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
@@ -212,7 +218,13 @@ export default function App() {
         );
       }
       setCloud(
-        await verifyWithCloud(sanitized, consent, input, verificationPurpose),
+        await verifyWithCloud(
+          sanitized,
+          consent,
+          input,
+          verificationPurpose,
+          appLanguage,
+        ),
       );
       setConsent(false);
       setReview(false);
@@ -365,13 +377,15 @@ export default function App() {
           </span>
           VaultShield
         </a>
-        <div className="workspace-label">YOUR PEACE OF MIND, PROTECTED</div>
+        <div className="workspace-label">
+          {t("YOUR PEACE OF MIND, PROTECTED")}
+        </div>
         <nav>
           {(
             [
-              { id: "check", icon: ScanLine, label: "Check something" },
-              { id: "family", icon: Users, label: "Family circle" },
-              { id: "privacy", icon: LockKeyhole, label: "Your privacy" },
+              { id: "check", icon: ScanLine, label: t("Check something") },
+              { id: "family", icon: Users, label: t("Family circle") },
+              { id: "privacy", icon: LockKeyhole, label: t("Your privacy") },
             ] as const
           ).map((item) => (
             <button
@@ -380,7 +394,7 @@ export default function App() {
               onClick={() => setTab(item.id)}
             >
               <item.icon size={21} />
-              {item.label}
+              {t(item.label)}
               {item.id === "family" && alerts.length > 0 && (
                 <span className="nav-count">{alerts.length}</span>
               )}
@@ -392,45 +406,74 @@ export default function App() {
             <Fingerprint size={26} />
           </div>
           <strong>
-            A little pause.
-            <br />A lot of protection.
+            {t(" A little pause. ")}
+            <br />
+            {t("A lot of protection. ")}
           </strong>
           <p>
-            Your personal information belongs to you. Let’s keep it that way.
+            {t(
+              " Your personal information belongs to you. Let’s keep it that way. ",
+            )}
           </p>
           <div className="session">
             <span className="dot" />
-            {online ? "Private by design" : "You are offline"}
+            {online ? t("Private by design") : t("You are offline")}
           </div>
         </div>
       </aside>
       <div className="main-shell" inert={review}>
         <header className="topbar">
-          <span className="breadcrumb">Your safety workspace</span>
+          <label className="app-language">
+            <span>{t("Language")}</span>
+            <select
+              aria-label="English / हिन्दी"
+              value={appLanguage}
+              onChange={(event) => {
+                setLanguage(event.target.value as "en" | "hi");
+                stopLocalReading();
+              }}
+            >
+              <option value="en" lang="en">
+                English
+              </option>
+              <option value="hi" lang="hi">
+                हिन्दी
+              </option>
+            </select>
+          </label>
+          <span className="breadcrumb">{t("Your safety workspace")}</span>
           <span className="top-status ai-capability" role="status">
-            {capabilityLabel(capability)}
+            {t(capabilityLabel(capability))}
           </span>
           <span className="top-status">
             {online ? <LockKeyhole size={14} /> : <WifiOff size={14} />}{" "}
-            {online ? "No account needed" : "Offline mode"}
+            {online ? t("No account needed") : t("Offline mode")}
           </span>
           <button
             className="avatar"
-            aria-label="Open family circle"
+            aria-label={t("Open family circle")}
             onClick={() => setTab("family")}
           >
             VS
           </button>
         </header>
         <main>
+          <p className="language-note">
+            {t(
+              "Source messages and quoted evidence stay in their original language. New AI explanations use your selected language.",
+            )}
+          </p>
           <div className="connection-status" role="status">
-            {status}
+            {t(status)}
           </div>
           {error && (
             <div role="alert" className="banner error">
               <Info size={20} />
-              <span>{error}</span>
-              <button aria-label="Dismiss error" onClick={() => setError("")}>
+              <span>{t(error)}</span>
+              <button
+                aria-label={t("Dismiss error")}
+                onClick={() => setError("")}
+              >
                 <X size={18} />
               </button>
             </div>
@@ -438,22 +481,23 @@ export default function App() {
           {notice && (
             <div role="status" className="banner success">
               <CircleCheck size={20} />
-              {notice}
+              {t(notice)}
             </div>
           )}
           {tab === "check" && (
             <>
               <div className="page-heading">
                 <span className="eyebrow">
-                  <span className="tiny-line" /> A SECOND OPINION, BEFORE YOU
-                  ACT
+                  <span className="tiny-line" />
+                  {t(" A SECOND OPINION, BEFORE YOU ACT ")}
                 </span>
                 <h1>
-                  Something feel <span>off?</span>
+                  {t(" Something feel ")}
+                  <span>{t("off?")}</span>
                   <br />
-                  Let’s check it together.
+                  {t(" Let’s check it together. ")}
                 </h1>
-                <p>Check it before you pay for it. Privately.</p>
+                <p>{t("Check it before you pay for it. Privately.")}</p>
               </div>
               <div className="workspace">
                 <section className="check-column">
@@ -463,8 +507,10 @@ export default function App() {
                         <MessageSquareText size={23} />
                       </div>
                       <div>
-                        <h2>What would you like to check?</h2>
-                        <p>A message, payment request, or contract clause.</p>
+                        <h2>{t("What would you like to check?")}</h2>
+                        <p>
+                          {t("A message, payment request, or contract clause.")}
+                        </p>
                       </div>
                     </div>
                     <LocalDictation
@@ -484,7 +530,7 @@ export default function App() {
                       }}
                     />
                     <label htmlFor="message" className="input-label">
-                      Paste your message
+                      {t(" Paste your message ")}
                     </label>
                     <button
                       type="button"
@@ -492,7 +538,7 @@ export default function App() {
                       disabled={!!busy}
                       onClick={() => void pasteMessage()}
                     >
-                      Paste Message
+                      {t(" Paste Message ")}
                     </button>
                     <textarea
                       ref={messageEditor}
@@ -504,16 +550,16 @@ export default function App() {
                         setInput(e.target.value);
                         reset();
                       }}
-                      placeholder={
-                        "“Your account will be blocked. Update your KYC immediately…”"
-                      }
+                      placeholder={t(
+                        "“Your account will be blocked. Update your KYC immediately…”",
+                      )}
                     />
                     <div className="editor-footer">
-                      <span>English, हिंदी & Hinglish welcome</span>
+                      <span>{t("English, हिंदी & Hinglish welcome")}</span>
                       <span>{input.length.toLocaleString()}/16,000</span>
                     </div>
                     <div className="divider">
-                      <span>or add a screenshot</span>
+                      <span>{t("or add a screenshot")}</span>
                     </div>
                     <input
                       ref={file}
@@ -530,11 +576,11 @@ export default function App() {
                       <div className="image-preview">
                         <img
                           src={image.url}
-                          alt="Selected screenshot, kept on this device"
+                          alt={t("Selected screenshot, kept on this device")}
                         />
                         <span>{image.name}</span>
                         <button
-                          aria-label="Remove image"
+                          aria-label={t("Remove image")}
                           disabled={!!busy}
                           onClick={() => {
                             setImage(undefined);
@@ -552,8 +598,8 @@ export default function App() {
                       >
                         <Upload size={22} />
                         <span>
-                          <strong>Upload a screenshot</strong>
-                          <small>One JPG or PNG · up to 8 MB</small>
+                          <strong>{t("Upload a screenshot")}</strong>
+                          <small>{t("One JPG or PNG · up to 8 MB")}</small>
                         </span>
                         <span className="upload-plus">+</span>
                       </button>
@@ -565,8 +611,8 @@ export default function App() {
                     >
                       <ShieldCheck size={21} />
                       {busy === "Checking on your device"
-                        ? "Checking on your device…"
-                        : "Check privately"}
+                        ? t("Checking on your device…")
+                        : t("Check privately")}
                       {!busy && <span className="button-key">↵</span>}
                     </button>
                     {busy === "Checking on your device" && (
@@ -575,22 +621,26 @@ export default function App() {
                       </p>
                     )}
                     {image && error && (
-                      <p className="local-progress">{screenshotUnavailable}</p>
+                      <p className="local-progress">
+                        {t(screenshotUnavailable)}
+                      </p>
                     )}
                     <div className="private-note">
                       <LockKeyhole size={14} />
-                      Your message stays on this device. Cloud is always your
-                      choice.
+                      {t(
+                        " Your message stays on this device. Cloud is always your choice. ",
+                      )}
                     </div>
                   </div>
                   <div className="examples">
                     <div className="section-label">
-                      NOT SURE? TRY AN EXAMPLE <span>Sample messages</span>
+                      {t(" NOT SURE? TRY AN EXAMPLE ")}
+                      <span>{t("Sample messages")}</span>
                     </div>
                     <div className="example-grid">
                       {examples.map((e, i) => (
                         <button
-                          key={e.title}
+                          key={t(e.title)}
                           disabled={!!busy}
                           onClick={() => {
                             setInput(e.text);
@@ -608,8 +658,8 @@ export default function App() {
                             )}
                           </span>
                           <span>
-                            <strong>{e.title}</strong>
-                            <small>{e.label}</small>
+                            <strong>{t(e.title)}</strong>
+                            <small>{t(e.label)}</small>
                           </span>
                           <ChevronRight size={15} />
                         </button>
@@ -623,63 +673,67 @@ export default function App() {
                       <div className="icon-tile">
                         <Fingerprint size={22} />
                       </div>
-                      <span>YOUR PRIVACY FIREWALL</span>
+                      <span>{t("YOUR PRIVACY FIREWALL")}</span>
                       <LockKeyhole size={17} />
                     </div>
                     <h2>
-                      Private first.
+                      {t(" Private first. ")}
                       <br />
-                      Helpful second.
+                      {t(" Helpful second. ")}
                     </h2>
                     <p>
-                      Personal details are removed on your device before you
-                      choose to verify online.
+                      {t(
+                        " Personal details are removed on your device before you choose to verify online. ",
+                      )}
                     </p>
                     <div className="redaction-demo">
                       <div>
-                        <span>Personal name</span>
+                        <span>{t("Personal name")}</span>
                         <code>[REDACTED]</code>
                       </div>
                       <div>
-                        <span>Aadhaar number</span>
+                        <span>{t("Aadhaar number")}</span>
                         <code>[REDACTED]</code>
                       </div>
                       <div>
-                        <span>UPI / phone</span>
+                        <span>{t("UPI / phone")}</span>
                         <code>[REDACTED]</code>
                       </div>
                       <div className="demo-caption">
                         <ShieldCheck size={14} />
                         {result
-                          ? `${result.masked} redaction markers · review for missed details`
-                          : "Illustration · your actual preview appears after checking"}
+                          ? `${result.masked} ${t("redaction markers · review for missed details")}`
+                          : t(
+                              "Illustration · your actual preview appears after checking",
+                            )}
                       </div>
                     </div>
                     <div className="flow-step">
                       <span className="step-number">1</span>
                       <div>
-                        <strong>Check on your device</strong>
+                        <strong>{t("Check on your device")}</strong>
                         <small>
-                          Find pressure tactics & mask private details.
+                          {t(" Find pressure tactics & mask private details. ")}
                         </small>
                       </div>
-                      <span className="local-tag">LOCAL</span>
+                      <span className="local-tag">{t("LOCAL")}</span>
                     </div>
                     <div className="step-connector" />
                     <div className="flow-step">
                       <span className="step-number optional">2</span>
                       <div>
                         <strong>
-                          Review & verify <em>Optional</em>
+                          {t(" Review & verify ")}
+                          <em>{t("Optional")}</em>
                         </strong>
                         <small>
-                          Only the redacted text. Only with permission.
+                          {t(" Only the redacted text. Only with permission. ")}
                         </small>
                       </div>
                     </div>
                     <div className="privacy-bottom">
                       <Check size={16} />
-                      No message history stored
+                      {t(" No message history stored ")}
                     </div>
                   </div>
                   <div className="gentle-note">
@@ -687,16 +741,17 @@ export default function App() {
                       <Shield size={20} />
                     </span>
                     <div>
-                      <strong>Pressure is a reason to pause.</strong>
+                      <strong>{t("Pressure is a reason to pause.")}</strong>
                       <p>
-                        Before sending money or sharing a code, contact someone
-                        you trust through a number you already know.
+                        {t(
+                          " Before sending money or sharing a code, contact someone you trust through a number you already know. ",
+                        )}
                       </p>
                     </div>
                   </div>
                   <div className="service-status">
                     <span className="dot" />
-                    {status}
+                    {t(status)}
                   </div>
                 </aside>
               </div>
@@ -707,37 +762,45 @@ export default function App() {
                       <span className="badge local">
                         <ShieldCheck size={14} />
                         {result.source === "LOCAL_RULES"
-                          ? "LOCAL RULES · NOT AI"
+                          ? t("LOCAL RULES · NOT AI")
                           : usesAndroidModel
-                            ? "NATIVE ON-DEVICE AI"
-                            : "ON-DEVICE AI"}
-                        {result.ruleAssisted ? " + LOCAL RULES" : ""} ·{" "}
+                            ? t("NATIVE ON-DEVICE AI")
+                            : t("ON-DEVICE AI")}
+                        {result.ruleAssisted ? t(" + LOCAL RULES") : ""} ·{" "}
                         {(result.durationMs / 1000).toFixed(2)}s
                       </span>
                       <h2>
                         {!hasAssessableText(result.text)
-                          ? "No readable message to assess"
+                          ? t("No readable message to assess")
                           : count === 0
                             ? result.source === "LOCAL_RULES"
-                              ? "No common pressure phrases matched"
+                              ? t("No common pressure phrases matched")
                               : result.ruleAssisted
-                                ? "AI assessment incomplete"
-                                : "No pressure tactics found"
-                            : `${count} of 4 pressure tactics found`}
+                                ? t("AI assessment incomplete")
+                                : t("No pressure tactics found")
+                            : tacticCount(count)}
                       </h2>
                       <p>
                         {!hasAssessableText(result.text)
-                          ? "The image may have no readable message, or masking removed all usable text. This is not a safety assessment. Upload a clearer screenshot or paste the message."
+                          ? t(
+                              "The image may have no readable message, or masking removed all usable text. This is not a safety assessment. Upload a clearer screenshot or paste the message.",
+                            )
                           : result.source === "LOCAL_RULES"
-                            ? "This basic check matches common phrases and masks recognizable identifiers. Review for missed pressure signals and private details."
+                            ? t(
+                                "This basic check matches common phrases and masks recognizable identifiers. Review for missed pressure signals and private details.",
+                              )
                             : count === 0
-                              ? "This is not a guarantee of safety. Verify payment requests independently."
-                              : "Pause before you pay. Here’s how this message is applying pressure."}
+                              ? t(
+                                  "This is not a guarantee of safety. Verify payment requests independently.",
+                                )
+                              : t(
+                                  "Pause before you pay. Here’s how this message is applying pressure.",
+                                )}
                       </p>
                       <p className="tool-hint">
-                        This count measures pressure tactics, not fraud
-                        probability. Zero tactics does not mean the request is
-                        genuine.
+                        {t(
+                          " This count measures pressure tactics, not fraud probability. Zero tactics does not mean the request is genuine. ",
+                        )}
                       </p>
                     </div>
                     <button
@@ -753,15 +816,16 @@ export default function App() {
                       }
                     >
                       <Users size={18} />
-                      Alert family
+                      {t(" Alert family ")}
                     </button>
                   </div>
                   {result.fallbackReason && (
                     <div className="local-progress" role="status">
-                      <p>{result.fallbackReason}</p>
+                      <p>{t(result.fallbackReason)}</p>
                       <p>
-                        Last step: {result.fallbackStage}. Error code:{" "}
-                        {result.fallbackCode}.
+                        {t(" Last step: ")}
+                        {t(result.fallbackStage ?? "")}
+                        {t(". Error code:")} {result.fallbackCode}.
                       </p>
                       <button
                         type="button"
@@ -777,22 +841,33 @@ export default function App() {
                         }}
                       >
                         {diagnosticsBusy
-                          ? "Checking browser support…"
-                          : "Check local AI support"}
+                          ? t("Checking browser support…")
+                          : t("Check local AI support")}
                       </button>
                       {localDiagnostics && (
                         <ul>
-                          <li>Platform: {localDiagnostics.platform}</li>
                           <li>
-                            Secure page:{" "}
-                            {localDiagnostics.securePage ? "yes" : "no"}
+                            {t("Platform: ")}
+                            {localDiagnostics.platform}
                           </li>
                           <li>
-                            Chrome Prompt API exposed:{" "}
-                            {localDiagnostics.promptApiExposed ? "yes" : "no"}
+                            {t(" Secure page:")}{" "}
+                            {localDiagnostics.securePage ? t("yes") : t("no")}
                           </li>
-                          <li>Text model: {localDiagnostics.text}</li>
-                          <li>Image model: {localDiagnostics.image}</li>
+                          <li>
+                            {t(" Chrome Prompt API exposed:")}{" "}
+                            {localDiagnostics.promptApiExposed
+                              ? t("yes")
+                              : t("no")}
+                          </li>
+                          <li>
+                            {t("Text model: ")}
+                            {localDiagnostics.text}
+                          </li>
+                          <li>
+                            {t("Image model: ")}
+                            {localDiagnostics.image}
+                          </li>
                         </ul>
                       )}
                     </div>
@@ -802,19 +877,19 @@ export default function App() {
                       <PressureEvidence result={result} />
                       {result.ruleAssisted && (
                         <p className="tool-hint">
-                          Local AI returned a partial assessment. Its findings
-                          are preserved. Missing categories were checked
-                          separately with local phrase rules; a missing AI
-                          assessment does not mean no pressure.
+                          {t(
+                            " Local AI returned a partial assessment. Its findings are preserved. Missing categories were checked separately with local phrase rules; a missing AI assessment does not mean no pressure. ",
+                          )}
                         </p>
                       )}
                       {result.preparationMs !== undefined &&
                         result.generationMs !== undefined && (
                           <p className="tool-hint">
-                            Preparation:{" "}
-                            {(result.preparationMs / 1000).toFixed(1)}s ·
-                            Analysis: {(result.generationMs / 1000).toFixed(1)}
-                            s. Measured on this device.
+                            {t(" Preparation:")}{" "}
+                            {(result.preparationMs / 1000).toFixed(1)}
+                            {t("s · Analysis: ")}
+                            {(result.generationMs / 1000).toFixed(1)}
+                            {t(" s. Measured on this device. ")}
                           </p>
                         )}
                       <FamilySafety
@@ -836,26 +911,26 @@ export default function App() {
                                     ? "?"
                                     : "✓"}
                               </span>
-                              <h3>{s.name}</h3>
+                              <h3>{t(s.name)}</h3>
                               <small>
                                 {s.found
-                                  ? "Detected"
+                                  ? t("Detected")
                                   : s.assessedByAI === false
-                                    ? "No phrase match"
-                                    : "Not detected"}
+                                    ? t("No phrase match")
+                                    : t("Not detected")}
                               </small>
                             </div>
                             <p className="tool-hint">
                               {s.assessmentSource === "LOCAL_RULES"
                                 ? result.source === "ON_DEVICE"
-                                  ? "Not assessed by AI · LOCAL RULES"
-                                  : "LOCAL RULES · NOT AI"
-                                : "ON-DEVICE AI"}
+                                  ? t("Not assessed by AI · LOCAL RULES")
+                                  : t("LOCAL RULES · NOT AI")
+                                : t("ON-DEVICE AI")}
                             </p>
                             {s.found && (
                               <>
                                 <blockquote>“{s.evidence}”</blockquote>
-                                <p>{s.action}</p>
+                                <p>{t(s.action)}</p>
                               </>
                             )}
                           </div>
@@ -863,10 +938,11 @@ export default function App() {
                       </div>
                       {!!result.imageMismatches?.length && (
                         <section className="card family-safety">
-                          <h3>Possible screenshot mismatches</h3>
+                          <h3>{t("Possible screenshot mismatches")}</h3>
                           <p>
-                            These are observations from the image. Verify them
-                            independently.
+                            {t(
+                              " These are observations from the image. Verify them independently. ",
+                            )}
                           </p>
                           <ul>
                             {result.imageMismatches.map((item, index) => (
@@ -876,7 +952,7 @@ export default function App() {
                         </section>
                       )}
                       <details className="local-tools-drawer">
-                        <summary>Polish your reply · Optional</summary>
+                        <summary>{t("Polish your reply · Optional")}</summary>
                         <LocalTools
                           key={`local-tools:${result.text}`}
                           text={result.text}
@@ -887,14 +963,15 @@ export default function App() {
                   <div className="card cloud-invite">
                     <Cloud size={28} />
                     <div>
-                      <h3>Want a second layer of verification?</h3>
+                      <h3>{t("Want a second layer of verification?")}</h3>
                       <p>
-                        Automated masking can miss details. Please check the
-                        redacted text carefully before approving. Choose a
-                        hybrid second opinion or a cloud check of public
-                        sources.{" "}
+                        {t(
+                          " Automated masking can miss details. Please check the redacted text carefully before approving. Choose a hybrid second opinion or a cloud check of public sources.",
+                        )}{" "}
                         {!hasAssessableText(result.text) &&
-                          "Verification is unavailable because no readable message remains. Your image has not been uploaded."}
+                          t(
+                            "Verification is unavailable because no readable message remains. Your image has not been uploaded.",
+                          )}
                       </p>
                     </div>
                     <button
@@ -905,7 +982,7 @@ export default function App() {
                         setConsent(false);
                       }}
                     >
-                      Review & verify
+                      {t(" Review & verify ")}
                     </button>
                   </div>
                 </div>
@@ -914,9 +991,11 @@ export default function App() {
               {cloud && <CloudAssessment key={cloud.text} cloud={cloud} />}
               <div className="page-footer">
                 <LockKeyhole size={14} />
-                <span>Your instincts matter. We help you check the facts.</span>
+                <span>
+                  {t("Your instincts matter. We help you check the facts.")}
+                </span>
                 <span className="footer-right">
-                  Built for a safer everyday.
+                  {t(" Built for a safer everyday. ")}
                 </span>
               </div>
             </>
@@ -924,18 +1003,22 @@ export default function App() {
           {tab === "family" && (
             <>
               <div className="page-heading">
-                <span className="eyebrow">A TRUSTED SECOND PAIR OF EYES</span>
+                <span className="eyebrow">
+                  {t("A TRUSTED SECOND PAIR OF EYES")}
+                </span>
                 <h1>
-                  Your family <span>circle.</span>
+                  {t(" Your family ")}
+                  <span>{t("circle.")}</span>
                 </h1>
-                <p>Ask for help without sharing your private message.</p>
+                <p>{t("Ask for help without sharing your private message.")}</p>
               </div>
               <div className="family-layout">
                 <section className="card">
-                  <h2>Connect someone you trust</h2>
+                  <h2>{t("Connect someone you trust")}</h2>
                   <p>
-                    Invite one person using a single-use code. It expires in 10
-                    minutes.
+                    {t(
+                      " Invite one person using a single-use code. It expires in 10 minutes. ",
+                    )}
                   </p>
                   <button
                     className="primary"
@@ -947,7 +1030,7 @@ export default function App() {
                     }
                   >
                     <Users size={18} />
-                    Create invitation
+                    {t(" Create invitation ")}
                   </button>
                   {invite && (
                     <div className="invite-code">
@@ -964,17 +1047,19 @@ export default function App() {
                         }
                       >
                         <Copy size={16} />
-                        Copy
+                        {t(" Copy ")}
                       </button>
                     </div>
                   )}
                   <hr />
-                  <label htmlFor="family-code">Have an invitation?</label>
+                  <label htmlFor="family-code">
+                    {t("Have an invitation?")}
+                  </label>
                   <input
                     id="family-code"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="Paste your family member’s code"
+                    placeholder={t("Paste your family member’s code")}
                   />
                   <button
                     className="secondary"
@@ -987,20 +1072,25 @@ export default function App() {
                       })
                     }
                   >
-                    Join family circle
+                    {t(" Join family circle ")}
                   </button>
                 </section>
                 <section className="card">
-                  <h2>People & notifications</h2>
+                  <h2>{t("People & notifications")}</h2>
                   <p>
                     {members.length
                       ? `${members.length} trusted connection(s)`
-                      : "No one paired yet. Create or accept an invitation to get started."}
+                      : t(
+                          "No one paired yet. Create or accept an invitation to get started.",
+                        )}
                   </p>
                   {members.map((m, i) => (
                     <div className="member" key={m}>
                       <Users size={20} />
-                      <span>Family member {i + 1}</span>
+                      <span>
+                        {t("Family member ")}
+                        {i + 1}
+                      </span>
                       <button
                         aria-label={`Remove family member ${i + 1}`}
                         onClick={() =>
@@ -1024,24 +1114,30 @@ export default function App() {
                     }
                   >
                     <Bell size={18} />
-                    Enable notifications
+                    {t(" Enable notifications ")}
                   </button>
-                  <h3 className="inbox-title">Help requests</h3>
+                  <h3 className="inbox-title">{t("Help requests")}</h3>
                   {alerts.length ? (
                     alerts.map((a) => (
                       <div className="alert-item" key={a.id}>
                         <Bell size={18} />
                         <span>
-                          Help requested · {a.stages}/4 stages
+                          {t(" Help requested · ")}
+                          {a.stages}
+                          {t("/4 stages ")}
                           <br />
                           <small>
-                            Call your family member on their saved number.
+                            {t(
+                              " Call your family member on their saved number. ",
+                            )}
                           </small>
                         </span>
                       </div>
                     ))
                   ) : (
-                    <p className="empty-note">Your family inbox is clear.</p>
+                    <p className="empty-note">
+                      {t("Your family inbox is clear.")}
+                    </p>
                   )}
                 </section>
               </div>
@@ -1050,11 +1146,12 @@ export default function App() {
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">
-                <span className="eyebrow">YOU ARE IN CONTROL</span>
+                <span className="eyebrow">{t("YOU ARE IN CONTROL")}</span>
                 <h1>
-                  Your data. <span>Your decision.</span>
+                  {t(" Your data. ")}
+                  <span>{t("Your decision.")}</span>
                 </h1>
-                <p>Here’s exactly what stays and what leaves.</p>
+                <p>{t("Here’s exactly what stays and what leaves.")}</p>
               </div>
               <div className="privacy-section-grid">
                 <section className="card privacy-section">
@@ -1062,11 +1159,11 @@ export default function App() {
                     <LockKeyhole size={21} aria-hidden="true" />
                   </div>
                   <div>
-                    <h2>On this device</h2>
+                    <h2>{t("On this device")}</h2>
                     <p>
-                      Your original text and screenshots stay in the app’s
-                      memory during the private check. VaultShield does not save
-                      these messages in Firestore or browser storage.
+                      {t(
+                        " Your original text and screenshots stay in the app’s memory during the private check. VaultShield does not save these messages in Firestore or browser storage. ",
+                      )}
                     </p>
                   </div>
                 </section>
@@ -1075,11 +1172,11 @@ export default function App() {
                     <Cloud size={21} aria-hidden="true" />
                   </div>
                   <div>
-                    <h2>Only after your permission</h2>
+                    <h2>{t("Only after your permission")}</h2>
                     <p>
-                      You review and approve the exact redacted text before
-                      verification can use cloud AI or Google Search. Check for
-                      private details the redaction may have missed.
+                      {t(
+                        " You review and approve the exact redacted text before verification can use cloud AI or Google Search. Check for private details the redaction may have missed. ",
+                      )}
                     </p>
                   </div>
                 </section>
@@ -1088,11 +1185,11 @@ export default function App() {
                     <Users size={21} aria-hidden="true" />
                   </div>
                   <div>
-                    <h2>When you alert family</h2>
+                    <h2>{t("When you alert family")}</h2>
                     <p>
-                      VaultShield uses your anonymous account ID to send a help
-                      request with the pressure count and time. The alert
-                      contains no original message, screenshot, or location.
+                      {t(
+                        " VaultShield uses your anonymous account ID to send a help request with the pressure count and time. The alert contains no original message, screenshot, or location. ",
+                      )}
                     </p>
                   </div>
                 </section>
@@ -1101,12 +1198,11 @@ export default function App() {
                     <Info size={21} aria-hidden="true" />
                   </div>
                   <div>
-                    <h2>What your device supports</h2>
+                    <h2>{t("What your device supports")}</h2>
                     <p>
-                      On-device AI needs a compatible desktop Chrome setup or
-                      Android with AICore. When the model is unavailable, basic
-                      checks can still run on pasted text. Verify payment
-                      requests independently.
+                      {t(
+                        " On-device AI needs a compatible desktop Chrome setup or Android with AICore. When the model is unavailable, basic checks can still run on pasted text. Verify payment requests independently. ",
+                      )}
                     </p>
                   </div>
                 </section>
@@ -1145,21 +1241,21 @@ export default function App() {
                   className="card privacy-diagnostics"
                   aria-labelledby="privacy-diagnostics-title"
                 >
-                  <h2 id="privacy-diagnostics-title">Diagnostics</h2>
+                  <h2 id="privacy-diagnostics-title">{t("Diagnostics")}</h2>
                   <dl>
-                    <dt>Platform</dt>
+                    <dt>{t("Platform")}</dt>
                     <dd>{capability.platform}</dd>
-                    <dt>Text engine</dt>
+                    <dt>{t("Text engine")}</dt>
                     <dd>{capability.textEngine}</dd>
-                    <dt>Screenshot engine</dt>
+                    <dt>{t("Screenshot engine")}</dt>
                     <dd>{capability.screenshotEngine}</dd>
-                    <dt>Local model</dt>
+                    <dt>{t("Local model")}</dt>
                     <dd>{diagnostics.modelStatus}</dd>
-                    <dt>ML Kit status</dt>
+                    <dt>{t("ML Kit status")}</dt>
                     <dd>{diagnostics.mlKitStatus ?? "—"}</dd>
-                    <dt>Last error</dt>
+                    <dt>{t("Last error")}</dt>
                     <dd>
-                      {diagnostics.lastError || "None reported"}{" "}
+                      {diagnostics.lastError || t("None reported")}{" "}
                       {diagnostics.lastErrorCode ?? ""}
                     </dd>
                     <dt>App Check</dt>
@@ -1182,7 +1278,7 @@ export default function App() {
           >
             <button
               className="modal-close"
-              aria-label="Close review"
+              aria-label={t("Close review")}
               disabled={!!busy}
               onClick={() => setReview(false)}
             >
@@ -1190,15 +1286,16 @@ export default function App() {
             </button>
             <span className="badge cloud">
               <Cloud size={14} />
-              OPTIONAL · REVIEW & VERIFY
+              {t(" OPTIONAL · REVIEW & VERIFY ")}
             </span>
-            <h2 id="consent-title">You choose what leaves.</h2>
+            <h2 id="consent-title">{t("You choose what leaves.")}</h2>
             <p>
-              Remove any remaining private details. Only the reviewed text can
-              go to the cloud. Your screenshot stays on this device.
+              {t(
+                " Remove any remaining private details. Only the reviewed text can go to the cloud. Your screenshot stays on this device. ",
+              )}
             </p>
             <fieldset className="verification-options" disabled={!!busy}>
-              <legend>What would you like to check?</legend>
+              <legend>{t("What would you like to check?")}</legend>
               <label>
                 <input
                   type="radio"
@@ -1211,10 +1308,11 @@ export default function App() {
                   }}
                 />
                 <span>
-                  <strong>Get a second opinion</strong>
+                  <strong>{t("Get a second opinion")}</strong>
                   <small>
-                    Firebase prefers local AI, with approved cloud fallback. No
-                    live web search.
+                    {t(
+                      " Firebase prefers local AI, with approved cloud fallback. No live web search. ",
+                    )}
                   </small>
                 </span>
               </label>
@@ -1230,15 +1328,16 @@ export default function App() {
                   }}
                 />
                 <span>
-                  <strong>Check public sources online</strong>
+                  <strong>{t("Check public sources online")}</strong>
                   <small>
-                    Send the reviewed text to cloud AI with Google Search.
-                    Sources may be unavailable or inconclusive.
+                    {t(
+                      " Send the reviewed text to cloud AI with Google Search. Sources may be unavailable or inconclusive. ",
+                    )}
                   </small>
                 </span>
               </label>
             </fieldset>
-            <label htmlFor="redacted">Text approved for AI</label>
+            <label htmlFor="redacted">{t("Text approved for AI")}</label>
             <textarea
               id="redacted"
               value={edit}
@@ -1251,9 +1350,9 @@ export default function App() {
             />
             {!hasAssessableText(edit) && (
               <p className="local-progress" role="status">
-                There is no readable message left to verify—only masked details
-                or empty text. Add the message wording before approving. Your
-                screenshot stays on this device.
+                {t(
+                  " There is no readable message left to verify—only masked details or empty text. Add the message wording before approving. Your screenshot stays on this device. ",
+                )}
               </p>
             )}
             <label className="consent">
@@ -1264,8 +1363,12 @@ export default function App() {
                 onChange={(e) => setConsent(e.target.checked)}
               />
               {verificationPurpose === "public-sources"
-                ? "I reviewed this text and approve sending it to Google’s cloud AI for public-source checking with Google Search."
-                : "I reviewed this text and approve Google’s cloud AI processing it if Firebase cannot use the local model."}
+                ? t(
+                    "I reviewed this text and approve sending it to Google’s cloud AI for public-source checking with Google Search.",
+                  )
+                : t(
+                    "I reviewed this text and approve Google’s cloud AI processing it if Firebase cannot use the local model.",
+                  )}
             </label>
             <button
               className="primary"
@@ -1274,16 +1377,17 @@ export default function App() {
             >
               <Cloud size={18} />
               {busy === "Verifying approved text"
-                ? "Verifying…"
-                : "Approve & verify"}
+                ? t("Verifying…")
+                : t("Approve & verify")}
             </button>
             <p>
-              Only the reviewed text is approved. AI can miss details; review
-              names, account details and private clauses before continuing.
+              {t(
+                " Only the reviewed text is approved. AI can miss details; review names, account details and private clauses before continuing. ",
+              )}
             </p>
             {error && (
               <p role="alert" className="modal-error">
-                {error}
+                {t(error)}
               </p>
             )}
           </section>
