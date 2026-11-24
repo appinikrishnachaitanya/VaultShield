@@ -94,7 +94,7 @@ export default function MaaSummary({
         >
           {busy ? "Preparing summary…" : "Summarize in my language"}
         </button>
-        {((summary && canReadSummary) || reading) && (
+        {summary && (canReadSummary || reading) && (
           <button
             type="button"
             className="secondary"
