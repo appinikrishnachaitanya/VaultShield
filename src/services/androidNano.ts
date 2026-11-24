@@ -21,6 +21,18 @@ export const androidAI = registerPlugin<{
     text: string;
     imageBase64?: string;
   }): Promise<{ status: string; text?: string }>;
+  verifyReviewed(input: {
+    prompt: string;
+    consent: boolean;
+    model: string;
+    purpose: "hybrid" | "public-sources";
+  }): Promise<{
+    status: string;
+    text?: string;
+    source?: "ON_DEVICE" | "IN_CLOUD";
+    durationMs?: number;
+    metadata?: import("firebase/ai").GroundingMetadata;
+  }>;
   getAppCheckToken(): Promise<{ token: string; expireTimeMillis: number }>;
   diagnostics(): Promise<{
     modelStatus: string;

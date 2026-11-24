@@ -1,3 +1,4 @@
+import { usesAndroidModel } from "../../services/androidNano";
 import { getToken as getAppCheckToken } from "firebase/app-check";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
 import {
@@ -50,6 +51,13 @@ export const sendAlert = (stages: number) => request("/alerts", { stages });
 export const removeMember = (uid: string) =>
   request(`/pair/${encodeURIComponent(uid)}`, undefined, "DELETE");
 export async function enableNotifications() {
+  if (usesAndroidModel) {
+    const { androidPushToken } =
+      await import("../../services/androidNotifications");
+    const token = await androidPushToken();
+    await request("/notifications/token", { token });
+    return;
+  }
   if (!app || !(await isSupported()))
     throw new Error("Push notifications are unavailable in this browser.");
   if (!import.meta.env.VITE_FIREBASE_VAPID_KEY)

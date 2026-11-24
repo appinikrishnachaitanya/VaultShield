@@ -377,5 +377,7 @@
   "Run the privacy check first to prepare redacted text.": "पहले निजी जाँच करें, ताकि निजी विवरण छिपाया पाठ तैयार हो सके।",
   "Screenshot check needs On-Device AI. Please use text paste on this device, or use Desktop Chrome / Android App.": "स्क्रीनशॉट जाँच के लिए डिवाइस पर AI चाहिए। इस डिवाइस पर पाठ पेस्ट करें, या समर्थित डेस्कटॉप Chrome / Android ऐप इस्तेमाल करें।",
   "Local summarization uses English internally. Hindi source text is translated on-device when supported.": "स्थानीय सार बनाने की सुविधा अंदरूनी तौर पर अंग्रेज़ी इस्तेमाल करती है। सुविधा उपलब्ध होने पर हिंदी मूल पाठ का अनुवाद इसी डिवाइस पर होता है।",
-  "Translating the source on this device before summarizing…": "सार बनाने से पहले मूल पाठ का अनुवाद इसी डिवाइस पर हो रहा है…"
+  "Translating the source on this device before summarizing…": "सार बनाने से पहले मूल पाठ का अनुवाद इसी डिवाइस पर हो रहा है…",
+  "Android local AI could not run. Review the masked text to allow Firebase local-first verification with cloud fallback.": "Android पर स्थानीय AI नहीं चल पाया। निजी विवरण छिपाया पाठ देखकर Firebase की स्थानीय AI और ज़रूरत पर क्लाउड जाँच की अनुमति दें।",
+  "Android local AI is unavailable for this tool. No cloud fallback was used.": "इस सुविधा के लिए Android पर स्थानीय AI उपलब्ध नहीं है। क्लाउड का उपयोग नहीं किया गया।"
 }

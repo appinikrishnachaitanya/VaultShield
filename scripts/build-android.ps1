@@ -1,4 +1,4 @@
-param([switch]$SkipWebBuild)
+param([switch]$SkipWebBuild, [switch]$ValidateRelease)
 $ErrorActionPreference = 'Stop'
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $workspaceRoot
@@ -15,9 +15,18 @@ try {
   if (-not $SkipWebBuild) { & npm.cmd run build -- --mode android; if ($LASTEXITCODE -ne 0) { throw 'Web build failed.' } }
   & (Join-Path $workspaceRoot 'node_modules/.bin/cap.cmd') sync android
   if ($LASTEXITCODE -ne 0) { throw 'Capacitor sync failed.' }
-  & (Join-Path $workspaceRoot 'android/gradlew.bat') -p android assembleDebug --no-daemon --max-workers=2
+  $buildTasks = @('assembleDebug')
+  if ($ValidateRelease) { $buildTasks += ':app:compileReleaseKotlin' }
+  & (Join-Path $workspaceRoot 'android/gradlew.bat') -p android @buildTasks --no-daemon --max-workers=2
   if ($LASTEXITCODE -ne 0) { throw 'Android build failed.' }
   $apkFile = Join-Path $workspaceRoot 'android/app/build/outputs/apk/debug/app-debug.apk'
   if (-not (Test-Path -LiteralPath $apkFile)) { throw 'Build finished without the expected APK.' }
-  Write-Output "Debug APK: $apkFile"
+  $artifactDirectory = Join-Path $workspaceRoot 'artifacts'
+  New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
+  $artifactApk = Join-Path $artifactDirectory 'VaultShield-debug.apk'
+  Copy-Item -LiteralPath $apkFile -Destination $artifactApk -Force
+  $artifactHash = (Get-FileHash -LiteralPath $artifactApk -Algorithm SHA256).Hash
+  Set-Content -LiteralPath (Join-Path $artifactDirectory 'VaultShield-debug.apk.sha256') -Value "$artifactHash  VaultShield-debug.apk"
+  Write-Output "Debug APK: $artifactApk"
+  Write-Output "SHA256: $artifactHash"
 } finally { Pop-Location }

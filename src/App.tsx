@@ -197,6 +197,13 @@ export default function App() {
       );
       setResult(r);
       setEdit(r.text);
+      if (usesAndroidModel && r.source === "LOCAL_RULES") {
+        setVerificationPurpose("hybrid");
+        setReview(true);
+        setNotice(
+          "Android local AI could not run. Review the masked text to allow Firebase local-first verification with cloud fallback.",
+        );
+      }
       setTimeout(
         () =>
           output.current?.scrollIntoView({
@@ -352,6 +359,34 @@ export default function App() {
     return () => {
       active = false;
       void listener.then((handle) => handle.remove()).catch(() => {});
+    };
+  }, []);
+  useEffect(() => {
+    if (!usesAndroidModel) return;
+    let active = true;
+    let cleanup: (() => void) | undefined;
+    void import("./services/androidNotifications")
+      .then(({ watchAndroidPush }) =>
+        watchAndroidPush(
+          () => {
+            if (active)
+              setNotice(
+                "A family member requested help. Open Family circle and call them on their saved number.",
+              );
+          },
+          () => {
+            if (active) setTab("family");
+          },
+        ),
+      )
+      .then((stop) => {
+        if (active) cleanup = stop;
+        else stop();
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      cleanup?.();
     };
   }, []);
   useEffect(() => {
