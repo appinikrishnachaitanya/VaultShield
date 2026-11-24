@@ -48,6 +48,7 @@ import LocalTools from "./components/LocalTools";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
 import PressureEvidence from "./components/PressureEvidence";
+import CloudAssessment from "./components/CloudAssessment";
 import type { LocalResult } from "./types/privacy";
 const examples = [
   {
@@ -915,54 +916,7 @@ export default function App() {
                 </div>
               )}
               <AlreadyPaid key={result?.text ?? "no-report"} result={result} />
-              {cloud && (
-                <section className="card cloud-result">
-                  <span
-                    className={`badge ${cloud.source === "ON_DEVICE" ? "local" : "cloud"}`}
-                  >
-                    {cloud.source === "ON_DEVICE"
-                      ? "HYBRID · ON-DEVICE"
-                      : cloud.purpose === "public-sources"
-                        ? "CLOUD · PUBLIC-SOURCE CHECK"
-                        : "HYBRID · CLOUD FALLBACK"}{" "}
-                    · {(cloud.durationMs / 1000).toFixed(2)}s
-                  </span>
-                  <p className="tool-hint">
-                    {cloud.source === "ON_DEVICE"
-                      ? "Reviewed text analyzed on this device. No live web search."
-                      : `${cloud.model} · Approved redacted text only.`}
-                  </p>
-                  <h2>
-                    {cloud.metadata?.groundingChunks?.length
-                      ? "Assessment with public sources"
-                      : cloud.source === "ON_DEVICE"
-                        ? "Local assessment · no live search"
-                        : "Cloud assessment · no sources returned"}
-                  </h2>
-                  <div className="cloud-text">{cloud.text}</div>
-                  {cloud.metadata?.groundingChunks?.map((c, i) =>
-                    c.web?.uri && /^https?:\/\//.test(c.web.uri) ? (
-                      <a
-                        className="source-link"
-                        key={i}
-                        href={c.web.uri}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {c.web.title || c.web.uri}
-                      </a>
-                    ) : null,
-                  )}
-                  {cloud.metadata?.searchEntryPoint?.renderedContent && (
-                    <iframe
-                      title="Google Search suggestions"
-                      sandbox="allow-popups allow-popups-to-escape-sandbox"
-                      srcDoc={cloud.metadata.searchEntryPoint.renderedContent}
-                      className="search-suggestions"
-                    />
-                  )}
-                </section>
-              )}
+              {cloud && <CloudAssessment key={cloud.text} cloud={cloud} />}
               <div className="page-footer">
                 <LockKeyhole size={14} />
                 <span>Your instincts matter. We help you check the facts.</span>

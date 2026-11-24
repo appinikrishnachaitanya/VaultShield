@@ -14,10 +14,12 @@ export default function MaaSummary({
   text,
   language,
   disabled = false,
+  contentKind = "message",
 }: {
   text: SanitizedText;
   language: FamilyLanguage;
   disabled?: boolean;
+  contentKind?: "message" | "assessment";
 }) {
   const [summary, setSummary] = useState<FamilySummaryResult>();
   const canReadSummary = useLocalVoice(summary?.language ?? language);
@@ -49,9 +51,13 @@ export default function MaaSummary({
     } catch (error) {
       if (active.current)
         setError(
-          error instanceof Error
-            ? error.message
-            : "The local summary could not finish. The safety guidance above is still available.",
+          contentKind === "assessment" &&
+            error instanceof Error &&
+            /not support|unavailable/i.test(error.message)
+            ? "A private summary is not available on this device. Your full assessment is still available above."
+            : error instanceof Error
+              ? error.message
+              : "The local summary could not finish. The safety guidance above is still available.",
         );
     } finally {
       running.current = false;
@@ -62,15 +68,20 @@ export default function MaaSummary({
     }
   }
   return (
-    <section className="maa-summary" aria-label="Maa Mode message summary">
+    <section
+      className="maa-summary"
+      aria-label={`Maa Mode ${contentKind} summary`}
+    >
       <h4>
-        <AlignLeft size={19} aria-hidden="true" /> Understand this message ·{" "}
-        {familyLanguages[language]}
+        <AlignLeft size={19} aria-hidden="true" /> Understand this {contentKind}{" "}
+        · {familyLanguages[language]}
       </h4>
       <p>
-        Summarize the redacted message locally, then translate it into your Maa
-        Mode language when supported. English source text is currently required
-        by the summarizer.
+        {contentKind === "assessment"
+          ? "A short, simple explanation in your language, created privately on this device when supported. No additional cloud request."
+          : "Summarize the redacted message locally, then translate it into your Maa Mode language when supported."}
+        {contentKind === "message" &&
+          " English source text is currently required by the summarizer."}
       </p>
       <div className="tool-actions">
         <button
@@ -97,8 +108,9 @@ export default function MaaSummary({
       </div>
       {!support.summarizer && (
         <p className="tool-hint">
-          Local summarization is unavailable in this browser. The Maa Mode
-          safety guidance above is still available.
+          {contentKind === "assessment"
+            ? "Local summarization is unavailable in this browser. The full assessment above is still available. No cloud translation was used."
+            : "Local summarization is unavailable in this browser. The Maa Mode safety guidance above is still available."}
         </p>
       )}
       {busy && (
@@ -145,7 +157,12 @@ export default function MaaSummary({
         </p>
       )}
       <details className="source-details">
-        <summary>Compare with the redacted message</summary>
+        <summary>
+          Compare with the{" "}
+          {contentKind === "assessment"
+            ? "full assessment"
+            : "redacted message"}
+        </summary>
         <p className="preserve-lines">{text}</p>
       </details>
     </section>
