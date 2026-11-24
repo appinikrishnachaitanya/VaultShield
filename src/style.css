@@ -2118,3 +2118,10 @@ blockquote {
 .cloud-result {
   scroll-margin-top: 24px;
 }
+
+@media (max-width: 640px) {
+  .assessment-maa,
+  .cloud-result {
+    scroll-margin-top: 96px;
+  }
+}
