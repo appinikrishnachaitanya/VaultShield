@@ -53,6 +53,7 @@ import { runLeakTest, assertNoKnownLeak } from "./lib/leakTest";
 import LeakTestPanel from "./components/LeakTestPanel";
 import NetworkProof from "./components/NetworkProof";
 import CommunitySignal from "./components/CommunitySignal";
+import DemoStories from "./components/DemoStories";
 import { patternSignal } from "./lib/patterns";
 import { startNetworkCheck } from "./lib/netProof";
 import type { TokenCounts } from "./lib/tokenVault";
@@ -629,6 +630,7 @@ export default function App() {
                         reset();
                       }}
                     />
+                    <DemoStories onChoose={(text) => { reset(); setImage(undefined); setInput(text); }} />
                     <label htmlFor="message" className="input-label">
                       {t(" Paste your message ")}
                     </label>

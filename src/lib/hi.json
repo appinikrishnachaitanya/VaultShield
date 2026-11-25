@@ -541,5 +541,9 @@
   "lt1k": "₹1,000 से कम",
   "1k-10k": "₹1,000 से ₹10,000 तक",
   "10k-50k": "₹10,000 से ₹50,000 तक",
-  "50k-plus": "₹50,000 से अधिक"
+  "50k-plus": "₹50,000 से अधिक",
+  "Demo story": "डेमो उदाहरण",
+  "Synthetic examples. Results come from the real analysis flow.": "काल्पनिक उदाहरण। नतीजे असली जाँच प्रक्रिया से आते हैं।",
+  "Synthetic freelancer contract": "काल्पनिक फ़्रीलांसर अनुबंध",
+  "Synthetic legal notice": "काल्पनिक कानूनी नोटिस"
 }
