@@ -503,5 +503,14 @@
   "HYBRID-ON-DEVICE": "हाइब्रिड · डिवाइस पर",
   "HYBRID-CLOUD-FALLBACK": "हाइब्रिड · क्लाउड विकल्प",
   "CLOUD-PUBLIC-SOURCE": "क्लाउड · सार्वजनिक स्रोत",
-  "LOCAL RULES": "स्थानीय नियम"
+  "LOCAL RULES": "स्थानीय नियम",
+  "Leak test": "बची निजी जानकारी की जाँच",
+  "PASS": "कोई संकेत नहीं मिला",
+  "WARN": "ध्यान दें",
+  "A known private value remains. Remove the highlighted text before approving.": "पहले से मिली निजी जानकारी अभी मौजूद है। अनुमति से पहले चिह्नित पाठ हटाएँ।",
+  "Review these possible identifiers before approving.": "अनुमति देने से पहले इन संभावित पहचान वाली जानकारियों को जाँचें।",
+  "No known private values or identifier patterns found. Review is still required.": "कोई ज्ञात निजी जानकारी या पहचान का पैटर्न नहीं मिला। फिर भी पाठ देखें।",
+  "Deterministic check. Names and unusual identifiers can still be missed.": "नियमों पर आधारित जाँच। नाम और असामान्य पहचान वाली जानकारी छूट सकती है।",
+  "Digit run": "लंबी संख्या",
+  "High-entropy string": "लंबा मिला-जुला कोड"
 }

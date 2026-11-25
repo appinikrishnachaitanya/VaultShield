@@ -55,6 +55,8 @@ import { routeInput, assertCloudRoute } from "./lib/router";
 import RoutingBanner from "./components/RoutingBanner";
 import { buildReceipt, type PrivacyReceiptData } from "./lib/receipt";
 import PrivacyReceipt from "./components/PrivacyReceipt";
+import { runLeakTest, assertNoKnownLeak } from "./lib/leakTest";
+import LeakTestPanel from "./components/LeakTestPanel";
 import type { TokenCounts } from "./lib/tokenVault";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
@@ -121,6 +123,7 @@ export default function App() {
   const [cloud, setCloud] =
     useState<Awaited<ReturnType<typeof verifyWithCloud>>>();
   const [edit, setEdit] = useState("");
+  const leakResult = runLeakTest(edit, vault.current);
   const [consent, setConsent] = useState(false);
   const [verificationPurpose, setVerificationPurpose] = useState<
     "hybrid" | "public-sources"
@@ -270,6 +273,7 @@ export default function App() {
   function submitReviewedText() {
     void task("Verifying approved text", async () => {
       assertCloudRoute(privacyRoute);
+      assertNoKnownLeak(edit, vault.current);
       const sanitized = vault.current.tokenize(edit).text;
       if (sanitized !== edit) {
         setEdit(sanitized);
@@ -283,7 +287,7 @@ export default function App() {
         result?.source === "LOCAL_RULES" &&
         verificationPurpose === "hybrid"
       ) {
-        const hybridResult = await checkAndroidReviewedText(sanitized, consent);
+        const hybridResult = await checkAndroidReviewedText(sanitized, consent, vault.current);
         setReceipt(buildReceipt({route:privacyRoute,source:hybridResult.source,purpose:'hybrid',model:hybridResult.cloudModel,elapsedMs:hybridResult.durationMs,counts:tokenCounts,payload:hybridResult.requestPayload,approvedText:sanitized}));
         setResult(hybridResult);
         setEdit(hybridResult.text);
@@ -302,6 +306,7 @@ export default function App() {
           input,
           verificationPurpose,
           appLanguage,
+          vault.current,
         );
       setCloud(verification);
       setReceipt(buildReceipt({route:privacyRoute,source:verification.source,purpose:verification.purpose,model:verification.model,elapsedMs:verification.durationMs,counts:tokenCounts,payload:verification.requestPayload,approvedText:sanitized,groundingUsed:verification.groundingUsed}));
@@ -1531,10 +1536,12 @@ export default function App() {
               maxLength={16000}
               disabled={!!busy}
               onChange={(e) => {
+                vault.current.touch();
                 setEdit(e.target.value);
                 setConsent(false);
               }}
             />
+            <LeakTestPanel result={leakResult} text={edit} />
             {!hasAssessableText(edit) && (
               <p className="local-progress" role="status">
                 {t(
@@ -1546,7 +1553,7 @@ export default function App() {
               <input
                 type="checkbox"
                 checked={consent}
-                disabled={!!busy || localOnly || !hasAssessableText(edit)}
+                disabled={!!busy || localOnly || leakResult.blocked || !hasAssessableText(edit)}
                 onChange={(e) => setConsent(e.target.checked)}
               />
               {verificationPurpose === "public-sources"
@@ -1559,7 +1566,7 @@ export default function App() {
             </label>
             <button
               className="primary"
-              disabled={!consent || !!busy || localOnly || !hasAssessableText(edit)}
+              disabled={!consent || !!busy || localOnly || leakResult.blocked || !hasAssessableText(edit)}
               onClick={submitReviewedText}
             >
               <Cloud size={18} />

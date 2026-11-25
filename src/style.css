@@ -2263,3 +2263,4 @@ html[lang="hi"] h3 {
 .receipt-comparison pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:300px; overflow:auto; background:#f8fafc; padding:14px; font:inherit; }
 .privacy-receipt { margin-top:24px; }.privacy-receipt summary { cursor:pointer; padding:12px 0; }
 @media(max-width:640px){.receipt-comparison{grid-template-columns:1fr;}}
+.leak-preview { white-space:pre-wrap; overflow-wrap:anywhere; max-height:180px; overflow:auto; padding:12px; background:white; }

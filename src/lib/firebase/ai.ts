@@ -20,6 +20,8 @@ import {
 import { ai, settings } from "./config";
 import { maskIdentifiers, hasAssessableText } from "../privacy";
 import { assertCloudRoute, routeInput } from "../router";
+import { assertNoKnownLeak } from "../leakTest";
+import type { TokenVaultSession } from "../tokenVault";
 import type { SanitizedText, LocalResult, Stage } from "../../types/privacy";
 const actions = {
   Authority:
@@ -342,7 +344,9 @@ function parseLocalResult(
 export async function checkAndroidReviewedText(
   text: SanitizedText,
   consent: boolean,
+  session?: TokenVaultSession,
 ): Promise<LocalResult> {
+  assertNoKnownLeak(text, session);
   assertCloudRoute(routeInput(text));
   if (!usesAndroidModel) throw new Error("This hybrid scan is Android-only.");
   if (!consent) throw new Error("Explicit permission is required.");
@@ -386,7 +390,9 @@ export async function verifyWithCloud(
   original?: string,
   purpose: "hybrid" | "public-sources" = "hybrid",
   language: "en" | "hi" = "en",
+  session?: TokenVaultSession,
 ) {
+  assertNoKnownLeak(text, session);
   assertCloudRoute(routeInput(original || text));
   assertCloudRoute(routeInput(text));
   if (
