@@ -1,4 +1,4 @@
-import { t, useAppLanguage } from "../lib/i18n";
+import { setLanguage as setAppLanguage, t, useAppLanguage } from "../lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { Clock3, HeartHandshake, Phone, Volume2, Square } from "lucide-react";
 import {
@@ -136,6 +136,8 @@ export function FamilySafety({
               stopLocalReading();
               latestLanguage.current = event.target.value as FamilyLanguage;
               setLanguage(event.target.value as FamilyLanguage);
+              if (event.target.value === "en" || event.target.value === "hi")
+                setAppLanguage(event.target.value as "en" | "hi");
               setAudioNotice("");
               setTranslation(undefined);
               setReplyDraft(undefined);

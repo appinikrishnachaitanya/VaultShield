@@ -21,7 +21,7 @@ export type AICapability = {
 };
 
 export const screenshotUnavailable =
-  "Screenshot check needs On-Device AI. Please use text paste on this device, or use Desktop Chrome / Android App.";
+  "This device cannot read screenshots privately yet. Paste the message text to check it, then review any masked details before asking for an AI second opinion.";
 
 export function detectAIPlatform(): Platform {
   if (usesAndroidModel) return "capacitor-android";
@@ -222,7 +222,7 @@ export function refreshAICapability() {
 
 export function capabilityLabel({ platform, modelStatus }: AICapability) {
   if (platform === "mobile-web" || platform === "ios-web")
-    return "Mobile browser · Private local rules";
+    return "Private text check ready · AI second opinion after your approval";
   if (modelStatus === "checking")
     return platform === "capacitor-android"
       ? "Android AI · Checking…"

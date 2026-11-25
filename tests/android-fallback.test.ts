@@ -21,6 +21,7 @@ vi.mock("../src/lib/firebase/config", () => ({
 }));
 
 import {
+  checkAndroidReviewedText,
   checkWithLocalFallback,
   verifyWithCloud,
   summarizeForFamily,
@@ -105,6 +106,11 @@ describe("native Firebase reviewed-text boundary", () => {
           prompt: expect.stringContaining("simple Hindi"),
         }),
       );
+      const prompt = mocks.verifyReviewed.mock.calls[0][0].prompt as string;
+      expect(prompt).toContain("इन हिंदी शीर्षकों का उपयोग करें");
+      expect(prompt).not.toContain(
+        "Use three sections: What this means",
+      );
       expect(mocks.checkStatus).not.toHaveBeenCalled();
       expect(mocks.cloudModel).not.toHaveBeenCalled();
     },
@@ -117,6 +123,45 @@ describe("native Firebase reviewed-text boundary", () => {
       ),
     ).rejects.toThrow("permission");
     expect(mocks.verifyReviewed).not.toHaveBeenCalled();
+  });
+  it("runs the Android primary pressure analysis through PREFER hybrid after redacted-text consent", async () => {
+    const approved =
+      "Police asked me to pay now. Phone: [REDACTED]." as import("../src/types/privacy").SanitizedText;
+    mocks.verifyReviewed.mockResolvedValue({
+      status: "READY",
+      text: JSON.stringify({
+        redactedText: approved,
+        stages: {
+          Authority: "Police",
+          Fear: "",
+          Urgency: "pay now",
+          Secrecy: "",
+        },
+      }),
+      source: "IN_CLOUD",
+      durationMs: 3210,
+    });
+    const result = await checkAndroidReviewedText(approved, true);
+    expect(result).toMatchObject({
+      source: "IN_CLOUD",
+      durationMs: 3210,
+      stages: [
+        { name: "Authority", found: true, assessmentSource: "IN_CLOUD" },
+        { name: "Fear", found: false, assessmentSource: "IN_CLOUD" },
+        { name: "Urgency", found: true, assessmentSource: "IN_CLOUD" },
+        { name: "Secrecy", found: false, assessmentSource: "IN_CLOUD" },
+      ],
+    });
+    expect(mocks.verifyReviewed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        consent: true,
+        purpose: "hybrid",
+        model: "gemini-3.5-flash-lite",
+        prompt: expect.stringContaining("Phone: [REDACTED]"),
+      }),
+    );
+    expect(mocks.analyze).not.toHaveBeenCalled();
+    expect(mocks.cloudModel).not.toHaveBeenCalled();
   });
   it("rejects identifiers even if a caller forges the branded TypeScript type", async () => {
     await expect(
@@ -160,27 +205,59 @@ describe("native Firebase reviewed-text boundary", () => {
       ),
     ).rejects.toThrow("Verification could not complete");
   });
-  it("routes Hindi summaries and reply polishing through the local-only Android bridge", async () => {
+  it("routes Android Maa summaries through consented Firebase hybrid AI and keeps reply polishing local", async () => {
     mocks.analyze.mockResolvedValue({
       status: "READY",
-      text: "रुकें और पुष्टि करें।",
+      text: "I will check this.",
+    });
+    mocks.verifyReviewed.mockResolvedValue({
+      status: "READY",
+      text: "रुकें और स्वतंत्र रूप से पुष्टि करें।",
+      source: "IN_CLOUD",
+      durationMs: 4321,
     });
     const text =
       "Please pay now." as import("../src/types/privacy").SanitizedText;
-    expect((await summarizeForFamily(text, "hi")).language).toBe("hi");
+    expect(
+      await summarizeForFamily(text, "hi", undefined, "en", true),
+    ).toMatchObject({
+      language: "hi",
+      source: "IN_CLOUD",
+      durationMs: 4321,
+      text: "रुकें और स्वतंत्र रूप से पुष्टि करें।",
+    });
     await proofreadReplyLocally("I will check this.");
-    expect(mocks.analyze).toHaveBeenCalledTimes(2);
+    expect(mocks.analyze).toHaveBeenCalledTimes(1);
+    expect(mocks.verifyReviewed).toHaveBeenCalledOnce();
+    expect(mocks.verifyReviewed.mock.calls[0][0]).toMatchObject({
+      consent: true,
+      purpose: "hybrid",
+    });
+    expect(mocks.cloudModel).not.toHaveBeenCalled();
+  });
+  it("does not send an Android summary without explicit cloud-fallback approval", async () => {
+    const text =
+      "Please pay now." as import("../src/types/privacy").SanitizedText;
+    await expect(summarizeForFamily(text, "hi")).rejects.toThrow(
+      "permission",
+    );
     expect(mocks.verifyReviewed).not.toHaveBeenCalled();
     expect(mocks.cloudModel).not.toHaveBeenCalled();
   });
-  it("does not upgrade a failed local tool into an unapproved cloud request", async () => {
+  it("reports a failed approved hybrid summary without a second provider path", async () => {
     mocks.analyze.mockResolvedValue({ status: "FEATURE_NOT_FOUND" });
+    mocks.verifyReviewed.mockRejectedValue(new Error("Firebase request failed"));
     await expect(
       summarizeForFamily(
         "Please pay now." as import("../src/types/privacy").SanitizedText,
         "hi",
+        undefined,
+        "en",
+        true,
       ),
-    ).rejects.toThrow("No cloud fallback");
-    expect(mocks.verifyReviewed).not.toHaveBeenCalled();
+    ).rejects.toThrow("Firebase request failed");
+    expect(mocks.verifyReviewed).toHaveBeenCalledOnce();
+    expect(mocks.analyze).not.toHaveBeenCalled();
+    expect(mocks.cloudModel).not.toHaveBeenCalled();
   });
 });

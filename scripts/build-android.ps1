@@ -25,7 +25,15 @@ try {
   New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
   $artifactApk = Join-Path $artifactDirectory 'VaultShield-debug.apk'
   Copy-Item -LiteralPath $apkFile -Destination $artifactApk -Force
-  $artifactHash = (Get-FileHash -LiteralPath $artifactApk -Algorithm SHA256).Hash
+  # Compute SHA-256 with .NET so the build also works in restricted PowerShell
+  # environments where Microsoft.PowerShell.Utility's Get-FileHash is absent.
+  $sha256 = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hashBytes = $sha256.ComputeHash([System.IO.File]::ReadAllBytes($artifactApk))
+  } finally {
+    $sha256.Dispose()
+  }
+  $artifactHash = [System.BitConverter]::ToString($hashBytes).Replace('-', '')
   Set-Content -LiteralPath (Join-Path $artifactDirectory 'VaultShield-debug.apk.sha256') -Value "$artifactHash  VaultShield-debug.apk"
   Write-Output "Debug APK: $artifactApk"
   Write-Output "SHA256: $artifactHash"

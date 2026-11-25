@@ -1,4 +1,4 @@
-import { t, useAppLanguage } from "../lib/i18n";
+import { setLanguage as setAppLanguage, t, useAppLanguage } from "../lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { HeartHandshake, ShieldCheck, BookOpen } from "lucide-react";
 import {
@@ -50,11 +50,21 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
     setTranslationError("");
     const target = appLanguage;
     try {
-      const [text] = await translateFamilyGuidance(
-        [cloud.text],
+      // Translate short sections separately: a whole assessment can exceed the
+      // local translator's useful context and return an English paraphrase.
+      const sections = cloud.text.split(/\n\s*\n/u).filter(Boolean);
+      const translatedSections = await translateFamilyGuidance(
+        sections,
         target,
         reportLanguage,
       );
+      if (
+        target === "hi" &&
+        translatedSections.some((section) => !/[\u0900-\u097f]/u.test(section))
+      ) {
+        throw new Error("Hindi translation did not produce Hindi text.");
+      }
+      const text = translatedSections.join("\n\n");
       if (active.current) setTranslated({ text, language: target });
     } catch {
       if (active.current)
@@ -90,13 +100,13 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
           : `${cloud.model} · ${t("Approved redacted text only.")}`}
       </p>
       <a className="assessment-maa-shortcut" href="#assessment-maa">
-        {t(" Make this simpler in my language ↓ ")}
+        {t("Hear a short explanation ↓")}
       </a>
       <div className="assessment-detail-heading">
         <BookOpen size={21} aria-hidden="true" />
         <h3>
           {local
-            ? t("Your local second opinion")
+            ? t("Your second opinion")
             : sources.length
               ? t("Search-assisted assessment")
               : t("Assessment · no sources returned")}
@@ -157,9 +167,11 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
             <select
               id="assessment-language"
               value={language}
-              onChange={(event) =>
-                setLanguage(event.target.value as FamilyLanguage)
-              }
+              onChange={(event) => {
+                const next = event.target.value as FamilyLanguage;
+                setLanguage(next);
+                if (next === "en" || next === "hi") setAppLanguage(next);
+              }}
             >
               {Object.entries(familyLanguages).map(([value, label]) => (
                 <option key={value} value={value}>

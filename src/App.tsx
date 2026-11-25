@@ -23,7 +23,11 @@ import {
   FileText,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
-import { checkWithLocalFallback, verifyWithCloud } from "./lib/firebase/ai";
+import {
+  checkAndroidReviewedText,
+  checkWithLocalFallback,
+  verifyWithCloud,
+} from "./lib/firebase/ai";
 import { androidAI, usesAndroidModel } from "./services/androidNano";
 import {
   capabilityLabel,
@@ -191,7 +195,8 @@ export default function App() {
       setLocalProgress("Preparing the on-device check...");
       const r = await checkWithLocalFallback(input, image, setLocalProgress);
       setCoolOffUntil(
-        r.stages.filter((stage) => stage.found).length >= 3
+        r.source !== "LOCAL_RULES" &&
+          r.stages.filter((stage) => stage.found).length >= 3
           ? Date.now() + 600_000
           : null,
       );
@@ -223,6 +228,23 @@ export default function App() {
         throw new Error(
           "Additional identifiers were removed. Review the updated text and give permission again.",
         );
+      }
+      if (
+        usesAndroidModel &&
+        result?.source === "LOCAL_RULES" &&
+        verificationPurpose === "hybrid"
+      ) {
+        const hybridResult = await checkAndroidReviewedText(sanitized, consent);
+        setResult(hybridResult);
+        setEdit(hybridResult.text);
+        setCoolOffUntil(
+          hybridResult.stages.filter((stage) => stage.found).length >= 3
+            ? Date.now() + 600_000
+            : null,
+        );
+        setConsent(false);
+        setReview(false);
+        return;
       }
       setCloud(
         await verifyWithCloud(
@@ -403,6 +425,8 @@ export default function App() {
       navigator.serviceWorker.removeEventListener("message", receive);
   }, []);
   const count = result?.stages.filter((s) => s.found).length ?? 0;
+  const awaitingAndroidHybrid =
+    usesAndroidModel && result?.source === "LOCAL_RULES";
   return (
     <div className="app">
       <aside className="sidebar" inert={review}>
@@ -794,18 +818,26 @@ export default function App() {
                 <div ref={output} className="results">
                   <div className="result-heading">
                     <div>
-                      <span className="badge local">
+                      <span
+                        className={`badge ${result.source === "IN_CLOUD" ? "cloud" : "local"}`}
+                      >
                         <ShieldCheck size={14} />
-                        {result.source === "LOCAL_RULES"
-                          ? t("LOCAL RULES · NOT AI")
-                          : usesAndroidModel
-                            ? t("NATIVE ON-DEVICE AI")
-                            : t("ON-DEVICE AI")}
+                        {awaitingAndroidHybrid
+                          ? t("HYBRID AI · REVIEW REQUIRED")
+                          : result.source === "IN_CLOUD"
+                            ? t("HYBRID · CLOUD FALLBACK")
+                            : result.source === "LOCAL_RULES"
+                              ? t("LOCAL RULES · NOT AI")
+                              : usesAndroidModel
+                                ? t("NATIVE ON-DEVICE AI")
+                                : t("ON-DEVICE AI")}
                         {result.ruleAssisted ? t(" + LOCAL RULES") : ""} ·{" "}
                         {(result.durationMs / 1000).toFixed(2)}s
                       </span>
                       <h2>
-                        {!hasAssessableText(result.text)
+                        {awaitingAndroidHybrid
+                          ? t("Review redacted text to run hybrid AI")
+                          : !hasAssessableText(result.text)
                           ? t("No readable message to assess")
                           : count === 0
                             ? result.source === "LOCAL_RULES"
@@ -816,7 +848,9 @@ export default function App() {
                             : tacticCount(count)}
                       </h2>
                       <p>
-                        {!hasAssessableText(result.text)
+                        {awaitingAndroidHybrid
+                          ? t("The Android local model did not run. No pressure tactics have been assessed yet. Review the redacted text and approve Firebase AI Logic to prefer on-device inference with cloud fallback.")
+                          : !hasAssessableText(result.text)
                           ? t(
                               "The image may have no readable message, or masking removed all usable text. This is not a safety assessment. Upload a clearer screenshot or paste the message.",
                             )
@@ -838,22 +872,40 @@ export default function App() {
                         )}
                       </p>
                     </div>
-                    <button
-                      className="secondary"
-                      disabled={!!busy}
-                      onClick={() =>
-                        void task("Sending alert", async () => {
-                          const r = await sendAlert(count);
-                          setNotice(
-                            `Help requested in ${r.inboxes} family inbox(es). ${r.pushNotifications} push notification(s) accepted by FCM.`,
-                          );
-                        })
-                      }
-                    >
-                      <Users size={18} />
-                      {t(" Alert family ")}
-                    </button>
+                    {!awaitingAndroidHybrid && (
+                      <button
+                        className="secondary"
+                        disabled={!!busy}
+                        onClick={() =>
+                          void task("Sending alert", async () => {
+                            const r = await sendAlert(count);
+                            setNotice(
+                              `Help requested in ${r.inboxes} family inbox(es). ${r.pushNotifications} push notification(s) accepted by FCM.`,
+                            );
+                          })
+                        }
+                      >
+                        <Users size={18} />
+                        {t(" Alert family ")}
+                      </button>
+                    )}
                   </div>
+                  {awaitingAndroidHybrid && (
+                    <div className="tool-actions">
+                      <button
+                        type="button"
+                        className="primary"
+                        disabled={!!busy || !hasAssessableText(result.text)}
+                        onClick={() => {
+                          setConsent(false);
+                          setVerificationPurpose("hybrid");
+                          setReview(true);
+                        }}
+                      >
+                        {t("Review & verify")}
+                      </button>
+                    </div>
+                  )}
                   {result.fallbackReason && (
                     <div className="local-progress" role="status">
                       <p>{t(result.fallbackReason)}</p>
@@ -907,7 +959,7 @@ export default function App() {
                       )}
                     </div>
                   )}
-                  {hasAssessableText(result.text) && (
+                  {hasAssessableText(result.text) && !awaitingAndroidHybrid && (
                     <>
                       <PressureEvidence result={result} />
                       {result.ruleAssisted && (
@@ -960,7 +1012,9 @@ export default function App() {
                                 ? result.source === "ON_DEVICE"
                                   ? t("Not assessed by AI · LOCAL RULES")
                                   : t("LOCAL RULES · NOT AI")
-                                : t("ON-DEVICE AI")}
+                                : s.assessmentSource === "IN_CLOUD"
+                                  ? t("CLOUD AI · APPROVED TEXT")
+                                  : t("ON-DEVICE AI")}
                             </p>
                             {s.found && (
                               <>
@@ -995,7 +1049,7 @@ export default function App() {
                       </details>
                     </>
                   )}
-                  <div className="card cloud-invite">
+                  {!awaitingAndroidHybrid && <div className="card cloud-invite">
                     <Cloud size={28} />
                     <div>
                       <h3>{t("Want a second layer of verification?")}</h3>
@@ -1019,7 +1073,7 @@ export default function App() {
                     >
                       {t(" Review & verify ")}
                     </button>
-                  </div>
+                  </div>}
                 </div>
               )}
               <AlreadyPaid key={result?.text ?? "no-report"} result={result} />
@@ -1321,12 +1375,16 @@ export default function App() {
             </button>
             <span className="badge cloud">
               <Cloud size={14} />
-              {t(" OPTIONAL · REVIEW & VERIFY ")}
+              {awaitingAndroidHybrid
+                ? t(" ANDROID HYBRID · REVIEW REQUIRED ")
+                : t(" OPTIONAL · REVIEW & VERIFY ")}
             </span>
             <h2 id="consent-title">{t("You choose what leaves.")}</h2>
             <p>
               {t(
-                " Remove any remaining private details. Only the reviewed text can go to the cloud. Your screenshot stays on this device. ",
+                awaitingAndroidHybrid
+                  ? " The Android local model is unavailable, so no AI assessment has run yet. Review this redacted text; after approval, Firebase AI Logic prefers on-device AI and may send only this text to cloud if needed. Screenshots are never sent. "
+                  : " Remove any remaining private details. Only the reviewed text can go to the cloud. Your screenshot stays on this device. ",
               )}
             </p>
             <fieldset className="verification-options" disabled={!!busy}>
@@ -1343,7 +1401,7 @@ export default function App() {
                   }}
                 />
                 <span>
-                  <strong>{t("Get a second opinion")}</strong>
+                  <strong>{t("Ask AI to check this")}</strong>
                   <small>
                     {t(
                       " Firebase prefers local AI, with approved cloud fallback. No live web search. ",
@@ -1363,7 +1421,7 @@ export default function App() {
                   }}
                 />
                 <span>
-                  <strong>{t("Check public sources online")}</strong>
+                  <strong>{t("Check trusted websites")}</strong>
                   <small>
                     {t(
                       " Send the reviewed text to cloud AI with Google Search. Sources may be unavailable or inconclusive. ",
@@ -1402,7 +1460,7 @@ export default function App() {
                     "I reviewed this text and approve sending it to Google’s cloud AI for public-source checking with Google Search.",
                   )
                 : t(
-                    "I reviewed this text and approve Google’s cloud AI processing it if Firebase cannot use the local model.",
+                    "I reviewed this text and approve Firebase AI Logic to prefer on-device AI and send only this text to cloud if local inference is unavailable.",
                   )}
             </label>
             <button

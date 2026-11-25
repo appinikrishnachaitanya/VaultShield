@@ -1,0 +1,1 @@
+{"name":"VaultShield","short_name":"VaultShield","description":"Check it before you pay for it. Privately.","start_url":"/","scope":"/","display":"standalone","background_color":"#f8fafc","theme_color":"#0f766e","icons":[{"src":"/shield.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}

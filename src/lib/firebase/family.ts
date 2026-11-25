@@ -58,17 +58,30 @@ export async function enableNotifications() {
     await request("/notifications/token", { token });
     return;
   }
-  if (!app || !(await isSupported()))
+  if (!app || !("Notification" in window))
     throw new Error("Push notifications are unavailable in this browser.");
   if (!import.meta.env.VITE_FIREBASE_VAPID_KEY)
     throw new Error("Configure the Firebase public VAPID key first.");
-  if ((await Notification.requestPermission()) !== "granted")
-    throw new Error("Notification permission was not granted.");
-  const registration = await navigator.serviceWorker.getRegistration();
-  if (!registration?.active)
+  if (!window.isSecureContext)
+    throw new Error("Notifications require the secure VaultShield website (HTTPS).");
+  if (Notification.permission === "denied")
     throw new Error(
-      "Notifications require the built PWA. Run npm run build and npm run preview, then reload.",
+      "Notifications are blocked for this website. Open the site controls beside the address bar, allow Notifications, then try again. Family alerts still appear in your inbox.",
     );
+  const permission =
+    Notification.permission === "granted"
+      ? "granted"
+      : await Notification.requestPermission();
+  if (permission !== "granted")
+    throw new Error(
+      "Notifications were not allowed. Check Chrome's permission chip or this site's notification setting, then try again. Family alerts still appear in your inbox.",
+    );
+  if (!(await isSupported()))
+    throw new Error("Push notifications are unavailable in this browser.");
+  if (!("serviceWorker" in navigator))
+    throw new Error("Background notifications are unavailable in this browser.");
+  await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  const registration = await navigator.serviceWorker.ready;
   const messaging = getMessaging(app);
   const token = await getToken(messaging, {
     vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,

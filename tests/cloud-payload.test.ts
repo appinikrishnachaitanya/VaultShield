@@ -123,7 +123,9 @@ it("requests a Hindi explanation through the real Firebase SDK without leaking o
   expect(result.language).toBe("hi");
   expect(result.source).toBe("IN_CLOUD");
   const body = String(fetchSpy.mock.calls[0][1].body);
-  expect(body).toContain("simple Hindi (Devanagari)");
+  expect(body).toContain("simple Hindi written in Devanagari");
+  expect(body).toContain("इन हिंदी शीर्षकों का उपयोग करें");
+  expect(body).not.toContain("Use three sections: What this means");
   expect(body).not.toContain("9876543210");
   expect(body).not.toContain(original);
 });
