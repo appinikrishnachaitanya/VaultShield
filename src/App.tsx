@@ -49,6 +49,7 @@ import { routeInput, assertCloudRoute } from "./lib/router";
 import RoutingBanner from "./components/RoutingBanner";
 import { buildReceipt, type PrivacyReceiptData } from "./lib/receipt";
 import PrivacyReceipt from "./components/PrivacyReceipt";
+import LocalCheckNotice from "./components/LocalCheckNotice";
 import { runLeakTest, assertNoKnownLeak } from "./lib/leakTest";
 import LeakTestPanel from "./components/LeakTestPanel";
 import CloudApproval from "./components/CloudApproval";
@@ -452,7 +453,10 @@ export default function App() {
     reader.readAsDataURL(f);
   }
   const closeReview = useCallback(() => {
-    if (!busy) { setReview(false); setSensitiveOverride(false); }
+    if (!busy) {
+      setReview(false);
+      setSensitiveOverride(false);
+    }
   }, [busy]);
   const dialogRef = useDialogFocus(review, closeReview);
   useEffect(() => {
@@ -1058,66 +1062,20 @@ export default function App() {
                       </button>
                     </div>
                   )}
-                  {result.fallbackReason && (
-                    <div className="local-progress" role="status">
-                      <p>{t(result.fallbackReason)}</p>
-                      <p>
-                        {t(" Last step: ")}
-                        {t(result.fallbackStage ?? "")}
-                        {t(". Error code:")} {result.fallbackCode}.
-                      </p>
-                      <button
-                        type="button"
-                        className="secondary"
-                        disabled={diagnosticsBusy || !!busy}
-                        onClick={async () => {
-                          setDiagnosticsBusy(true);
-                          try {
-                            setLocalDiagnostics(await localAIDiagnostics());
-                          } finally {
-                            setDiagnosticsBusy(false);
-                          }
-                        }}
-                      >
-                        {diagnosticsBusy
-                          ? t("Checking browser support…")
-                          : t("Check local AI support")}
-                      </button>
-                      {localDiagnostics && (
-                        <ul>
-                          <li>
-                            {t("Platform: ")}
-                            {localDiagnostics.platform}
-                          </li>
-                          <li>
-                            {t(" Secure page:")}{" "}
-                            {localDiagnostics.securePage ? t("yes") : t("no")}
-                          </li>
-                          <li>
-                            {t(" Chrome Prompt API exposed:")}{" "}
-                            {localDiagnostics.promptApiExposed
-                              ? t("yes")
-                              : t("no")}
-                          </li>
-                          <li>
-                            {t("Text model: ")}
-                            {localDiagnostics.text}
-                          </li>
-                          <li>
-                            {t("Image model: ")}
-                            {localDiagnostics.image}
-                          </li>
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                  {result.source === "LOCAL_RULES" && (
-                    <p className="routing-banner" role="status">
-                      {t(
-                        "Local AI did not run. Names and addresses were checked only by limited rules. Review them manually.",
-                      )}
-                    </p>
-                  )}
+                  <LocalCheckNotice
+                    result={result}
+                    diagnostics={localDiagnostics}
+                    checking={diagnosticsBusy}
+                    disabled={!!busy}
+                    onCheck={async () => {
+                      setDiagnosticsBusy(true);
+                      try {
+                        setLocalDiagnostics(await localAIDiagnostics());
+                      } finally {
+                        setDiagnosticsBusy(false);
+                      }
+                    }}
+                  />
                   {hasAssessableText(result.text) && !awaitingAndroidHybrid && (
                     <>
                       <PressureEvidence result={result} />
