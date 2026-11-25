@@ -1195,58 +1195,75 @@ blockquote {
   }
 }
 @media (max-width: 640px) {
+  /* ── Top header: brand + nav ── */
   .sidebar {
     position: sticky;
     top: 0;
     z-index: 10;
     width: auto;
     height: auto;
-    padding: 13px 20px;
+    padding: max(16px, env(safe-area-inset-top)) 12px 10px;
     background: #ffffffed;
     backdrop-filter: blur(15px);
     border-right: 0;
     border-bottom: 1px solid #e2e8f0;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
+    gap: 6px;
   }
   .brand {
-    font-size: 1.2rem;
-    gap: 8px;
+    font-size: 1.1rem;
+    gap: 7px;
+    flex-shrink: 0;
   }
   .brand-icon {
     padding: 6px;
     border-radius: 10px;
   }
   .brand-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
   .workspace-label,
-  .sidebar-bottom {
+  .sidebar-bottom,
+  .privacy-stats-bar {
     display: none;
   }
   nav {
     display: flex;
     gap: 2px;
+    flex-shrink: 0;
   }
   .nav-item {
-    font-size: 0;
-    padding: 9px;
-    gap: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 10px;
+    font-size: 0.55rem;
+    font-weight: 600;
+    color: #94a3b8;
+    border-radius: 8px;
+    letter-spacing: 0.01em;
+  }
+  .nav-item.active {
+    color: #0f766e;
+    background: #edf7f5;
   }
   .nav-item svg {
-    width: 21px;
-    height: 21px;
+    width: 20px;
+    height: 20px;
   }
   .nav-count {
-    font-size: 0.6rem;
+    display: none;
   }
+
   .main-shell {
     margin: 0;
   }
   main {
-    padding: 29px 20px 20px;
+    padding: 24px 16px 20px;
   }
   .page-heading {
     margin-bottom: 26px;
