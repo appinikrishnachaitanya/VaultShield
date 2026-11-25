@@ -972,9 +972,23 @@ blockquote {
   margin: 9px 0 15px;
 }
 .family-layout .field-hint {
-  margin: -6px 0 12px;
+  margin: 10px 0 0;
   color: #92400e;
   font-size: 0.9rem;
+}
+.family-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.family-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  text-align: center;
 }
 .invite-code {
   background: #f1f5f9;
@@ -987,6 +1001,9 @@ blockquote {
   display: block;
   font-size: 0.85rem;
   margin-bottom: 12px;
+}
+.invite-code p {
+  margin: 0 0 12px;
 }
 .member {
   display: flex;

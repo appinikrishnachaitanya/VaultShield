@@ -1107,7 +1107,7 @@ export default function App() {
                   <h2>{t("Connect someone you trust")}</h2>
                   <p>
                     {t(
-                      " Share one code with your family. Up to 9 relatives can join before it expires in 10 minutes. ",
+                      "Enter your name, then create an invitation or join with a code.",
                     )}
                   </p>
                   <label htmlFor="family-name">{t("Your name in the family")}</label>
@@ -1118,30 +1118,57 @@ export default function App() {
                     onChange={(event) => setFamilyName(event.target.value)}
                     placeholder={t("For example, Mum or Ravi")}
                   />
-                  <button
-                    className="primary"
-                    disabled={!!busy || familyName.trim().length < 2}
-                    onClick={() =>
-                      void task("Creating invite", async () => {
-                        try { localStorage.setItem("vaultshield-family-name", familyName.trim()); } catch { /* Optional preference. */ }
-                        setInvite((await createInvite(familyName)).code);
-                      })
-                    }
-                  >
-                    <Users size={18} />
-                    {t(" Create invitation ")}
-                  </button>
+                  <label htmlFor="family-code">{t("Invitation code (only to join)")}</label>
+                  <input
+                    id="family-code"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder={t("Paste your family member’s code")}
+                  />
+                  <div className="family-actions">
+                    <button
+                      className="primary"
+                      disabled={!!busy || familyName.trim().length < 2}
+                      onClick={() =>
+                        void task("Creating invite", async () => {
+                          try { localStorage.setItem("vaultshield-family-name", familyName.trim()); } catch { /* Optional preference. */ }
+                          setInvite((await createInvite(familyName)).code);
+                        })
+                      }
+                    >
+                      <Users size={18} />
+                      {t(" Create invitation ")}
+                    </button>
+                    <button
+                      className="secondary"
+                      disabled={!!busy || !code.trim() || familyName.trim().length < 2}
+                      onClick={() =>
+                        void task("Joining family", async () => {
+                          await joinFamily(code, familyName);
+                          try { localStorage.setItem("vaultshield-family-name", familyName.trim()); } catch { /* Optional preference. */ }
+                          setCode("");
+                          setNotice("Family connection established.");
+                        })
+                      }
+                    >
+                      {t(" Join family circle ")}
+                    </button>
+                  </div>
+                  {familyName.trim().length < 2 && (
+                    <p className="field-hint" role="status">
+                      {t("Enter your name above (at least 2 characters) to continue.")}
+                    </p>
+                  )}
                   {invite && (
                     <div className="invite-code">
+                      <p>{t("Share this code with up to 9 relatives. It expires in 10 minutes.")}</p>
                       <code>{invite}</code>
                       <button
                         className="secondary"
                         onClick={() =>
                           void task("Copying invitation", async () => {
                             await navigator.clipboard.writeText(invite);
-                            setNotice(
-                              "Invitation copied. Share it privately with your family member.",
-                            );
+                            setNotice("Invitation copied. Share it privately with your family member.");
                           })
                         }
                       >
@@ -1150,35 +1177,6 @@ export default function App() {
                       </button>
                     </div>
                   )}
-                  <hr />
-                  <label htmlFor="family-code">
-                    {t("Have an invitation?")}
-                  </label>
-                  <input
-                    id="family-code"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder={t("Paste your family member’s code")}
-                  />
-                  {code.trim() && familyName.trim().length < 2 && (
-                    <p className="field-hint" role="status">
-                      {t("Enter your family name above to join (at least 2 characters).")}
-                    </p>
-                  )}
-                  <button
-                    className="secondary"
-                    disabled={!!busy || !code.trim() || familyName.trim().length < 2}
-                    onClick={() =>
-                      void task("Joining family", async () => {
-                        await joinFamily(code, familyName);
-                        try { localStorage.setItem("vaultshield-family-name", familyName.trim()); } catch { /* Optional preference. */ }
-                        setCode("");
-                        setNotice("Family connection established.");
-                      })
-                    }
-                  >
-                    {t(" Join family circle ")}
-                  </button>
                 </section>
                 <section className="card">
                   <h2>{t("People & notifications")}</h2>
