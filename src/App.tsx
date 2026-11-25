@@ -136,6 +136,7 @@ export default function App() {
   }>();
   const versionTaps = useRef(0);
   const [notice, setNotice] = useState("");
+  const [notificationsReady, setNotificationsReady] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const output = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -150,6 +151,13 @@ export default function App() {
               `Family inbox / Firestore: ${e.message} Check that the app rules are published to the (default) database in vaultshield-2ace9. If App Check enforcement is enabled, verify this browser’s debug token is registered.`,
             ),
           );
+          if (!usesAndroidModel && "Notification" in window && Notification.permission === "granted") {
+            void enableNotifications().then(() => {
+              if (active) setNotificationsReady(true);
+            }).catch(() => {
+              // Keep the registration button available if token refresh needs attention.
+            });
+          }
         }
       })
       .catch((e) => {
@@ -1224,16 +1232,17 @@ export default function App() {
                   ))}
                   <button
                     className="secondary"
-                    disabled={!!busy}
+                    disabled={!!busy || notificationsReady}
                     onClick={() =>
                       void task("Enabling notifications", async () => {
                         await enableNotifications();
+                        setNotificationsReady(true);
                         setNotice("Notifications enabled on this device.");
                       })
                     }
                   >
-                    <Bell size={18} />
-                    {t(" Enable notifications ")}
+                    {notificationsReady ? <Check size={18} /> : <Bell size={18} />}
+                    {t(notificationsReady ? "Notifications enabled" : "Enable notifications")}
                   </button>
                   <h3 className="inbox-title">{t("Help requests")}</h3>
                   {alerts.length ? (
