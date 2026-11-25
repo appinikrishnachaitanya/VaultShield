@@ -434,5 +434,17 @@
   "This Google account already has a family circle. Open that account? Your guest connections stay separate.": "इस Google खाते में पहले से परिवार जुड़ा है। वह खाता खोलें? आपके अतिथि कनेक्शन अलग रहेंगे।",
   "Could not complete this action. Please try again.": "यह काम पूरा नहीं हुआ। फिर से कोशिश करें।",
   "Could not load account settings. Please try again.": "खाते की सेटिंग नहीं खुली। फिर से कोशिश करें।",
-  "Enable Google sign-in in Firebase Authentication first.": "पहले Firebase Authentication में Google साइन-इन चालू करें।"
+  "Enable Google sign-in in Firebase Authentication first.": "पहले Firebase Authentication में Google साइन-इन चालू करें।",
+  "A little pause. A safer next step.": "थोड़ा ठहरें। अगला कदम सोचकर लें।",
+  "Before you pay, pause here.": "पैसे भेजने से पहले, यहाँ ठहरें।",
+  "A worrying message? Check the pressure, protect your details, and find a calm next step.": "चिंता वाला संदेश आया है? दबाव को समझें, अपनी जानकारी बचाएँ और सोचकर अगला कदम लें।",
+  "Start privately": "निजी तौर पर शुरू करें",
+  "Paste a message or add a screenshot. The first check stays on your device.": "संदेश पेस्ट करें या स्क्रीनशॉट जोड़ें। पहली जाँच आपके डिवाइस पर होती है।",
+  "You choose what leaves": "क्या बाहर जाए, आप चुनें",
+  "Review masked text before approving an AI follow-up or a check of public sources.": "AI से आगे की जाँच या सार्वजनिक स्रोतों की जाँच से पहले छिपाई गई जानकारी वाला पाठ देखें और अनुमति दें।",
+  "Bring someone you trust": "किसी अपने की मदद लें",
+  "Ask your family for help without sending them the suspicious message.": "संदिग्ध संदेश भेजे बिना अपने परिवार से मदद माँगें।",
+  "Start a private check": "निजी जाँच शुरू करें",
+  "Keep my family circle with Google": "Google से मेरा परिवार सुरक्षित रखें",
+  "You can start without an account. Google sign-in is optional.": "बिना खाते के शुरू करें। Google से साइन-इन करना आपकी मर्ज़ी है।"
 }

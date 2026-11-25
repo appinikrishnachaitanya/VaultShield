@@ -2233,3 +2233,24 @@ html[lang="hi"] h3 {
 .account-panel { position: absolute; top: 52px; left: 0; z-index: 30; width: min(360px, 85vw); box-shadow: 0 12px 32px #0f172a22; }
 .account-panel input { display:block; width:100%; padding:12px; margin:10px 0; border:1px solid #cbd5e1; border-radius:8px; }
 .account-panel button { display:block; min-height:44px; padding:10px 14px; margin:10px 0; border:1px solid #cbd5e1; border-radius:8px; background:white; }
+.welcome-backdrop { position:fixed; inset:0; z-index:100; background:#0f172a70; backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+.welcome-panel { background:#fff; color:#0f172a; width:100%; max-width:620px; max-height:calc(100dvh - 40px); overflow:auto; border-radius:24px; padding:32px; box-shadow:0 24px 80px #0f172a30; }
+.welcome-top,.welcome-brand { display:flex; align-items:center; gap:10px; }
+.welcome-top { justify-content:space-between; }
+.welcome-brand { font-weight:700; color:#0f766e; }
+.welcome-close { border:0; background:transparent; padding:10px; min-height:44px; }
+.welcome-languages { display:flex; gap:8px; margin:20px 0; }
+.welcome-languages button { border:1px solid #cbd5e1; background:white; border-radius:9px; min-height:44px; padding:8px 16px; }
+.welcome-languages button[aria-pressed=true] { background:#ecfdf5; border-color:#0f766e; color:#0f766e; font-weight:700; }
+.welcome-eyebrow { color:#0f766e; font-size:.9rem; font-weight:600; margin-bottom:8px; }
+.welcome-panel h1 { font-size:clamp(1.8rem,5vw,2.4rem); line-height:1.2; margin:0 0 12px; }
+.welcome-intro { color:#475569; line-height:1.6; }
+.welcome-steps { list-style:none; padding:0; margin:24px 0; display:grid; gap:18px; }
+.welcome-steps li { display:flex; gap:14px; align-items:flex-start; }
+.welcome-steps svg { color:#0f766e; flex-shrink:0; margin-top:3px; }
+.welcome-steps h2 { font-size:1.05rem; margin:0 0 4px; }
+.welcome-steps p { font-size:1rem; line-height:1.5; color:#475569; margin:0; }
+.welcome-start { width:100%; display:flex; justify-content:center; align-items:center; gap:12px; min-height:52px; }
+.welcome-account { display:block; width:100%; min-height:48px; margin-top:10px; background:white; color:#0f766e; border:1px solid #cbd5e1; border-radius:10px; padding:10px; }
+.welcome-footnote { text-align:center; font-size:.85rem; color:#64748b; margin:14px 0 0; }
+@media(max-width:480px) { .welcome-backdrop { padding:12px; } .welcome-panel { padding:22px; max-height:calc(100dvh - 24px); } }

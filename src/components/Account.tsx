@@ -22,6 +22,11 @@ export default function Account() {
   const [message, setMessage] = useState("");
   const [existing, setExisting] = useState<AuthCredential>();
   useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener("vaultshield-open-account", show);
+    return () => window.removeEventListener("vaultshield-open-account", show);
+  }, []);
+  useEffect(() => {
     if (!auth) return;
     return onAuthStateChanged(auth, async (current) => {
       setUser(current);
@@ -108,7 +113,8 @@ export default function Account() {
                       "vaultshield-family-name",
                       name.trim(),
                     );
-                    location.reload();
+                    window.dispatchEvent(new Event("vaultshield-profile"));
+                    setOpen(false);
                   })
                 }
               >

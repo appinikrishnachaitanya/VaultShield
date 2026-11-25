@@ -49,6 +49,7 @@ import { useDialogFocus } from "./lib/useDialogFocus";
 import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
+import Welcome from "./components/Welcome";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
 import PressureEvidence from "./components/PressureEvidence";
@@ -447,6 +448,7 @@ export default function App() {
     usesAndroidModel && result?.source === "LOCAL_RULES";
   return (
     <div className="app">
+      <Welcome />
       <aside className="sidebar" inert={review}>
         <a className="brand" href="/" aria-label="VaultShield home">
           <span className="brand-icon">
