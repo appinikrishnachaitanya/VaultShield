@@ -2,6 +2,7 @@
 """Run with Application Default Credentials; no AI or message contents enter this service."""
 import hashlib
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Depends, HTTPException, Header
@@ -44,7 +45,17 @@ def reserve_action(uid: str, action: str, interval: int):
 
 class Payload(BaseModel):
     model_config = ConfigDict(extra='forbid')
-class Pair(Payload):
+class Named(Payload):
+    name: str = Field(min_length=2,max_length=40)
+    @field_validator('name')
+    @classmethod
+    def safe_name(cls,value):
+        value=value.strip()
+        if len(value)<2 or re.search(r'[\r\n<>@]|\d{6,}',value):
+            raise ValueError('Use a short name, not contact details')
+        return value
+class Invite(Named): pass
+class Pair(Named):
     code: str = Field(min_length=32, max_length=128)
 class Token(Payload):
     token: str = Field(min_length=20, max_length=4096)
@@ -59,13 +70,13 @@ class Alert(Payload):
             raise ValueError('Invalid tactic types')
         return value
 @app.get('/health')
-def health(): return {'status':'ok'}
+def health(): return {'status':'ok','familyApi':2}
 @app.post('/pair/invite')
-def invite(uid=Depends(identity)):
+def invite(body:Invite,uid=Depends(identity)):
     reserve_action(uid, 'invite', 30)
     code=secrets.token_urlsafe(32)
-    db.collection('invites').document(digest(code)).set({'owner':uid,'expires':now()+timedelta(minutes=10)})
-    return {'code':code,'expiresInSeconds':600}
+    db.collection('invites').document(digest(code)).set({'owner':uid,'ownerName':body.name.strip(),'expires':now()+timedelta(minutes=10),'uses':0,'maxUses':9})
+    return {'code':code,'expiresInSeconds':600,'maxMembers':10}
 @app.post('/pair/join')
 def join(body:Pair, uid=Depends(identity)):
     reserve_action(uid, 'join', 5)
@@ -73,27 +84,72 @@ def join(body:Pair, uid=Depends(identity)):
     @firestore.transactional
     def accept(tx):
         snap=ref.get(transaction=tx)
-        if not snap.exists: raise HTTPException(404,'Invite code is incorrect, expired, or already used. Ask for a new code for each person.')
+        if not snap.exists: raise HTTPException(404,'Invite code is incorrect or expired. Ask for the current family code.')
         value=snap.to_dict()
         if value['expires'] < now() or value['owner']==uid: raise HTTPException(400,'Invite expired or belongs to you')
         owner=value['owner']
-        tx.set(db.collection('users').document(uid).collection('family').document(owner),{'pairedAt':now()})
-        tx.set(db.collection('users').document(owner).collection('family').document(uid),{'pairedAt':now()})
-        tx.delete(ref)
+        # Read inside the transaction so simultaneous joins retry against the
+        # latest member list before creating links for the whole circle.
+        family_query=db.collection('users').document(owner).collection('family').limit(10)
+        existing=[member for member in tx.get(family_query) if (member.to_dict() or {}).get('circleOwner',owner)==owner]
+        already_joined=any(member.id==uid for member in existing)
+        if not already_joined and (len(existing)>=9 or value.get('uses',0)>=value.get('maxUses',9)):
+            raise HTTPException(409,'This family circle is full')
+        stamp=now()
+        owner_name=value.get('ownerName','Family member')
+        newcomer_name=body.name.strip()
+        tx.set(db.collection('users').document(uid).collection('family').document(owner),{'pairedAt':stamp,'name':owner_name,'circleOwner':owner})
+        tx.set(db.collection('users').document(owner).collection('family').document(uid),{'pairedAt':stamp,'name':newcomer_name,'circleOwner':owner})
+        for member in existing:
+            if member.id==uid: continue
+            member_name=(member.to_dict() or {}).get('name','Family member')
+            tx.set(db.collection('users').document(uid).collection('family').document(member.id),{'pairedAt':stamp,'name':member_name,'circleOwner':owner})
+            tx.set(db.collection('users').document(member.id).collection('family').document(uid),{'pairedAt':stamp,'name':newcomer_name,'circleOwner':owner})
+        if not already_joined: tx.update(ref,{'uses':value.get('uses',0)+1})
     accept(db.transaction())
     return {'paired':True}
+class Label(Named): pass
+@app.post('/pair/{member}/label')
+def label_member(member:str,body:Label,uid=Depends(identity)):
+    if '/' in member or member==uid: raise HTTPException(400,'Invalid member')
+    ref=db.collection('users').document(uid).collection('family').document(member)
+    if not ref.get().exists: raise HTTPException(404,'Family member not found')
+    ref.update({'name':body.name.strip()})
+    return {'updated':True}
 @app.delete('/pair/{member}')
 def unpair(member:str,uid=Depends(identity)):
     if '/' in member: raise HTTPException(400,'Invalid member')
+    own_ref=db.collection('users').document(uid).collection('family').document(member)
+    own_snap=own_ref.get()
+    if not own_snap.exists: raise HTTPException(404,'Family member not found')
+    circle_owner=(own_snap.to_dict() or {}).get('circleOwner')
     batch=db.batch()
-    batch.delete(db.collection('users').document(uid).collection('family').document(member))
-    batch.delete(db.collection('users').document(member).collection('family').document(uid))
+    if circle_owner and (uid==circle_owner or member==circle_owner):
+        removed=member if uid==circle_owner else uid
+        others=[person for person in db.collection('users').document(circle_owner).collection('family').limit(10).stream() if (person.to_dict() or {}).get('circleOwner',circle_owner)==circle_owner]
+        participants=[circle_owner]+[person.id for person in others if person.id!=removed]
+        for person in participants:
+            batch.delete(db.collection('users').document(person).collection('family').document(removed))
+            batch.delete(db.collection('users').document(removed).collection('family').document(person))
+    else:
+        batch.delete(own_ref)
+        batch.delete(db.collection('users').document(member).collection('family').document(uid))
     batch.commit()
     return {'removed':True}
 @app.post('/notifications/token')
 def register(body:Token,uid=Depends(identity)):
     reserve_action(uid, 'token', 10)
-    db.collection('users').document(uid).collection('tokens').document(digest(body.token)).set({'token':body.token,'updatedAt':now()})
+    token_id=digest(body.token)
+    owner_ref=db.collection('tokenOwners').document(token_id)
+    previous=owner_ref.get()
+    batch=db.batch()
+    if previous.exists:
+        old_uid=(previous.to_dict() or {}).get('uid')
+        if old_uid and old_uid!=uid:
+            batch.delete(db.collection('users').document(old_uid).collection('tokens').document(token_id))
+    batch.set(db.collection('users').document(uid).collection('tokens').document(token_id),{'token':body.token,'updatedAt':now()})
+    batch.set(owner_ref,{'uid':uid})
+    batch.commit()
     return {'registered':True}
 @app.post('/alerts')
 def alert(body:Alert,uid=Depends(identity)):
@@ -109,13 +165,19 @@ def alert(body:Alert,uid=Depends(identity)):
         tx.set(rate,{'last':stamp})
     reserve(db.transaction())
     delivered=0
+    inboxes=0
     for member in members:
-        db.collection('users').document(member.id).collection('alerts').add({'tacticCount':body.stages,'tacticTypes':body.tacticTypes,'timestamp':stamp,'familyCircleId':digest('|'.join(sorted([uid,member.id]))),'status':'requested'})
+        sender_ref=db.collection('users').document(member.id).collection('family').document(uid)
+        sender_snap=sender_ref.get()
+        if not sender_snap.exists: continue
+        sender_name=(sender_snap.to_dict() or {}).get('name','Family member')
+        db.collection('users').document(member.id).collection('alerts').add({'tacticCount':body.stages,'tacticTypes':body.tacticTypes,'timestamp':stamp,'familyCircleId':digest('|'.join(sorted([uid,member.id]))),'senderName':sender_name,'status':'requested'})
+        inboxes+=1
         for token in db.collection('users').document(member.id).collection('tokens').limit(5).stream():
             try:
-                messaging.send(messaging.Message(token=token.to_dict()['token'],notification=messaging.Notification(title='VaultShield · Help requested',body=f'A family member asked for help. {body.stages}/4 manipulation stages. Open VaultShield.'),webpush=messaging.WebpushConfig(fcm_options=messaging.WebpushFCMOptions(link=os.environ.get('PUBLIC_APP_URL','https://vaultshield-2ace9.web.app')))))
+                messaging.send(messaging.Message(token=token.to_dict()['token'],notification=messaging.Notification(title='VaultShield · Help requested',body=f'{sender_name} asked for help. Call them using your saved number. {body.stages}/4 pressure tactics.'),webpush=messaging.WebpushConfig(fcm_options=messaging.WebpushFCMOptions(link=os.environ.get('PUBLIC_APP_URL','https://vaultshield-2ace9.web.app')))))
                 delivered+=1
             except messaging.UnregisteredError: token.reference.delete()
             except Exception: pass  # Firestore inbox remains the durable delivery path.
-    return {'inboxes':len(members),'pushNotifications':delivered}
+    return {'inboxes':inboxes,'pushNotifications':delivered}
 
