@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase/config";
 import {
   continueWithGoogle,
+  handleGoogleRedirect,
   ExistingAccount,
   openExistingAccount,
   leaveAccount,
@@ -26,6 +27,37 @@ export default function Account() {
     window.addEventListener("vaultshield-open-account", show);
     return () => window.removeEventListener("vaultshield-open-account", show);
   }, []);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const linked = await handleGoogleRedirect();
+        if (!linked) return;
+        const displayName =
+          localStorage.getItem("vaultshield-family-name") ||
+          auth?.currentUser?.displayName?.slice(0, 40) ||
+          "";
+        if (db && auth?.currentUser && displayName.trim().length >= 2) {
+          await setDoc(
+            doc(db, "users", auth.currentUser.uid, "settings", "profile"),
+            { displayName: displayName.trim(), language: "en" },
+          );
+        }
+        location.reload();
+      } catch (error) {
+        if (error instanceof ExistingAccount) setExisting(error.credential);
+        else {
+          const code = (error as { code?: string }).code;
+          setMessage(
+            t(
+              code === "auth/operation-not-allowed"
+                ? "Enable Google sign-in in Firebase Authentication first."
+                : "Could not complete this action. Please try again.",
+            ),
+          );
+        }
+      }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!auth) return;
     return onAuthStateChanged(auth, async (current) => {

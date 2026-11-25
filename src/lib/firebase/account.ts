@@ -1,6 +1,7 @@
 import {
   GoogleAuthProvider,
-  linkWithPopup,
+  linkWithRedirect,
+  getRedirectResult,
   linkWithCredential,
   signInWithCredential,
   signOut,
@@ -32,7 +33,8 @@ export async function continueWithGoogle() {
       nativeCredential = GoogleAuthProvider.credential(idToken);
       await linkWithCredential(auth.currentUser, nativeCredential);
     } else {
-      await linkWithPopup(auth.currentUser, new GoogleAuthProvider());
+      await linkWithRedirect(auth.currentUser, new GoogleAuthProvider());
+      // Page navigates to Google — execution stops here
     }
   } catch (error) {
     const e = error as { code?: string };
@@ -42,6 +44,24 @@ export async function continueWithGoogle() {
         GoogleAuthProvider.credentialFromError(
           error as import("firebase/app").FirebaseError,
         );
+      if (credential) throw new ExistingAccount(credential);
+    }
+    throw error;
+  }
+}
+
+// Call on page load to process a returning Google redirect
+export async function handleGoogleRedirect(): Promise<boolean> {
+  if (!auth) return false;
+  try {
+    const result = await getRedirectResult(auth);
+    return result !== null;
+  } catch (error) {
+    const e = error as { code?: string };
+    if (e.code === "auth/credential-already-in-use") {
+      const credential = GoogleAuthProvider.credentialFromError(
+        error as import("firebase/app").FirebaseError,
+      );
       if (credential) throw new ExistingAccount(credential);
     }
     throw error;
