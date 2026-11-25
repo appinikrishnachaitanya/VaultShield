@@ -21,13 +21,14 @@ export function tokenAttribute(category:IdentifierCategory,value:string):string 
 }
 /** This object and its Maps are tab-memory only. Never serialize an instance or its entries. */
 export class TokenVaultSession {
+ onExpire?:()=>void;
  private values=new Map<string,TokenEntry>();
  private tokens=new Map<string,TokenEntry>();
  private serial:TokenCounts={};
  private timer:ReturnType<typeof setTimeout>|undefined;
  private revision=0;
  get version(){return this.revision;}
- touch(){clearTimeout(this.timer);this.timer=setTimeout(()=>this.clear(),15*60_000);}
+ touch(){clearTimeout(this.timer);this.timer=setTimeout(()=>{this.clear();this.onExpire?.();},15*60_000);}
  clear(){this.values.clear();this.tokens.clear();this.serial={};clearTimeout(this.timer);this.revision++;}
  entries(){return [...this.tokens.values()].map(x=>({...x}));}
  tokenize(input:string):Tokenized {

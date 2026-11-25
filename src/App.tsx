@@ -53,6 +53,9 @@ import Welcome from "./components/Welcome";
 import { TokenVaultSession, rehydrate } from "./lib/tokenVault";
 import { routeInput, assertCloudRoute } from "./lib/router";
 import RoutingBanner from "./components/RoutingBanner";
+import { buildReceipt, type PrivacyReceiptData } from "./lib/receipt";
+import PrivacyReceipt from "./components/PrivacyReceipt";
+import type { TokenCounts } from "./lib/tokenVault";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
 import PressureEvidence from "./components/PressureEvidence";
@@ -88,9 +91,10 @@ const examples = [
 export default function App() {
   const vault = useRef(new TokenVaultSession());
   useEffect(() => {
-    const clear = () => vault.current.clear();
+    const clear = () => { vault.current.clear(); setReceipt(undefined); setInput(''); setImage(undefined); setResult(undefined); setCloud(undefined); setEdit(''); setConsent(false); setReview(false); };
+    vault.current.onExpire = clear;
     window.addEventListener('pagehide', clear);
-    return () => { clear(); window.removeEventListener('pagehide', clear); };
+    return () => { vault.current.onExpire = undefined; vault.current.clear(); window.removeEventListener('pagehide', clear); };
   }, []);
   const appLanguage = useAppLanguage();
   useEffect(() => {
@@ -109,6 +113,8 @@ export default function App() {
     url: string;
   }>();
   const [result, setResult] = useState<LocalResult>();
+  const [receipt, setReceipt] = useState<PrivacyReceiptData>();
+  const [tokenCounts, setTokenCounts] = useState<TokenCounts>({});
   const privacyRoute = routeInput(input + '\n' + (result?.text || ''), Boolean(image && !result));
   const localOnly = privacyRoute.tier === 'LOCAL_ONLY';
   const [coolOffUntil, setCoolOffUntil] = useState<number | null>(null);
@@ -230,8 +236,12 @@ export default function App() {
       setLocalProgress("Preparing the on-device check...");
       vault.current.clear();
       const tokenized = vault.current.tokenize(input);
+      const version = vault.current.version;
       const r = await checkWithLocalFallback(tokenized.text, image, setLocalProgress);
+      if (vault.current.version !== version) return;
       r.text = vault.current.tokenize(r.text).text;
+      setTokenCounts(tokenized.counts);
+      setReceipt(buildReceipt({route:routeInput(input + '\n' + r.text),source:r.source,elapsedMs:r.durationMs,counts:tokenized.counts}));
       setCoolOffUntil(
         r.source !== "LOCAL_RULES" &&
           r.stages.filter((stage) => stage.found).length >= 3
@@ -274,6 +284,7 @@ export default function App() {
         verificationPurpose === "hybrid"
       ) {
         const hybridResult = await checkAndroidReviewedText(sanitized, consent);
+        setReceipt(buildReceipt({route:privacyRoute,source:hybridResult.source,purpose:'hybrid',model:hybridResult.cloudModel,elapsedMs:hybridResult.durationMs,counts:tokenCounts,payload:hybridResult.requestPayload,approvedText:sanitized}));
         setResult(hybridResult);
         setEdit(hybridResult.text);
         setCoolOffUntil(
@@ -285,15 +296,15 @@ export default function App() {
         setReview(false);
         return;
       }
-      setCloud(
-        await verifyWithCloud(
+      const verification = await verifyWithCloud(
           sanitized,
           consent,
           input,
           verificationPurpose,
           appLanguage,
-        ),
-      );
+        );
+      setCloud(verification);
+      setReceipt(buildReceipt({route:privacyRoute,source:verification.source,purpose:verification.purpose,model:verification.model,elapsedMs:verification.durationMs,counts:tokenCounts,payload:verification.requestPayload,approvedText:sanitized,groundingUsed:verification.groundingUsed}));
       setConsent(false);
       setReview(false);
     });
@@ -329,6 +340,8 @@ export default function App() {
 
   function reset() {
     vault.current.clear();
+    setReceipt(undefined);
+    setTokenCounts({});
     setCoolOffUntil(null);
     setResult(undefined);
     setCloud(undefined);
@@ -1116,6 +1129,7 @@ export default function App() {
               )}
               <AlreadyPaid key={result?.text ?? "no-report"} result={result} />
               {cloud && <CloudAssessment key={cloud.text} cloud={cloud} localDisplay={(text) => rehydrate(text, vault.current)} />}
+              {receipt && <PrivacyReceipt receipt={receipt} original={input} entries={vault.current.entries()} />}
               <div className="page-footer">
                 <LockKeyhole size={14} />
                 <span>

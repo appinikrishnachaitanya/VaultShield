@@ -2257,3 +2257,9 @@ html[lang="hi"] h3 {
 .routing-banner { padding:16px 20px; border:1px solid #99f6e4; background:#f0fdfa; border-radius:12px; margin:16px 0; }
 .routing-banner p { margin:6px 0 0; font-size:.95rem; }
 .route-LOCAL_ONLY { border-color:#fcd34d; background:#fffbeb; }
+.receipt-facts { display:grid; grid-template-columns:minmax(120px,1fr) 2fr; gap:8px 18px; margin:18px 0; }
+.receipt-facts dt { color:#475569; }.receipt-facts dd { margin:0; overflow-wrap:anywhere; }
+.receipt-comparison { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+.receipt-comparison pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:300px; overflow:auto; background:#f8fafc; padding:14px; font:inherit; }
+.privacy-receipt { margin-top:24px; }.privacy-receipt summary { cursor:pointer; padding:12px 0; }
+@media(max-width:640px){.receipt-comparison{grid-template-columns:1fr;}}

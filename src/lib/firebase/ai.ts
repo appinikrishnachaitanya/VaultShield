@@ -352,8 +352,9 @@ export async function checkAndroidReviewedText(
     throw new Error("Review and approve the redacted text before continuing.");
 
   const start = performance.now();
+  const prompt = buildPrivateScanPrompt(text);
   const result = await androidAI.verifyReviewed({
-    prompt: buildPrivateScanPrompt(text),
+    prompt,
     consent,
     model: settings().model,
     purpose: "hybrid",
@@ -375,6 +376,8 @@ export async function checkAndroidReviewedText(
       result.source as "ON_DEVICE" | "IN_CLOUD",
     ),
     durationMs: result.durationMs ?? performance.now() - start,
+    requestPayload: result.source === 'IN_CLOUD' ? prompt as SanitizedText : undefined,
+    cloudModel: result.source === 'IN_CLOUD' ? settings().model : undefined,
   };
 }
 export async function verifyWithCloud(
@@ -523,6 +526,9 @@ export async function verifyWithCloud(
     source: local ? ("ON_DEVICE" as const) : ("IN_CLOUD" as const),
     model: local ? undefined : cfg.model,
     purpose,
+    requestPayload: (local ? '' : prompt) as SanitizedText,
+    approvedText: text,
+    groundingUsed: !local && Boolean(response.candidates?.[0]?.groundingMetadata?.groundingChunks?.length || response.candidates?.[0]?.groundingMetadata?.webSearchQueries?.length),
     metadata: local ? undefined : response.candidates?.[0]?.groundingMetadata,
   };
 }

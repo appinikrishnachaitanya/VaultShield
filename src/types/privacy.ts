@@ -20,4 +20,6 @@ export type LocalResult = {
   ruleAssisted?: boolean;
   preparationMs?: number;
   generationMs?: number;
+  requestPayload?: SanitizedText;
+  cloudModel?: string;
 };
