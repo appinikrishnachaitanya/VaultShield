@@ -42,6 +42,7 @@ import { useDialogFocus } from "./lib/useDialogFocus";
 import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
+import DocumentScanner from "./components/DocumentScanner";
 import FamilyCircle from "./components/FamilyCircle";
 import Welcome from "./components/Welcome";
 import { TokenVaultSession, rehydrate, countTokens } from "./lib/tokenVault";
@@ -118,7 +119,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
-  const [tab, setTab] = useState<"check" | "family" | "privacy">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -575,6 +576,7 @@ export default function App() {
             [
               { id: "check", icon: ScanLine, label: t("Check something") },
               { id: "family", icon: Users, label: t("Family circle") },
+              { id: "docs", icon: FileText, label: t("Scan document") },
               { id: "privacy", icon: LockKeyhole, label: t("Your privacy") },
             ] as const
           ).map((item) => (
@@ -1246,6 +1248,7 @@ export default function App() {
               setNotificationsReady={setNotificationsReady}
             />
           )}
+          {tab === "docs" && <DocumentScanner />}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">

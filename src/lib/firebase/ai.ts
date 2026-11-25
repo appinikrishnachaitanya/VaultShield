@@ -1,4 +1,10 @@
 import { buildPrivateScanPrompt } from "../ai/privateScanPrompt";
+import {
+  buildDocumentExtractionPrompt,
+  buildDocumentAnalysisPrompt,
+  type DocumentCategory,
+  type DocumentAnalysisResult,
+} from "../ai/documentPrompts";
 // PRIVACY RULE: Never store, log, or send original unredacted user content to cloud/Firestore.
 import {
   androidAI,
@@ -566,6 +572,132 @@ export async function verifyWithCloud(
     metadata: local ? undefined : response.candidates?.[0]?.groundingMetadata,
   };
 }
+
+/** Extract plain text from a document image using on-device AI only. Never sends image to cloud. */
+export async function extractTextFromDocument(
+  image: { data: string; mimeType: string },
+  category: DocumentCategory,
+  onProgress?: (message: string) => void,
+): Promise<string> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  if (usesAndroidModel)
+    throw new Error(
+      "Use ML Kit Text Recognition on Android for document scanning.",
+    );
+  onProgress?.(
+    "Checking on-device AI availability for document reading…",
+  );
+  const availability = await chromeAvailability(true, true);
+  if (availability === "unavailable")
+    throw new Error(
+      "On-device AI is required to read document images privately. No image was sent to cloud. Enable Chrome's on-device AI or paste the document text instead.",
+    );
+  const createOptions = chromeModelOptions(true);
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_ON_DEVICE,
+    inCloudParams: { model: settings().model },
+    onDeviceParams: { createOptions },
+  });
+  if (availability !== "available") {
+    onProgress?.("Preparing on-device model for document reading…");
+    await boundedWait(
+      model.initializeDeviceModel(),
+      600_000,
+      "On-device model preparation timed out.",
+    );
+  }
+  onProgress?.("Reading document text on your device…");
+  const prompt = buildDocumentExtractionPrompt(category);
+  const result = await boundedWait(
+    model.generateContent([prompt, { inlineData: image }]),
+    120_000,
+    "On-device document reading timed out.",
+  );
+  if (result.response.inferenceSource !== InferenceSource.ON_DEVICE) {
+    markUnconfirmedAI();
+    throw new LocalInferenceBoundaryError(
+      "Privacy boundary: document OCR must stay on-device. No data was sent.",
+    );
+  }
+  refreshAICapability();
+  return result.response.text().trim();
+}
+
+/** Analyze tokenized document text using cloud AI. Input must be fully tokenized — no raw PII. */
+export async function analyzeDocumentText(
+  tokenizedText: SanitizedText,
+  category: DocumentCategory,
+  vault: TokenVaultSession,
+  onProgress?: (message: string) => void,
+): Promise<DocumentAnalysisResult> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  assertNoKnownLeak(tokenizedText, vault);
+  const { model: modelName } = settings();
+  const payloadBytes = new TextEncoder().encode(tokenizedText).length;
+  onProgress?.(`Analyzing document with cloud AI (${payloadBytes} bytes, fully tokenized)…`);
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: {
+      model: modelName,
+      generationConfig: { responseMimeType: "application/json" },
+    },
+  });
+  const start = performance.now();
+  const prompt = buildDocumentAnalysisPrompt(tokenizedText, category);
+  const result = await boundedWait(
+    model.generateContent(prompt),
+    60_000,
+    "Document analysis timed out.",
+  );
+  if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) {
+    markUnconfirmedAI();
+    throw new Error("Expected cloud inference for document analysis.");
+  }
+  recordAIResult(result.response.text(), "IN_CLOUD");
+  let parsed: Partial<DocumentAnalysisResult>;
+  try {
+    parsed = JSON.parse(
+      result.response.text().replace(/^```(?:json)?\s*|\s*```$/g, "").trim(),
+    ) as Partial<DocumentAnalysisResult>;
+  } catch {
+    throw new Error(
+      "Document analysis returned an unexpected format. Please try again.",
+    );
+  }
+  return {
+    summary: typeof parsed.summary === "string" ? parsed.summary : "Analysis complete.",
+    detectedCategory:
+      (["medical", "legal", "land", "loan", "insurance", "bank_statement", "general"] as const).includes(
+        parsed.detectedCategory as DocumentCategory,
+      )
+        ? (parsed.detectedCategory as DocumentCategory)
+        : category,
+    safetyLevel:
+      (["safe", "review", "concern"] as const).includes(
+        parsed.safetyLevel as DocumentAnalysisResult["safetyLevel"],
+      )
+        ? (parsed.safetyLevel as DocumentAnalysisResult["safetyLevel"])
+        : "review",
+    redFlags: Array.isArray(parsed.redFlags)
+      ? parsed.redFlags.filter((s): s is string => typeof s === "string").slice(0, 8)
+      : [],
+    missingItems: Array.isArray(parsed.missingItems)
+      ? parsed.missingItems.filter((s): s is string => typeof s === "string").slice(0, 6)
+      : [],
+    keyFacts: Array.isArray(parsed.keyFacts)
+      ? parsed.keyFacts.filter((s): s is string => typeof s === "string").slice(0, 6)
+      : [],
+    nextSteps: Array.isArray(parsed.nextSteps)
+      ? parsed.nextSteps.filter((s): s is string => typeof s === "string").slice(0, 4)
+      : [],
+    masked: vault.entries().length,
+    payloadBytes,
+    durationMs: performance.now() - start,
+    model: modelName,
+  };
+}
+
+export type { DocumentAnalysisResult, DocumentCategory };
 
 async function boundedWait<T>(
   operation: Promise<T>,
