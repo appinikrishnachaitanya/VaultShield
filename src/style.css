@@ -3407,48 +3407,56 @@ html[lang="hi"] h3 {
 
 /* ── Privacy Stats Bar ───────────────────────────────────── */
 .privacy-stats-bar {
-  margin: 0 0 20px;
-  padding: 14px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
-  border-radius: 12px;
+  border-radius: 10px;
+  overflow: hidden;
   animation: fadeSlideIn 0.3s ease;
 }
 .stats-bar-label {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.65rem;
+  gap: 4px;
+  font-size: 0.6rem;
   font-weight: 750;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: #15803d;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .stats-bar-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 .stat-cell {
   display: flex;
   align-items: center;
   gap: 6px;
   color: #0f766e;
+  min-width: 0;
 }
 .stat-cell svg { flex-shrink: 0; }
 .stat-cell > span {
   display: flex;
-  flex-direction: column;
-  line-height: 1.2;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 .stat-cell strong {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 750;
   color: #0f172a;
+  flex-shrink: 0;
 }
 .stat-cell small {
-  font-size: 0.65rem;
+  font-size: 0.63rem;
   color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Document Scanner ───────────────────────────────────── */
