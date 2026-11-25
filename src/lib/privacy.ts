@@ -1,3 +1,4 @@
+import { publicBodySpans } from "./publicBodies";
 import type { SanitizedText } from "../types/privacy";
 export type IdentifierCategory =
   | "PERSON"
@@ -34,6 +35,7 @@ export function detectIdentifiers(input: string): {
 } {
   const text = normalizePrivateText(input);
   const matches: IdentifierMatch[] = [];
+  const publicBodies = publicBodySpans(text);
   const add = (category: IdentifierCategory, regex: RegExp, group = 0) => {
     for (const m of text.matchAll(regex)) {
       const value = m[group];
@@ -43,33 +45,59 @@ export function detectIdentifiers(input: string): {
         /^(?:team|sir|madam|customer|support|bank|officer)$/i.test(value.trim())
       )
         continue;
-      const start = m.index! + (group ? m[0].lastIndexOf(value) : 0);
-      const end = start + value.length;
-      const overlapping = matches
-        .filter((x) => start < x.end && end > x.start)
-        .sort((a, b) => a.start - b.start);
-      if (!overlapping.length) matches.push({ category, value, start, end });
-      else if (category === "PERSON" || category === "ORG") {
-        // Keep a labeled name even when the same field also contains a phone/account.
-        // Previously detected categories retain their own tokens and route policy.
-        let cursor = start;
-        for (const occupied of overlapping) {
-          if (occupied.start > cursor)
+      const initialStart = m.index! + (group ? m[0].lastIndexOf(value) : 0);
+      const initialEnd = initialStart + value.length;
+      let candidates = [{ start: initialStart, end: initialEnd }];
+      if (category === "PERSON" && group) {
+        for (const body of publicBodies) {
+          candidates = candidates.flatMap((span) =>
+            body.end <= span.start || body.start >= span.end
+              ? [span]
+              : [
+                  ...(body.start > span.start
+                    ? [{ start: span.start, end: body.start }]
+                    : []),
+                  ...(body.end < span.end
+                    ? [{ start: body.end, end: span.end }]
+                    : []),
+                ],
+          );
+        }
+      }
+      for (const candidate of candidates) {
+        let { start, end } = candidate;
+        if (category === "PERSON" && group) {
+          while (start < end && /\s/.test(text[start])) start++;
+          while (end > start && /\s/.test(text[end - 1])) end--;
+        }
+        if (start === end) continue;
+        const value = text.slice(start, end);
+        const overlapping = matches
+          .filter((x) => start < x.end && end > x.start)
+          .sort((a, b) => a.start - b.start);
+        if (!overlapping.length) matches.push({ category, value, start, end });
+        else if (category === "PERSON" || category === "ORG") {
+          // Keep a labeled name even when the same field also contains a phone/account.
+          // Previously detected categories retain their own tokens and route policy.
+          let cursor = start;
+          for (const occupied of overlapping) {
+            if (occupied.start > cursor)
+              matches.push({
+                category,
+                value: text.slice(cursor, occupied.start),
+                start: cursor,
+                end: occupied.start,
+              });
+            cursor = Math.max(cursor, occupied.end);
+          }
+          if (cursor < end)
             matches.push({
               category,
-              value: text.slice(cursor, occupied.start),
+              value: text.slice(cursor, end),
               start: cursor,
-              end: occupied.start,
+              end,
             });
-          cursor = Math.max(cursor, occupied.end);
         }
-        if (cursor < end)
-          matches.push({
-            category,
-            value: text.slice(cursor, end),
-            start: cursor,
-            end,
-          });
       }
     }
   };
@@ -128,7 +156,26 @@ export function detectIdentifiers(input: string): {
     /मेरा\s*नाम\s+([\p{Script=Devanagari}]+(?:\s+[\p{Script=Devanagari}]+){0,2}?)(?=\s+है|[।,.!?\n]|$)/gu,
     1,
   );
-  return { text, matches: matches.sort((a, b) => a.start - b.start) };
+  add(
+    "PERSON",
+    /\b(?:[Ss]tatement|[Ii]nvoice|[Oo]ffer[ \t]+letter|[Rr]eport)[ \t]+(?:for|of)[ \t]+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+){1,2})/g,
+    1,
+  );
+  const sorted = matches.sort((a, b) => a.start - b.start);
+  const merged: IdentifierMatch[] = [];
+  for (const span of sorted) {
+    const previous = merged[merged.length - 1];
+    if (
+      previous?.category === "PERSON" &&
+      span.category === "PERSON" &&
+      span.start >= previous.end &&
+      /^[ \t]*$/.test(text.slice(previous.end, span.start))
+    ) {
+      previous.end = span.end;
+      previous.value = text.slice(previous.start, span.end);
+    } else merged.push({ ...span });
+  }
+  return { text, matches: merged };
 }
 // The brand is a compile-time aid. Review is still required before sending.
 export function maskIdentifiers(input: string): {

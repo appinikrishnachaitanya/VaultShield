@@ -1,0 +1,252 @@
+[
+  {
+    "category": "PHONE",
+    "value": "+91 90000 00000",
+    "text": "SYNTHETIC: Call +91 90000 00000."
+  },
+  {
+    "category": "PHONE",
+    "value": "919000000001",
+    "text": "SYNTHETIC: Call 919000000001."
+  },
+  {
+    "category": "PHONE",
+    "value": "90000-00002",
+    "text": "SYNTHETIC: Call 90000-00002."
+  },
+  {
+    "category": "PHONE",
+    "value": "90000 00003",
+    "text": "SYNTHETIC: Call 90000 00003."
+  },
+  {
+    "category": "PHONE",
+    "value": "9000000004",
+    "text": "SYNTHETIC: Call 9000000004."
+  },
+  {
+    "category": "PHONE",
+    "value": "+91-90000-00005",
+    "text": "SYNTHETIC: Call +91-90000-00005."
+  },
+  {
+    "category": "PHONE",
+    "value": "९००००००००६",
+    "text": "SYNTHETIC: Call ९००००००००६."
+  },
+  {
+    "category": "PHONE",
+    "value": "90000​00007",
+    "text": "SYNTHETIC: Call 90000​00007."
+  },
+  {
+    "category": "PHONE",
+    "value": "９００００００００８",
+    "text": "SYNTHETIC: Call ９００００００００８."
+  },
+  {
+    "category": "PHONE",
+    "value": "+91 90000 00009",
+    "text": "SYNTHETIC: Call +91 90000 00009."
+  },
+  {
+    "category": "EMAIL",
+    "value": "demo0@example.com",
+    "text": "SYNTHETIC: Email demo0@example.com."
+  },
+  {
+    "category": "UPI",
+    "value": "demo0@upi",
+    "text": "SYNTHETIC: Pay demo0@upi."
+  },
+  {
+    "category": "AADHAAR",
+    "value": "1234 5678 0000",
+    "text": "SYNTHETIC: Aadhaar 1234 5678 0000."
+  },
+  {
+    "category": "PAN",
+    "value": "ABCDE0000F",
+    "text": "SYNTHETIC: PAN ABCDE0000F."
+  },
+  {
+    "category": "BANK_ACC",
+    "value": "12340000",
+    "text": "SYNTHETIC: Account: 12340000."
+  },
+  {
+    "category": "AMOUNT",
+    "value": "₹500",
+    "text": "SYNTHETIC: Pay ₹500."
+  },
+  {
+    "category": "URL",
+    "value": "https://sbi-demo.example/private?id=0",
+    "text": "SYNTHETIC: Verify at https://sbi-demo.example/private?id=0"
+  },
+  {
+    "category": "EMAIL",
+    "value": "demo1@example.com",
+    "text": "SYNTHETIC: Email demo1@example.com."
+  },
+  {
+    "category": "UPI",
+    "value": "demo1@upi",
+    "text": "SYNTHETIC: Pay demo1@upi."
+  },
+  {
+    "category": "AADHAAR",
+    "value": "1234 5678 0001",
+    "text": "SYNTHETIC: Aadhaar 1234 5678 0001."
+  },
+  {
+    "category": "PAN",
+    "value": "ABCDE0001F",
+    "text": "SYNTHETIC: PAN ABCDE0001F."
+  },
+  {
+    "category": "BANK_ACC",
+    "value": "12340001",
+    "text": "SYNTHETIC: Account: 12340001."
+  },
+  {
+    "category": "AMOUNT",
+    "value": "₹1,500",
+    "text": "SYNTHETIC: Pay ₹1,500."
+  },
+  {
+    "category": "URL",
+    "value": "https://sbi-demo.example/private?id=1",
+    "text": "SYNTHETIC: Verify at https://sbi-demo.example/private?id=1"
+  },
+  {
+    "category": "EMAIL",
+    "value": "demo2@example.com",
+    "text": "SYNTHETIC: Email demo2@example.com."
+  },
+  {
+    "category": "UPI",
+    "value": "demo2@upi",
+    "text": "SYNTHETIC: Pay demo2@upi."
+  },
+  {
+    "category": "AADHAAR",
+    "value": "1234 5678 0002",
+    "text": "SYNTHETIC: Aadhaar 1234 5678 0002."
+  },
+  {
+    "category": "PAN",
+    "value": "ABCDE0002F",
+    "text": "SYNTHETIC: PAN ABCDE0002F."
+  },
+  {
+    "category": "BANK_ACC",
+    "value": "12340002",
+    "text": "SYNTHETIC: Account: 12340002."
+  },
+  {
+    "category": "AMOUNT",
+    "value": "₹15,000",
+    "text": "SYNTHETIC: Pay ₹15,000."
+  },
+  {
+    "category": "URL",
+    "value": "https://sbi-demo.example/private?id=2",
+    "text": "SYNTHETIC: Verify at https://sbi-demo.example/private?id=2"
+  },
+  {
+    "category": "EMAIL",
+    "value": "demo3@example.com",
+    "text": "SYNTHETIC: Email demo3@example.com."
+  },
+  {
+    "category": "UPI",
+    "value": "demo3@upi",
+    "text": "SYNTHETIC: Pay demo3@upi."
+  },
+  {
+    "category": "AADHAAR",
+    "value": "1234 5678 0003",
+    "text": "SYNTHETIC: Aadhaar 1234 5678 0003."
+  },
+  {
+    "category": "PAN",
+    "value": "ABCDE0003F",
+    "text": "SYNTHETIC: PAN ABCDE0003F."
+  },
+  {
+    "category": "BANK_ACC",
+    "value": "12340003",
+    "text": "SYNTHETIC: Account: 12340003."
+  },
+  {
+    "category": "AMOUNT",
+    "value": "₹35,000",
+    "text": "SYNTHETIC: Pay ₹35,000."
+  },
+  {
+    "category": "URL",
+    "value": "https://sbi-demo.example/private?id=3",
+    "text": "SYNTHETIC: Verify at https://sbi-demo.example/private?id=3"
+  },
+  {
+    "category": "EMAIL",
+    "value": "demo4@example.com",
+    "text": "SYNTHETIC: Email demo4@example.com."
+  },
+  {
+    "category": "UPI",
+    "value": "demo4@upi",
+    "text": "SYNTHETIC: Pay demo4@upi."
+  },
+  {
+    "category": "AADHAAR",
+    "value": "1234 5678 0004",
+    "text": "SYNTHETIC: Aadhaar 1234 5678 0004."
+  },
+  {
+    "category": "PAN",
+    "value": "ABCDE0004F",
+    "text": "SYNTHETIC: PAN ABCDE0004F."
+  },
+  {
+    "category": "BANK_ACC",
+    "value": "12340004",
+    "text": "SYNTHETIC: Account: 12340004."
+  },
+  {
+    "category": "AMOUNT",
+    "value": "₹75,000",
+    "text": "SYNTHETIC: Pay ₹75,000."
+  },
+  {
+    "category": "URL",
+    "value": "https://sbi-demo.example/private?id=4",
+    "text": "SYNTHETIC: Verify at https://sbi-demo.example/private?id=4"
+  },
+  {
+    "category": "PERSON",
+    "value": "Rahul Sharma",
+    "text": "SYNTHETIC: Inspector Rahul Sharma from Mumbai Police"
+  },
+  {
+    "category": "PERSON",
+    "value": "Priya Nair",
+    "text": "SYNTHETIC: Hi Priya Nair, please check."
+  },
+  {
+    "category": "PERSON",
+    "value": "Suresh Kumar",
+    "text": "SYNTHETIC: Mera naam Suresh Kumar hai."
+  },
+  {
+    "category": "PERSON",
+    "value": "Anita Desai",
+    "text": "SYNTHETIC: Anita Desai called yesterday."
+  },
+  {
+    "category": "PERSON",
+    "value": "ravi kumar",
+    "text": "SYNTHETIC: please ask ravi kumar tomorrow."
+  }
+]
