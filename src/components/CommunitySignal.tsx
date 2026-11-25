@@ -1,8 +1,75 @@
-import {useState} from 'react';
-import {t} from '../lib/i18n';
-import {sharePattern,loadTrendingPatterns} from '../lib/firebase/family';
-import type {PatternSignal,TrendingPatterns} from '../lib/patterns';
-export default function CommunitySignal({signal}:{signal:PatternSignal}){
- const [optIn,setOptIn]=useState(false);const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');const [trending,setTrending]=useState<TrendingPatterns>();
- return <section className="card community-signal"><h2>{t('Help spot shared pressure patterns')}</h2><p>{t('Optional: share only pressure categories, one broad link class, one amount range, and English/Hindi. No message, name, token values or document is shared.')}</p><p>{signal.tacticTypes.map(t).join(' · ')||t('No pressure categories')} · {t(signal.urlFeature)} · {t(signal.amountBucket)} · {signal.language==='hi'?'हिन्दी':'English'}</p><label className="consent"><input type="checkbox" checked={optIn} onChange={e=>setOptIn(e.target.checked)} disabled={busy}/>{t('I choose to share these categories.')}</label><button disabled={!optIn||busy} onClick={()=>{setBusy(true);setMessage('');void sharePattern(signal).then(()=>loadTrendingPatterns()).then(data=>{setTrending(data);setOptIn(false);setMessage('Pattern categories shared.');}).catch(()=>setMessage('Pattern sharing is unavailable. Your check is unchanged.')).finally(()=>setBusy(false));}}>{t(busy?'Sharing categories…':'Share these categories')}</button>{message&&<p role="status">{t(message)}</p>}{trending&&trending.buckets.length>0&&<div className="routing-banner"><h3>{t('Shared pressure patterns')}</h3><p>{t('Only buckets meeting the publication threshold are shown. Counts are observations, not distinct people or proof of a scam.')}</p>{trending.buckets.map((bucket,i)=><p key={i}>{bucket.tacticTypes.map(t).join(' · ')} · {t(bucket.urlFeature)} · {t(bucket.amountBucket)} · {bucket.language==='hi'?'हिन्दी':'English'} · {bucket.count} {t('observations')}</p>)}</div>}</section>;
+import { useState } from "react";
+import { t } from "../lib/i18n";
+import { sharePattern, loadTrendingPatterns } from "../lib/firebase/family";
+import type { PatternSignal, TrendingPatterns } from "../lib/patterns";
+export default function CommunitySignal({ signal }: { signal: PatternSignal }) {
+  const [optIn, setOptIn] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [trending, setTrending] = useState<TrendingPatterns>();
+  return (
+    <section className="card community-signal">
+      <h2>{t("Help spot shared pressure patterns")}</h2>
+      <p>
+        {t(
+          "Optional: share only pressure categories, one broad link class, one amount range, and English/Hindi. No message, name, token values or document is shared.",
+        )}
+      </p>
+      <p>
+        {signal.tacticTypes.map(t).join(" · ") || t("No pressure categories")} ·{" "}
+        {t(signal.urlFeature)} · {t(signal.amountBucket)} ·{" "}
+        {signal.language === "hi" ? "हिन्दी" : "English"}
+      </p>
+      <label className="consent">
+        <input
+          type="checkbox"
+          checked={optIn}
+          onChange={(e) => setOptIn(e.target.checked)}
+          disabled={busy}
+        />
+        {t("I choose to share these categories.")}
+      </label>
+      <button
+        disabled={!optIn || busy}
+        onClick={() => {
+          setBusy(true);
+          setMessage("");
+          void sharePattern(signal)
+            .then(() => loadTrendingPatterns())
+            .then((data) => {
+              setTrending(data);
+              setOptIn(false);
+              setMessage("Pattern categories shared.");
+            })
+            .catch(() =>
+              setMessage(
+                "Pattern sharing is unavailable. Your check is unchanged.",
+              ),
+            )
+            .finally(() => setBusy(false));
+        }}
+      >
+        {t(busy ? "Sharing categories…" : "Share these categories")}
+      </button>
+      {message && <p role="status">{t(message)}</p>}
+      {trending && trending.buckets.length > 0 && (
+        <div className="routing-banner">
+          <h3>{t("Shared pressure patterns")}</h3>
+          <p>
+            {t(
+              "Only buckets meeting the publication threshold are shown. Counts are observations, not distinct people or proof of a scam.",
+            )}
+          </p>
+          {trending.buckets.map((bucket, i) => (
+            <p key={i}>
+              {bucket.tacticTypes.map(t).join(" · ")} · {t(bucket.urlFeature)} ·{" "}
+              {t(bucket.amountBucket)} ·{" "}
+              {bucket.language === "hi" ? "हिन्दी" : "English"} · {bucket.count}{" "}
+              {t("observations")}
+            </p>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }

@@ -15,7 +15,13 @@ type Assessment = Omit<
   Awaited<ReturnType<typeof verifyWithCloud>>,
   "language"
 > & { language?: "en" | "hi" };
-export default function CloudAssessment({ cloud, localDisplay = (text: string) => text }: { cloud: Assessment; localDisplay?: (text: string) => string }) {
+export default function CloudAssessment({
+  cloud,
+  localDisplay = (text: string) => text,
+}: {
+  cloud: Assessment;
+  localDisplay?: (text: string) => string;
+}) {
   const report = useRef<HTMLElement>(null);
   useEffect(() => {
     report.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -139,7 +145,15 @@ export default function CloudAssessment({ cloud, localDisplay = (text: string) =
         </p>
       )}
       <div lang={display.language}>
-        <AssessmentMarkdown text={localDisplay(display.text)} />
+        <AssessmentMarkdown text={display.text} />
+        {localDisplay(display.text) !== display.text && (
+          <details>
+            <summary>
+              {t("Local view with original values · stays on this device")}
+            </summary>
+            <pre className="preserve-lines">{localDisplay(display.text)}</pre>
+          </details>
+        )}
       </div>
       <div className="assessment-pause">
         <ShieldCheck size={24} aria-hidden="true" />

@@ -44,19 +44,21 @@ import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import FamilyCircle from "./components/FamilyCircle";
 import Welcome from "./components/Welcome";
-import { TokenVaultSession, rehydrate } from "./lib/tokenVault";
+import { TokenVaultSession, rehydrate, countTokens } from "./lib/tokenVault";
 import { routeInput, assertCloudRoute } from "./lib/router";
 import RoutingBanner from "./components/RoutingBanner";
 import { buildReceipt, type PrivacyReceiptData } from "./lib/receipt";
 import PrivacyReceipt from "./components/PrivacyReceipt";
 import { runLeakTest, assertNoKnownLeak } from "./lib/leakTest";
 import LeakTestPanel from "./components/LeakTestPanel";
+import CloudApproval from "./components/CloudApproval";
+import { useReviewedText } from "./lib/useReviewedText";
 import NetworkProof from "./components/NetworkProof";
 import CommunitySignal from "./components/CommunitySignal";
 import DemoStories from "./components/DemoStories";
 import { patternSignal } from "./lib/patterns";
 import { startNetworkCheck } from "./lib/netProof";
-import type { TokenCounts } from "./lib/tokenVault";
+import type { TokenEntry } from "./lib/tokenVault";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
 import PressureEvidence from "./components/PressureEvidence";
@@ -92,10 +94,25 @@ const examples = [
 export default function App() {
   const vault = useRef(new TokenVaultSession());
   useEffect(() => {
-    const clear = () => { vault.current.clear(); setReceipt(undefined); setInput(''); setImage(undefined); setResult(undefined); setCloud(undefined); setEdit(''); setConsent(false); setReview(false); };
+    const clear = () => {
+      vault.current.clear();
+      setReceipt(undefined);
+      setTokenSpans([]);
+      setInput("");
+      setImage(undefined);
+      setResult(undefined);
+      setCloud(undefined);
+      setEdit("");
+      setConsent(false);
+      setReview(false);
+    };
     vault.current.onExpire = clear;
-    window.addEventListener('pagehide', clear);
-    return () => { vault.current.onExpire = undefined; vault.current.clear(); window.removeEventListener('pagehide', clear); };
+    window.addEventListener("pagehide", clear);
+    return () => {
+      vault.current.onExpire = undefined;
+      vault.current.clear();
+      window.removeEventListener("pagehide", clear);
+    };
   }, []);
   const appLanguage = useAppLanguage();
   useEffect(() => {
@@ -115,15 +132,17 @@ export default function App() {
   }>();
   const [result, setResult] = useState<LocalResult>();
   const [receipt, setReceipt] = useState<PrivacyReceiptData>();
-  const [tokenCounts, setTokenCounts] = useState<TokenCounts>({});
-  const privacyRoute = routeInput(input + '\n' + (result?.text || ''), Boolean(image && !result));
-  const localOnly = privacyRoute.tier === 'LOCAL_ONLY';
+  const [tokenSpans, setTokenSpans] = useState<TokenEntry[]>([]);
+  const privacyRoute = routeInput(
+    input + "\n" + (result?.text || ""),
+    Boolean(image && !result),
+  );
+  const localOnly = privacyRoute.tier === "LOCAL_ONLY";
   const [coolOffUntil, setCoolOffUntil] = useState<number | null>(null);
   const [cloud, setCloud] =
     useState<Awaited<ReturnType<typeof verifyWithCloud>>>();
-  const [edit, setEdit] = useState("");
+  const { edit, setEdit, consent, setConsent } = useReviewedText();
   const leakResult = runLeakTest(edit, vault.current);
-  const [consent, setConsent] = useState(false);
   const [verificationPurpose, setVerificationPurpose] = useState<
     "hybrid" | "public-sources"
   >("hybrid");
@@ -140,7 +159,9 @@ export default function App() {
   const [status, setStatus] = useState("Connecting securely…");
   const [online, setOnline] = useState(navigator.onLine);
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
-  const [alerts, setAlerts] = useState<{ id: string; stages: number; senderName: string; time: number }[]>([]);
+  const [alerts, setAlerts] = useState<
+    { id: string; stages: number; senderName: string; time: number }[]
+  >([]);
   const [diagnostics, setDiagnostics] = useState<{
     modelStatus: string;
     mlKitStatus?: number;
@@ -165,12 +186,18 @@ export default function App() {
               `Family inbox / Firestore: ${e.message} Check that the app rules are published to the (default) database in vaultshield-2ace9. If App Check enforcement is enabled, verify this browser’s debug token is registered.`,
             ),
           );
-          if (!usesAndroidModel && "Notification" in window && Notification.permission === "granted") {
-            void enableNotifications().then(() => {
-              if (active) setNotificationsReady(true);
-            }).catch(() => {
-              // Keep the registration button available if token refresh needs attention.
-            });
+          if (
+            !usesAndroidModel &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            void enableNotifications()
+              .then(() => {
+                if (active) setNotificationsReady(true);
+              })
+              .catch(() => {
+                // Keep the registration button available if token refresh needs attention.
+              });
           }
         }
       })
@@ -225,11 +252,28 @@ export default function App() {
       vault.current.clear();
       const tokenized = vault.current.tokenize(input);
       const version = vault.current.version;
-      const r = await checkWithLocalFallback(tokenized.text, image, setLocalProgress);
+      const r = await checkWithLocalFallback(
+        tokenized.text,
+        image,
+        setLocalProgress,
+      );
       if (vault.current.version !== version) return;
-      r.text = vault.current.tokenize(r.text).text;
-      setTokenCounts(tokenized.counts);
-      setReceipt(buildReceipt({route:routeInput(input + '\n' + r.text),source:r.source,elapsedMs:r.durationMs,counts:tokenized.counts}));
+      const modelTokens = vault.current.tokenize(r.text);
+      r.text = modelTokens.text;
+      const counts = countTokens(r.text);
+      r.masked = Object.values(counts).reduce(
+        (sum, value) => sum + (value ?? 0),
+        0,
+      );
+      setTokenSpans(tokenized.entries);
+      setReceipt(
+        buildReceipt({
+          route: routeInput(input + "\n" + r.text),
+          source: r.source,
+          elapsedMs: r.durationMs,
+          counts,
+        }),
+      );
       setCoolOffUntil(
         r.source !== "LOCAL_RULES" &&
           r.stages.filter((stage) => stage.found).length >= 3
@@ -238,7 +282,11 @@ export default function App() {
       );
       setResult(r);
       setEdit(r.text);
-      if (usesAndroidModel && r.source === "LOCAL_RULES" && routeInput(input + '\n' + r.text).tier !== 'LOCAL_ONLY') {
+      if (
+        usesAndroidModel &&
+        r.source === "LOCAL_RULES" &&
+        routeInput(input + "\n" + r.text).tier !== "LOCAL_ONLY"
+      ) {
         setVerificationPurpose("hybrid");
         setReview(true);
         setNotice(
@@ -259,6 +307,7 @@ export default function App() {
     void task("Verifying approved text", async () => {
       assertCloudRoute(privacyRoute);
       assertNoKnownLeak(edit, vault.current);
+      const version = vault.current.version;
       const sanitized = vault.current.tokenize(edit).text;
       if (sanitized !== edit) {
         setEdit(sanitized);
@@ -272,8 +321,24 @@ export default function App() {
         result?.source === "LOCAL_RULES" &&
         verificationPurpose === "hybrid"
       ) {
-        const hybridResult = await checkAndroidReviewedText(sanitized, consent, vault.current);
-        setReceipt(buildReceipt({route:privacyRoute,source:hybridResult.source,purpose:'hybrid',model:hybridResult.cloudModel,elapsedMs:hybridResult.durationMs,counts:tokenCounts,payload:hybridResult.requestPayload,approvedText:sanitized}));
+        const hybridResult = await checkAndroidReviewedText(
+          sanitized,
+          consent,
+          vault.current,
+        );
+        if (version !== vault.current.version) return;
+        setReceipt(
+          buildReceipt({
+            route: privacyRoute,
+            source: hybridResult.source,
+            purpose: "hybrid",
+            model: hybridResult.cloudModel,
+            elapsedMs: hybridResult.durationMs,
+            counts: countTokens(sanitized),
+            payload: hybridResult.requestPayload,
+            approvedText: sanitized,
+          }),
+        );
         setResult(hybridResult);
         setEdit(hybridResult.text);
         setCoolOffUntil(
@@ -286,15 +351,28 @@ export default function App() {
         return;
       }
       const verification = await verifyWithCloud(
-          sanitized,
-          consent,
-          input,
-          verificationPurpose,
-          appLanguage,
-          vault.current,
-        );
+        sanitized,
+        consent,
+        input,
+        verificationPurpose,
+        appLanguage,
+        vault.current,
+      );
+      if (version !== vault.current.version) return;
       setCloud(verification);
-      setReceipt(buildReceipt({route:privacyRoute,source:verification.source,purpose:verification.purpose,model:verification.model,elapsedMs:verification.durationMs,counts:tokenCounts,payload:verification.requestPayload,approvedText:sanitized,groundingUsed:verification.groundingUsed}));
+      setReceipt(
+        buildReceipt({
+          route: privacyRoute,
+          source: verification.source,
+          purpose: verification.purpose,
+          model: verification.model,
+          elapsedMs: verification.durationMs,
+          counts: countTokens(sanitized),
+          payload: verification.requestPayload,
+          approvedText: sanitized,
+          groundingUsed: verification.groundingUsed,
+        }),
+      );
       setConsent(false);
       setReview(false);
     });
@@ -331,7 +409,7 @@ export default function App() {
   function reset() {
     vault.current.clear();
     setReceipt(undefined);
-    setTokenCounts({});
+    setTokenSpans([]);
     setCoolOffUntil(null);
     setResult(undefined);
     setCloud(undefined);
@@ -434,8 +512,7 @@ export default function App() {
       .then(({ watchAndroidPush }) =>
         watchAndroidPush(
           () => {
-            if (active)
-              setTab("family");
+            if (active) setTab("family");
           },
           () => {
             if (active) setTab("family");
@@ -558,6 +635,17 @@ export default function App() {
           </button>
         </header>
         <main>
+          <section
+            className="privacy-router-intro"
+            aria-label={t("Privacy Router for AI")}
+          >
+            <strong>{t("Privacy Router for AI")}</strong>
+            <p>
+              {t(
+                "Cloud reasons over placeholders. This device holds the values. A receipt shows what the app submitted.",
+              )}
+            </p>
+          </section>
           {(input.trim() || image) && <RoutingBanner route={privacyRoute} />}
           <p className="language-note">
             {t(
@@ -630,7 +718,13 @@ export default function App() {
                         reset();
                       }}
                     />
-                    <DemoStories onChoose={(text) => { reset(); setImage(undefined); setInput(text); }} />
+                    <DemoStories
+                      onChoose={(text) => {
+                        reset();
+                        setImage(undefined);
+                        setInput(text);
+                      }}
+                    />
                     <label htmlFor="message" className="input-label">
                       {t(" Paste your message ")}
                     </label>
@@ -881,33 +975,35 @@ export default function App() {
                         {awaitingAndroidHybrid
                           ? t("Review redacted text to run hybrid AI")
                           : !hasAssessableText(result.text)
-                          ? t("No readable message to assess")
-                          : count === 0
-                            ? result.source === "LOCAL_RULES"
-                              ? t("No common pressure phrases matched")
-                              : result.ruleAssisted
-                                ? t("AI assessment incomplete")
-                                : t("No pressure tactics found")
-                            : tacticCount(count)}
+                            ? t("No readable message to assess")
+                            : count === 0
+                              ? result.source === "LOCAL_RULES"
+                                ? t("No common pressure phrases matched")
+                                : result.ruleAssisted
+                                  ? t("AI assessment incomplete")
+                                  : t("No pressure tactics found")
+                              : tacticCount(count)}
                       </h2>
                       <p>
                         {awaitingAndroidHybrid
-                          ? t("The Android local model did not run. No pressure tactics have been assessed yet. Review the redacted text and approve Firebase AI Logic to prefer on-device inference with cloud fallback.")
-                          : !hasAssessableText(result.text)
                           ? t(
-                              "The image may have no readable message, or masking removed all usable text. This is not a safety assessment. Upload a clearer screenshot or paste the message.",
+                              "The Android local model did not run. No pressure tactics have been assessed yet. Review the redacted text and approve Firebase AI Logic to prefer on-device inference with cloud fallback.",
                             )
-                          : result.source === "LOCAL_RULES"
+                          : !hasAssessableText(result.text)
                             ? t(
-                                "This basic check matches common phrases and masks recognizable identifiers. Review for missed pressure signals and private details.",
+                                "The image may have no readable message, or masking removed all usable text. This is not a safety assessment. Upload a clearer screenshot or paste the message.",
                               )
-                            : count === 0
+                            : result.source === "LOCAL_RULES"
                               ? t(
-                                  "This is not a guarantee of safety. Verify payment requests independently.",
+                                  "This basic check matches common phrases and masks recognizable identifiers. Review for missed pressure signals and private details.",
                                 )
-                              : t(
-                                  "Pause before you pay. Here’s how this message is applying pressure.",
-                                )}
+                              : count === 0
+                                ? t(
+                                    "This is not a guarantee of safety. Verify payment requests independently.",
+                                  )
+                                : t(
+                                    "Pause before you pay. Here’s how this message is applying pressure.",
+                                  )}
                       </p>
                       <p className="tool-hint">
                         {t(
@@ -938,7 +1034,9 @@ export default function App() {
                       <button
                         type="button"
                         className="primary"
-                        disabled={!!busy || localOnly || !hasAssessableText(result.text)}
+                        disabled={
+                          !!busy || localOnly || !hasAssessableText(result.text)
+                        }
                         onClick={() => {
                           setConsent(false);
                           setVerificationPurpose("hybrid");
@@ -1023,6 +1121,7 @@ export default function App() {
                           </p>
                         )}
                       <FamilySafety
+                        cloudAllowed={!localOnly}
                         key={`family-safety:${result.text}`}
                         result={result}
                         coolOffUntil={coolOffUntil}
@@ -1092,37 +1191,62 @@ export default function App() {
                       </details>
                     </>
                   )}
-                  {!awaitingAndroidHybrid && <div className="card cloud-invite">
-                    <Cloud size={28} />
-                    <div>
-                      <h3>{t("Want a second layer of verification?")}</h3>
-                      <p>
-                        {t(
-                          " Automated masking can miss details. Please check the redacted text carefully before approving. Choose a hybrid second opinion or a cloud check of public sources.",
-                        )}{" "}
-                        {!hasAssessableText(result.text) &&
-                          t(
-                            "Verification is unavailable because no readable message remains. Your image has not been uploaded.",
-                          )}
-                      </p>
+                  {!awaitingAndroidHybrid && (
+                    <div className="card cloud-invite">
+                      <Cloud size={28} />
+                      <div>
+                        <h3>{t("Want a second layer of verification?")}</h3>
+                        <p>
+                          {t(
+                            " Automated masking can miss details. Please check the redacted text carefully before approving. Choose a hybrid second opinion or a cloud check of public sources.",
+                          )}{" "}
+                          {!hasAssessableText(result.text) &&
+                            t(
+                              "Verification is unavailable because no readable message remains. Your image has not been uploaded.",
+                            )}
+                        </p>
+                      </div>
+                      <button
+                        className="primary"
+                        disabled={
+                          !!busy || localOnly || !hasAssessableText(result.text)
+                        }
+                        onClick={() => {
+                          setReview(true);
+                          setConsent(false);
+                        }}
+                      >
+                        {t(" Review & verify ")}
+                      </button>
                     </div>
-                    <button
-                      className="primary"
-                      disabled={!!busy || localOnly || !hasAssessableText(result.text)}
-                      onClick={() => {
-                        setReview(true);
-                        setConsent(false);
-                      }}
-                    >
-                      {t(" Review & verify ")}
-                    </button>
-                  </div>}
+                  )}
                 </div>
               )}
               <AlreadyPaid key={result?.text ?? "no-report"} result={result} />
-              {cloud && <CloudAssessment key={cloud.text} cloud={cloud} localDisplay={(text) => rehydrate(text, vault.current)} />}
-              {receipt && <PrivacyReceipt receipt={receipt} original={input} entries={vault.current.entries()} />}
-              {result && <CommunitySignal key={result.text} signal={patternSignal(result.stages,vault.current.entries(),appLanguage)} />}
+              {cloud && (
+                <CloudAssessment
+                  key={cloud.text}
+                  cloud={cloud}
+                  localDisplay={(text) => rehydrate(text, vault.current)}
+                />
+              )}
+              {receipt && (
+                <PrivacyReceipt
+                  receipt={receipt}
+                  original={input}
+                  entries={tokenSpans}
+                />
+              )}
+              {result && !localOnly && (
+                <CommunitySignal
+                  key={result.text}
+                  signal={patternSignal(
+                    result.stages,
+                    vault.current.entries(),
+                    appLanguage,
+                  )}
+                />
+              )}
               <div className="page-footer">
                 <LockKeyhole size={14} />
                 <span>
@@ -1134,7 +1258,17 @@ export default function App() {
               </div>
             </>
           )}
-          {tab === "family" && <FamilyCircle members={members} alerts={alerts} busy={busy} task={task} setNotice={setNotice} notificationsReady={notificationsReady} setNotificationsReady={setNotificationsReady} />}
+          {tab === "family" && (
+            <FamilyCircle
+              members={members}
+              alerts={alerts}
+              busy={busy}
+              task={task}
+              setNotice={setNotice}
+              notificationsReady={notificationsReady}
+              setNotificationsReady={setNotificationsReady}
+            />
+          )}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">
@@ -1291,7 +1425,10 @@ export default function App() {
               )}
             </p>
             <RoutingBanner route={privacyRoute} />
-            <fieldset className="verification-options" disabled={!!busy || localOnly}>
+            <fieldset
+              className="verification-options"
+              disabled={!!busy || localOnly}
+            >
               <legend>{t("What would you like to check?")}</legend>
               <label>
                 <input
@@ -1354,31 +1491,16 @@ export default function App() {
                 )}
               </p>
             )}
-            <label className="consent">
-              <input
-                type="checkbox"
-                checked={consent}
-                disabled={!!busy || localOnly || leakResult.blocked || !hasAssessableText(edit)}
-                onChange={(e) => setConsent(e.target.checked)}
-              />
-              {verificationPurpose === "public-sources"
-                ? t(
-                    "I reviewed this text and approve sending it to Google’s cloud AI for public-source checking with Google Search.",
-                  )
-                : t(
-                    "I reviewed this text and approve Firebase AI Logic to prefer on-device AI and send only this text to cloud if local inference is unavailable.",
-                  )}
-            </label>
-            <button
-              className="primary"
-              disabled={!consent || !!busy || localOnly || leakResult.blocked || !hasAssessableText(edit)}
-              onClick={submitReviewedText}
-            >
-              <Cloud size={18} />
-              {busy === "Verifying approved text"
-                ? t("Verifying…")
-                : t("Approve & verify")}
-            </button>
+            <CloudApproval
+              route={privacyRoute}
+              blocked={leakResult.blocked}
+              busy={!!busy}
+              readable={hasAssessableText(edit)}
+              consent={consent}
+              onConsent={setConsent}
+              onSubmit={submitReviewedText}
+              purpose={verificationPurpose}
+            />
             <p>
               {t(
                 " Only the reviewed text is approved. AI can miss details; review names, account details and private clauses before continuing. ",

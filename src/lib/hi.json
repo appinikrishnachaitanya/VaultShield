@@ -545,5 +545,10 @@
   "Demo story": "डेमो उदाहरण",
   "Synthetic examples. Results come from the real analysis flow.": "काल्पनिक उदाहरण। नतीजे असली जाँच प्रक्रिया से आते हैं।",
   "Synthetic freelancer contract": "काल्पनिक फ़्रीलांसर अनुबंध",
-  "Synthetic legal notice": "काल्पनिक कानूनी नोटिस"
+  "Synthetic legal notice": "काल्पनिक कानूनी नोटिस",
+  "Local view with original values · stays on this device": "असली जानकारी के साथ स्थानीय दृश्य · इसी डिवाइस पर रहेगा",
+  "This content stays on this device. Cloud actions are disabled.": "यह सामग्री इसी डिवाइस पर रहेगी। क्लाउड विकल्प बंद हैं।",
+  "A private value remains in the reviewed text. Remove it before approving.": "समीक्षा वाले पाठ में निजी जानकारी मौजूद है। अनुमति से पहले इसे हटाएँ।",
+  "Privacy Router for AI": "AI के लिए गोपनीयता राउटर",
+  "Cloud reasons over placeholders. This device holds the values. A receipt shows what the app submitted.": "क्लाउड टोकन पर विचार करता है। असली जानकारी इसी डिवाइस पर रहती है। रसीद बताती है कि ऐप ने क्या भेजा।"
 }

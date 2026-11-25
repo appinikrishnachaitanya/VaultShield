@@ -19,9 +19,11 @@ import { useLocalVoice, useLocalReading } from "../lib/useLocalVoice";
 export function FamilySafety({
   result,
   coolOffUntil,
+  cloudAllowed = true,
 }: {
   result: LocalResult;
   coolOffUntil: number | null;
+  cloudAllowed?: boolean;
 }) {
   const appLanguage = useAppLanguage();
   const [language, setLanguage] = useState<FamilyLanguage>(appLanguage);
@@ -204,6 +206,7 @@ export function FamilySafety({
       {toolNotice && <p role="status">{t(toolNotice)}</p>}
       {audioNotice && <p role="status">{t(audioNotice)}</p>}
       <MaaSummary
+        cloudAllowed={cloudAllowed}
         key={`${language}:${result.text}`}
         sourceLanguage={/[\u0900-\u097F]/u.test(result.text) ? "hi" : "en"}
         text={result.text}

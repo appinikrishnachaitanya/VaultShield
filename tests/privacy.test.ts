@@ -670,3 +670,14 @@ it.each(['hybrid','public-sources'] as const)('sends only typed placeholders in 
  for(const entry of vault.entries())expect(exact).not.toContain(entry.original);
  expect(exact).toContain('[PHONE_1]');expect(exact).not.toContain('90000');vault.clear();
 });
+
+it.each(['hybrid','public-sources'] as const)('blocks LOCAL_ONLY before creating a %s SDK request',async purpose=>{
+ const raw='Medical report: patient has diabetes.';
+ await expect(verifyWithCloud(maskIdentifiers(raw).text,true,raw,purpose)).rejects.toThrow('Cloud actions are disabled');
+ expect(mocks.model).not.toHaveBeenCalled();expect(mocks.generateContent).not.toHaveBeenCalled();
+});
+it('blocks a known name reintroduced into the final SDK input',async()=>{
+ const {TokenVaultSession}=await import('../src/lib/tokenVault');const session=new TokenVaultSession();session.tokenize('Name: Demo Ravi');
+ await expect(verifyWithCloud('Demo Ravi says pay now' as ReturnType<typeof maskIdentifiers>['text'],true,undefined,'hybrid','en',session)).rejects.toThrow('private value');
+ expect(mocks.generateContent).not.toHaveBeenCalled();session.clear();
+});

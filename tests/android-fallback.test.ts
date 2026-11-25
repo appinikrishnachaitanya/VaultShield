@@ -261,3 +261,9 @@ describe("native Firebase reviewed-text boundary", () => {
     expect(mocks.cloudModel).not.toHaveBeenCalled();
   });
 });
+
+it('keeps medical summaries on-device even when cloud approval is supplied',async()=>{
+ mocks.analyze.mockResolvedValue({status:'READY',text:'स्थानीय जानकारी।'});
+ const result=await summarizeForFamily('Medical report: patient has a fever.' as import('../src/types/privacy').SanitizedText,'hi',undefined,'en',true);
+ expect(result.source).toBe('ON_DEVICE');expect(mocks.verifyReviewed).not.toHaveBeenCalled();
+});

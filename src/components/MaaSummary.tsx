@@ -11,6 +11,7 @@ import { familyLanguages, type FamilyLanguage } from "../lib/familyGuidance";
 import { readWithLocalVoice, stopLocalReading } from "../lib/localVoice";
 import { useLocalVoice, useLocalReading } from "../lib/useLocalVoice";
 import type { SanitizedText } from "../types/privacy";
+import { routeInput } from "../lib/router";
 
 export default function MaaSummary({
   text,
@@ -18,12 +19,14 @@ export default function MaaSummary({
   disabled = false,
   contentKind = "message",
   sourceLanguage = "en",
+  cloudAllowed = true,
 }: {
   text: SanitizedText;
   language: FamilyLanguage;
   disabled?: boolean;
   contentKind?: "message" | "assessment";
   sourceLanguage?: "en" | "hi";
+  cloudAllowed?: boolean;
 }) {
   const [summary, setSummary] = useState<FamilySummaryResult>();
   const canReadSummary = useLocalVoice(summary?.language ?? language);
@@ -36,6 +39,8 @@ export default function MaaSummary({
   const active = useRef(true);
   const running = useRef(false);
   const support = optionalLocalSupport();
+  const hybrid =
+    usesAndroidModel && cloudAllowed && routeInput(text).tier !== "LOCAL_ONLY";
   useEffect(() => {
     active.current = true;
     return () => {
@@ -59,9 +64,12 @@ export default function MaaSummary({
         },
         sourceLanguage,
         allowCloudFallback,
+        !hybrid,
       );
       if (value.language === "hi" && !/[\u0900-\u097f]/u.test(value.text)) {
-        throw new Error("Hindi summary did not produce Hindi text. Please retry.");
+        throw new Error(
+          "Hindi summary did not produce Hindi text. Please retry.",
+        );
       }
       if (active.current) setSummary(value);
     } catch (error) {
@@ -95,21 +103,24 @@ export default function MaaSummary({
         {t(contentKind)} · {familyLanguages[language]}
       </h4>
       <p>
-      {usesAndroidModel
-        ? t("Firebase AI Logic prefers on-device summarization. If local AI is unavailable, it can use only the redacted text after your approval.")
-        : contentKind === "assessment"
+        {hybrid
           ? t(
-              "A short, simple explanation in your language, created privately on this device when supported. No additional cloud request.",
+              "Firebase AI Logic prefers on-device summarization. If local AI is unavailable, it can use only the redacted text after your approval.",
             )
-          : t(
-              "Summarize the redacted message locally, then translate it into your Maa Mode language when supported.",
-            )}
-        {!usesAndroidModel && contentKind === "message" &&
+          : contentKind === "assessment"
+            ? t(
+                "A short, simple explanation in your language, created privately on this device when supported. No additional cloud request.",
+              )
+            : t(
+                "Summarize the redacted message locally, then translate it into your Maa Mode language when supported.",
+              )}
+        {!usesAndroidModel &&
+          contentKind === "message" &&
           t(
             " Local summarization uses English internally. Hindi source text is translated on-device when supported.",
           )}
       </p>
-      {usesAndroidModel && (
+      {hybrid && (
         <div className="summary-cloud-approval">
           <details>
             <summary>{t("Review the redacted text for this summary")}</summary>
@@ -122,7 +133,9 @@ export default function MaaSummary({
               disabled={disabled || busy}
               onChange={(event) => setAllowCloudFallback(event.target.checked)}
             />
-            {t("I approve Firebase using this redacted text in the cloud only if on-device summarization is unavailable.")}
+            {t(
+              "I approve Firebase using this redacted text in the cloud only if on-device summarization is unavailable.",
+            )}
           </label>
         </div>
       )}
@@ -130,12 +143,17 @@ export default function MaaSummary({
         <button
           type="button"
           className="secondary"
-          disabled={disabled || busy || !support.summarizer || (usesAndroidModel && !allowCloudFallback)}
+          disabled={
+            disabled ||
+            busy ||
+            !support.summarizer ||
+            (hybrid && !allowCloudFallback)
+          }
           onClick={() => void summarize()}
         >
           {busy
             ? t("Preparing summary…")
-            : usesAndroidModel
+            : hybrid
               ? t("Approve & explain simply")
               : t("Explain simply in my language")}
         </button>
@@ -187,7 +205,9 @@ export default function MaaSummary({
       )}
       {summary && (
         <div className="tool-output">
-          <span className={`badge ${summary.source === "IN_CLOUD" ? "cloud" : "local"}`}>
+          <span
+            className={`badge ${summary.source === "IN_CLOUD" ? "cloud" : "local"}`}
+          >
             {summary.source === "IN_CLOUD"
               ? `${t("CLOUD FALLBACK · ")}${summary.model ?? "Firebase AI Logic"} · `
               : t("ON-DEVICE · ")}

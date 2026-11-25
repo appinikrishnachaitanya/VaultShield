@@ -2265,3 +2265,4 @@ html[lang="hi"] h3 {
 @media(max-width:640px){.receipt-comparison{grid-template-columns:1fr;}}
 .leak-preview { white-space:pre-wrap; overflow-wrap:anywhere; max-height:180px; overflow:auto; padding:12px; background:white; }
 .network-proof { position:relative; font-size:.85rem; }.network-proof summary { cursor:pointer; padding:8px; color:#0f766e; }.network-proof>.card { position:absolute; z-index:20; top:42px; left:0; width:min(360px,85vw); box-shadow:0 8px 24px #0f172a22; }.network-proof p { margin:10px 0; }
+.privacy-router-intro { padding:12px 0; color:#0f766e; }.privacy-router-intro p { color:#475569; margin:6px 0; font-size:.95rem; }
