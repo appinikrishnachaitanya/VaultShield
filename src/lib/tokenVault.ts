@@ -117,8 +117,7 @@ export class TokenVaultSession {
         offsets[m.start]?.start ?? m.start,
         offsets[m.end - 1]?.end ?? m.end,
       );
-      const key =
-        m.category + ":" + normalizePrivateText(original).toLocaleLowerCase();
+      const key = m.category + ":" + original;
       let entry = this.values.get(key);
       if (!entry) {
         const n = (this.serial[m.category] ?? 0) + 1;

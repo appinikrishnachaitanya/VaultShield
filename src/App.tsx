@@ -407,6 +407,7 @@ export default function App() {
   }
 
   function reset() {
+    startNetworkCheck();
     vault.current.clear();
     setReceipt(undefined);
     setTokenSpans([]);

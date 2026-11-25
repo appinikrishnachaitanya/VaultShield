@@ -505,8 +505,7 @@ export async function verifyWithCloud(
         ? String(error.code)
         : "unknown";
     console.warn("VaultShield verification failed", {
-      model: cfg.model,
-      code: /^[a-z0-9_/-]{1,80}$/i.test(code) ? code : "unknown",
+      code: ['AI/fetch-error','AI/invalid-response','appCheck/fetch-status-error','auth/network-request-failed'].includes(code) ? code : 'unknown',
       status: message.match(/\b(?:401|403|404|429|500|503)\b/)?.[0],
     });
     if (/\b429\b|quota|RESOURCE_EXHAUSTED/i.test(message))

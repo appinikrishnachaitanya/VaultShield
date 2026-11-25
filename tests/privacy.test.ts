@@ -664,8 +664,12 @@ it.each(['hybrid','public-sources'] as const)('sends only typed placeholders in 
  const raw='Name: Demo Ravi\nPay ₹35,000 to demo@upi and call +91 90000 00000 at https://sbi-test.example/private.';
  const approved=vault.tokenize(raw).text;
  mocks.generateContent.mockResolvedValue({response:{inferenceSource:'in_cloud',text:()=> 'Check [UPI_1] independently.'}});
- await verifyWithCloud(approved,true,raw,purpose);
+ const verification=await verifyWithCloud(approved,true,raw,purpose);
  const exact=mocks.generateContent.mock.calls[0][0] as string;
+ expect(verification.requestPayload).toBe(exact);
+ const {buildReceipt}=await import("../src/lib/receipt");
+ const receipt=buildReceipt({route:{tier:"TOKENIZE_THEN_CLOUD_OK",reasons:[]},source:verification.source,purpose,elapsedMs:verification.durationMs,counts:vault.tokenize(raw).counts,payload:verification.requestPayload});
+ expect(receipt.outboundBytes).toBe(new TextEncoder().encode(exact).length);
  expect(exact).toContain(JSON.stringify(approved));
  for(const entry of vault.entries())expect(exact).not.toContain(entry.original);
  expect(exact).toContain('[PHONE_1]');expect(exact).not.toContain('90000');vault.clear();
@@ -680,4 +684,11 @@ it('blocks a known name reintroduced into the final SDK input',async()=>{
  const {TokenVaultSession}=await import('../src/lib/tokenVault');const session=new TokenVaultSession();session.tokenize('Name: Demo Ravi');
  await expect(verifyWithCloud('Demo Ravi says pay now' as ReturnType<typeof maskIdentifiers>['text'],true,undefined,'hybrid','en',session)).rejects.toThrow('private value');
  expect(mocks.generateContent).not.toHaveBeenCalled();session.clear();
+});
+
+it('does not log private content embedded in SDK error codes or messages',async()=>{
+ const warn=vi.spyOn(console,'warn').mockImplementation(()=>{});
+ mocks.generateContent.mockRejectedValue(Object.assign(new Error('private-fixture-9000000000'),{code:'private-fixture-9000000000'}));
+ await expect(verifyWithCloud(maskIdentifiers('Please verify this request.').text,true)).rejects.toThrow('Verification could not complete');
+ expect(JSON.stringify(warn.mock.calls)).not.toContain('9000000000');warn.mockRestore();
 });
