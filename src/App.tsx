@@ -43,6 +43,10 @@ import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
+import ExplainForFamily from "./components/ExplainForFamily";
+import TokenVaultPreview from "./components/TokenVaultPreview";
+import PrivacyStatsBar from "./components/PrivacyStatsBar";
+import { recordCheck } from "./lib/privacyStats";
 import FamilyCircle from "./components/FamilyCircle";
 import Welcome from "./components/Welcome";
 import { TokenVaultSession, rehydrate, countTokens } from "./lib/tokenVault";
@@ -289,6 +293,11 @@ export default function App() {
       );
       setResult(r);
       setEdit(r.text);
+      recordCheck(
+        r.masked,
+        new TextEncoder().encode(input).length,
+        new TextEncoder().encode(vault.current.tokenize(input).text).length,
+      );
       if (
         usesAndroidModel &&
         r.source === "LOCAL_RULES" &&
@@ -593,6 +602,7 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <PrivacyStatsBar />
         <div className="sidebar-bottom">
           <div className="mini-shield">
             <Fingerprint size={26} />
@@ -768,6 +778,7 @@ export default function App() {
                       <span>{t("English, हिंदी & Hinglish welcome")}</span>
                       <span>{input.length.toLocaleString()}/16,000</span>
                     </div>
+                    <TokenVaultPreview input={input} />
                     <div className="divider">
                       <span>{t("or add a screenshot")}</span>
                     </div>
@@ -1080,6 +1091,7 @@ export default function App() {
                   {hasAssessableText(result.text) && !awaitingAndroidHybrid && (
                     <>
                       <PressureEvidence result={result} />
+                      <ExplainForFamily result={result} disabled={!!busy} />
                       {result.ruleAssisted && (
                         <p className="tool-hint">
                           {t(

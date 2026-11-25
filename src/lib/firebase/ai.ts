@@ -699,6 +699,55 @@ export async function analyzeDocumentText(
 
 export type { DocumentAnalysisResult, DocumentCategory };
 
+/**
+ * Generate a plain-language explanation of scam findings for a family member.
+ * Uses PREFER_ON_DEVICE so it works on-device when available, falls back to cloud
+ * with tokenized context only — no raw PII ever included.
+ */
+export async function generateFamilyExplanation(
+  tacticNames: string[],
+  stageCount: number,
+  language: "en" | "hi",
+  onProgress?: (msg: string) => void,
+): Promise<{ text: string; source: "ON_DEVICE" | "IN_CLOUD" }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const { model: modelName } = settings();
+  const tacticsStr = tacticNames.length
+    ? tacticNames.join(", ")
+    : "no specific pressure tactics";
+  const prompt =
+    language === "hi"
+      ? `आपको एक संदिग्ध संदेश मिला है जिसमें ${stageCount} दबाव की रणनीतियाँ पाई गई हैं: ${tacticsStr}।
+एक बुज़ुर्ग व्यक्ति के लिए 2-3 सरल वाक्यों में हिंदी में समझाएं:
+- यह संदेश संदिग्ध क्यों है
+- उन्हें अभी क्या करना चाहिए
+सरल भाषा का उपयोग करें। कोई तकनीकी शब्द नहीं। कोई व्यक्तिगत जानकारी शामिल न करें।`
+      : `A suspicious message was checked and found ${stageCount} pressure tactic${stageCount !== 1 ? "s" : ""}: ${tacticsStr}.
+Write 2-3 simple sentences for a non-technical family member explaining:
+- Why this message is suspicious
+- What they should do right now
+Use plain, calm language. No jargon. No personal information.`;
+
+  onProgress?.("Generating plain-language explanation on your device…");
+  const createOptions = chromeModelOptions(false);
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    inCloudParams: { model: modelName },
+    onDeviceParams: { createOptions },
+  });
+  const start = performance.now();
+  const result = await boundedWait(
+    model.generateContent(prompt),
+    30_000,
+    "Explanation generation timed out.",
+  );
+  const source =
+    result.response.inferenceSource === InferenceSource.ON_DEVICE
+      ? ("ON_DEVICE" as const)
+      : ("IN_CLOUD" as const);
+  return { text: result.response.text().trim(), source };
+}
+
 async function boundedWait<T>(
   operation: Promise<T>,
   milliseconds: number,
