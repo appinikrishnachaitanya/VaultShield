@@ -127,6 +127,7 @@ export default function App() {
     catch { return ""; }
   });
   const [memberLabels, setMemberLabels] = useState<Record<string,string>>({});
+  const [editingMember, setEditingMember] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<{
     modelStatus: string;
     mlKitStatus?: number;
@@ -1202,23 +1203,34 @@ export default function App() {
                       <Users size={20} />
                       <div className="member-details">
                         <strong>{m.name}</strong>
+                        {editingMember === m.id && <>
                         <label htmlFor={`member-label-${m.id}`}>{t("Name you recognize")}</label>
                         <input
                           id={`member-label-${m.id}`}
                           value={memberLabels[m.id] ?? m.name}
                           maxLength={40}
+                          autoFocus
                           onChange={(event) => setMemberLabels((labels) => ({...labels,[m.id]:event.target.value}))}
                         />
+                        </>}
                       </div>
+                      {editingMember === m.id ? <>
                       <button
                         type="button"
                         disabled={!!busy || (memberLabels[m.id] ?? m.name).trim().length < 2 || (memberLabels[m.id] ?? m.name).trim() === m.name}
                         onClick={() => void task("Saving name", async () => {
                           await labelMember(m.id, memberLabels[m.id]);
+                          setEditingMember(null);
                           setNotice("Family member name saved.");
                         })}
                       >{t("Save name")}</button>
+                      <button type="button" disabled={!!busy} onClick={() => setEditingMember(null)}>{t("Cancel")}</button>
+                      </> : <button type="button" disabled={!!busy} onClick={() => {
+                        setMemberLabels((labels) => ({ ...labels, [m.id]: m.name }));
+                        setEditingMember(m.id);
+                      }}>{t("Rename")}</button>}
                       <button
+                        disabled={!!busy}
                         aria-label={`${t("Remove")} ${m.name}`}
                         onClick={() =>
                           void task("Removing connection", async () => {
