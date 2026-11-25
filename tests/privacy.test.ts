@@ -242,7 +242,7 @@ describe("privacy firewall", () => {
         "Account: 12345678" as ReturnType<typeof maskIdentifiers>["text"],
         true,
       ),
-    ).rejects.toThrow("redacted");
+    ).rejects.toThrow("Cloud actions are disabled");
     expect(mocks.model).not.toHaveBeenCalled();
   });
   it("bounds an unresponsive Chrome availability probe without starting inference", async () => {

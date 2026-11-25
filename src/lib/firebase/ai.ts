@@ -19,6 +19,7 @@ import {
 } from "firebase/ai";
 import { ai, settings } from "./config";
 import { maskIdentifiers, hasAssessableText } from "../privacy";
+import { assertCloudRoute, routeInput } from "../router";
 import type { SanitizedText, LocalResult, Stage } from "../../types/privacy";
 const actions = {
   Authority:
@@ -342,6 +343,7 @@ export async function checkAndroidReviewedText(
   text: SanitizedText,
   consent: boolean,
 ): Promise<LocalResult> {
+  assertCloudRoute(routeInput(text));
   if (!usesAndroidModel) throw new Error("This hybrid scan is Android-only.");
   if (!consent) throw new Error("Explicit permission is required.");
   if (!text.trim() || !hasAssessableText(text))
@@ -382,6 +384,8 @@ export async function verifyWithCloud(
   purpose: "hybrid" | "public-sources" = "hybrid",
   language: "en" | "hi" = "en",
 ) {
+  assertCloudRoute(routeInput(original || text));
+  assertCloudRoute(routeInput(text));
   if (
     import.meta.env.DEV &&
     original?.trim() &&
@@ -608,6 +612,7 @@ async function androidHybridTool(
   prompt: string,
   consent: boolean,
 ): Promise<LocalToolResult> {
+  assertCloudRoute(routeInput(prompt));
   if (!consent) throw new Error("Explicit permission is required.");
   const model = settings().model;
   const result = await androidAI.verifyReviewed({

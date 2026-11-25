@@ -2254,3 +2254,6 @@ html[lang="hi"] h3 {
 .welcome-account { display:block; width:100%; min-height:48px; margin-top:10px; background:white; color:#0f766e; border:1px solid #cbd5e1; border-radius:10px; padding:10px; }
 .welcome-footnote { text-align:center; font-size:.85rem; color:#64748b; margin:14px 0 0; }
 @media(max-width:480px) { .welcome-backdrop { padding:12px; } .welcome-panel { padding:22px; max-height:calc(100dvh - 24px); } }
+.routing-banner { padding:16px 20px; border:1px solid #99f6e4; background:#f0fdfa; border-radius:12px; margin:16px 0; }
+.routing-banner p { margin:6px 0 0; font-size:.95rem; }
+.route-LOCAL_ONLY { border-color:#fcd34d; background:#fffbeb; }

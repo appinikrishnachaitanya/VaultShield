@@ -51,6 +51,8 @@ import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import Welcome from "./components/Welcome";
 import { TokenVaultSession, rehydrate } from "./lib/tokenVault";
+import { routeInput, assertCloudRoute } from "./lib/router";
+import RoutingBanner from "./components/RoutingBanner";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
 import PressureEvidence from "./components/PressureEvidence";
@@ -107,6 +109,8 @@ export default function App() {
     url: string;
   }>();
   const [result, setResult] = useState<LocalResult>();
+  const privacyRoute = routeInput(input + '\n' + (result?.text || ''), Boolean(image && !result));
+  const localOnly = privacyRoute.tier === 'LOCAL_ONLY';
   const [coolOffUntil, setCoolOffUntil] = useState<number | null>(null);
   const [cloud, setCloud] =
     useState<Awaited<ReturnType<typeof verifyWithCloud>>>();
@@ -236,7 +240,7 @@ export default function App() {
       );
       setResult(r);
       setEdit(r.text);
-      if (usesAndroidModel && r.source === "LOCAL_RULES") {
+      if (usesAndroidModel && r.source === "LOCAL_RULES" && routeInput(input + '\n' + r.text).tier !== 'LOCAL_ONLY') {
         setVerificationPurpose("hybrid");
         setReview(true);
         setNotice(
@@ -255,6 +259,7 @@ export default function App() {
   }
   function submitReviewedText() {
     void task("Verifying approved text", async () => {
+      assertCloudRoute(privacyRoute);
       const sanitized = vault.current.tokenize(edit).text;
       if (sanitized !== edit) {
         setEdit(sanitized);
@@ -456,7 +461,7 @@ export default function App() {
   }, []);
   const count = result?.stages.filter((s) => s.found).length ?? 0;
   const awaitingAndroidHybrid =
-    usesAndroidModel && result?.source === "LOCAL_RULES";
+    usesAndroidModel && result?.source === "LOCAL_RULES" && !localOnly;
   return (
     <div className="app">
       <Welcome />
@@ -549,6 +554,7 @@ export default function App() {
           </button>
         </header>
         <main>
+          {(input.trim() || image) && <RoutingBanner route={privacyRoute} />}
           <p className="language-note">
             {t(
               "Source messages and quoted evidence stay in their original language. New AI explanations use your selected language.",
@@ -927,7 +933,7 @@ export default function App() {
                       <button
                         type="button"
                         className="primary"
-                        disabled={!!busy || !hasAssessableText(result.text)}
+                        disabled={!!busy || localOnly || !hasAssessableText(result.text)}
                         onClick={() => {
                           setConsent(false);
                           setVerificationPurpose("hybrid");
@@ -1097,7 +1103,7 @@ export default function App() {
                     </div>
                     <button
                       className="primary"
-                      disabled={!!busy || !hasAssessableText(result.text)}
+                      disabled={!!busy || localOnly || !hasAssessableText(result.text)}
                       onClick={() => {
                         setReview(true);
                         setConsent(false);
@@ -1460,7 +1466,8 @@ export default function App() {
                   : " Remove any remaining private details. Only the reviewed text can go to the cloud. Your screenshot stays on this device. ",
               )}
             </p>
-            <fieldset className="verification-options" disabled={!!busy}>
+            <RoutingBanner route={privacyRoute} />
+            <fieldset className="verification-options" disabled={!!busy || localOnly}>
               <legend>{t("What would you like to check?")}</legend>
               <label>
                 <input
@@ -1525,7 +1532,7 @@ export default function App() {
               <input
                 type="checkbox"
                 checked={consent}
-                disabled={!!busy || !hasAssessableText(edit)}
+                disabled={!!busy || localOnly || !hasAssessableText(edit)}
                 onChange={(e) => setConsent(e.target.checked)}
               />
               {verificationPurpose === "public-sources"
@@ -1538,7 +1545,7 @@ export default function App() {
             </label>
             <button
               className="primary"
-              disabled={!consent || !!busy || !hasAssessableText(edit)}
+              disabled={!consent || !!busy || localOnly || !hasAssessableText(edit)}
               onClick={submitReviewedText}
             >
               <Cloud size={18} />
