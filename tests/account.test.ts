@@ -14,7 +14,8 @@ vi.mock("firebase/auth", () => ({
   GoogleAuthProvider: Object.assign(class {}, {
     credentialFromError: mocks.credential,
   }),
-  linkWithPopup: mocks.link,
+  linkWithRedirect: mocks.link,
+  getRedirectResult: vi.fn().mockResolvedValue(null),
   linkWithCredential: vi.fn(),
   signInWithCredential: mocks.signin,
   signOut: vi.fn(),
