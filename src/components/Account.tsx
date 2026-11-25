@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import {
   onAuthStateChanged,
   type User,
@@ -109,8 +110,8 @@ export default function Account() {
       </button>
       {open && (
         <section className="card account-panel" aria-label={t("My account")}>
-          <button type="button" onClick={() => setOpen(false)}>
-            {t("Close")}
+          <button type="button" className="account-panel-close" aria-label={t("Close")} onClick={() => setOpen(false)}>
+            <X size={18} />
           </button>
           {user && !user.isAnonymous ? (
             <>
