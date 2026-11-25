@@ -512,5 +512,15 @@
   "No known private values or identifier patterns found. Review is still required.": "कोई ज्ञात निजी जानकारी या पहचान का पैटर्न नहीं मिला। फिर भी पाठ देखें।",
   "Deterministic check. Names and unusual identifiers can still be missed.": "नियमों पर आधारित जाँच। नाम और असामान्य पहचान वाली जानकारी छूट सकती है।",
   "Digit run": "लंबी संख्या",
-  "High-entropy string": "लंबा मिला-जुला कोड"
+  "High-entropy string": "लंबा मिला-जुला कोड",
+  "This check": "इस जाँच में",
+  "AI delivery unconfirmed": "AI को भेजे जाने की पुष्टि नहीं",
+  "AI payload bytes sent": "बाइट AI पाठ भेजा गया",
+  "App-controlled requests and payload bytes only. This is not a network packet capture.": "केवल ऐप से शुरू हुए अनुरोध और पाठ के बाइट गिने जाते हैं। यह पूरे नेटवर्क का रिकॉर्ड नहीं है।",
+  "requests": "अनुरोध",
+  "AI-cloud": "AI क्लाउड",
+  "family": "परिवार",
+  "other": "अन्य",
+  "Service connections: Firebase Auth, App Check, Remote Config, Firestore and push services make separate SDK connections; their traffic is not measured here.": "सेवा कनेक्शन: Firebase Auth, App Check, Remote Config, Firestore और पुश सेवाओं के अलग SDK कनेक्शन होते हैं; उनका ट्रैफ़िक यहाँ नहीं मापा जाता।",
+  "Hybrid payload bytes are counted after the SDK reports cloud inference. Failed hybrid calls can leave delivery unconfirmed. Headers and SDK envelopes are excluded.": "SDK से क्लाउड जाँच की पुष्टि के बाद हाइब्रिड पाठ के बाइट गिने जाते हैं। असफल अनुरोध में भेजे जाने की पुष्टि नहीं हो सकती। हेडर और SDK का अतिरिक्त डेटा नहीं गिना जाता।"
 }

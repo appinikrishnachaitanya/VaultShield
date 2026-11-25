@@ -22,6 +22,7 @@ import { maskIdentifiers, hasAssessableText } from "../privacy";
 import { assertCloudRoute, routeInput } from "../router";
 import { assertNoKnownLeak } from "../leakTest";
 import type { TokenVaultSession } from "../tokenVault";
+import { recordAIResult, markUnconfirmedAI } from "../netProof";
 import type { SanitizedText, LocalResult, Stage } from "../../types/privacy";
 const actions = {
   Authority:
@@ -362,7 +363,8 @@ export async function checkAndroidReviewedText(
     consent,
     model: settings().model,
     purpose: "hybrid",
-  });
+  }).catch(error => { markUnconfirmedAI(); throw error; });
+  if (result.source === 'ON_DEVICE' || result.source === 'IN_CLOUD') recordAIResult(prompt, result.source);
   if (
     result.status !== "READY" ||
     !result.text ||
@@ -486,6 +488,7 @@ export async function verifyWithCloud(
     90_000,
     "Verification timed out. Your private check is still available.",
   ).catch((error: unknown) => {
+    markUnconfirmedAI();
     const message = error instanceof Error ? error.message : String(error);
     const code =
       typeof error === "object" && error !== null && "code" in error
@@ -519,6 +522,7 @@ export async function verifyWithCloud(
     throw new Error("Firebase did not report where verification ran.");
   }
   const local = response.inferenceSource === InferenceSource.ON_DEVICE;
+  recordAIResult(prompt, local ? 'ON_DEVICE' : 'IN_CLOUD');
   if (purpose === "public-sources" && local)
     throw new Error(
       "Public-source checking did not run in the cloud. No live verification can be claimed.",
@@ -632,7 +636,8 @@ async function androidHybridTool(
     consent,
     model,
     purpose: "hybrid",
-  });
+  }).catch(error => { markUnconfirmedAI(); throw error; });
+  if (result.source === 'ON_DEVICE' || result.source === 'IN_CLOUD') recordAIResult(prompt, result.source);
   if (
     result.status !== "READY" ||
     !result.text?.trim() ||

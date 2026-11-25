@@ -57,6 +57,8 @@ import { buildReceipt, type PrivacyReceiptData } from "./lib/receipt";
 import PrivacyReceipt from "./components/PrivacyReceipt";
 import { runLeakTest, assertNoKnownLeak } from "./lib/leakTest";
 import LeakTestPanel from "./components/LeakTestPanel";
+import NetworkProof from "./components/NetworkProof";
+import { startNetworkCheck } from "./lib/netProof";
 import type { TokenCounts } from "./lib/tokenVault";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
@@ -233,6 +235,7 @@ export default function App() {
   }
   async function analyze() {
     await task("Checking on your device", async () => {
+      startNetworkCheck();
       setResult(undefined);
       setCloud(undefined);
       setConsent(false);
@@ -536,6 +539,7 @@ export default function App() {
       </aside>
       <div className="main-shell" inert={review}>
         <header className="topbar">
+          <NetworkProof />
           <Account />
           <label className="app-language">
             <span>{t("Language")}</span>

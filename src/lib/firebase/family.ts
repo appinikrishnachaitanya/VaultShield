@@ -1,4 +1,5 @@
 import { usesAndroidModel } from "../../services/androidNano";
+import { countedFetch } from "../netProof";
 import { getToken as getAppCheckToken } from "firebase/app-check";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
 import {
@@ -16,7 +17,7 @@ async function request(path: string, body?: unknown, method = "POST") {
     auth.currentUser.getIdToken(),
     getAppCheckToken(appCheck),
   ]);
-  const response = await fetch(
+  const response = await countedFetch('family',
     `${import.meta.env.VITE_BACKEND_URL || ""}${path}`,
     {
       method,
