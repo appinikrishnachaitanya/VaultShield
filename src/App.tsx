@@ -296,7 +296,7 @@ export default function App() {
       recordCheck(
         r.masked,
         new TextEncoder().encode(input).length,
-        new TextEncoder().encode(vault.current.tokenize(input).text).length,
+        r.source === "LOCAL_RULES" ? 0 : new TextEncoder().encode(vault.current.tokenize(input).text).length,
       );
       if (
         usesAndroidModel &&
@@ -1091,7 +1091,6 @@ export default function App() {
                   {hasAssessableText(result.text) && !awaitingAndroidHybrid && (
                     <>
                       <PressureEvidence result={result} />
-                      <ExplainForFamily result={result} disabled={!!busy} />
                       {result.ruleAssisted && (
                         <p className="tool-hint">
                           {t(
@@ -1179,6 +1178,9 @@ export default function App() {
                         />
                       </details>
                     </>
+                  )}
+                  {!awaitingAndroidHybrid && result && (
+                    <ExplainForFamily result={result} disabled={!!busy} />
                   )}
                   {!awaitingAndroidHybrid && (
                     <div className="card cloud-invite">
