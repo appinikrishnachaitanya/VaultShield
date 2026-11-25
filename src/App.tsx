@@ -50,6 +50,7 @@ import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import Welcome from "./components/Welcome";
+import { TokenVaultSession, rehydrate } from "./lib/tokenVault";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
 import PressureEvidence from "./components/PressureEvidence";
@@ -83,6 +84,12 @@ const examples = [
   },
 ];
 export default function App() {
+  const vault = useRef(new TokenVaultSession());
+  useEffect(() => {
+    const clear = () => vault.current.clear();
+    window.addEventListener('pagehide', clear);
+    return () => { clear(); window.removeEventListener('pagehide', clear); };
+  }, []);
   const appLanguage = useAppLanguage();
   useEffect(() => {
     document.documentElement.lang = appLanguage;
@@ -217,7 +224,10 @@ export default function App() {
       setCloud(undefined);
       setConsent(false);
       setLocalProgress("Preparing the on-device check...");
-      const r = await checkWithLocalFallback(input, image, setLocalProgress);
+      vault.current.clear();
+      const tokenized = vault.current.tokenize(input);
+      const r = await checkWithLocalFallback(tokenized.text, image, setLocalProgress);
+      r.text = vault.current.tokenize(r.text).text;
       setCoolOffUntil(
         r.source !== "LOCAL_RULES" &&
           r.stages.filter((stage) => stage.found).length >= 3
@@ -245,7 +255,7 @@ export default function App() {
   }
   function submitReviewedText() {
     void task("Verifying approved text", async () => {
-      const sanitized = maskIdentifiers(edit).text;
+      const sanitized = vault.current.tokenize(edit).text;
       if (sanitized !== edit) {
         setEdit(sanitized);
         setConsent(false);
@@ -313,6 +323,7 @@ export default function App() {
   }
 
   function reset() {
+    vault.current.clear();
     setCoolOffUntil(null);
     setResult(undefined);
     setCloud(undefined);
@@ -1098,7 +1109,7 @@ export default function App() {
                 </div>
               )}
               <AlreadyPaid key={result?.text ?? "no-report"} result={result} />
-              {cloud && <CloudAssessment key={cloud.text} cloud={cloud} />}
+              {cloud && <CloudAssessment key={cloud.text} cloud={cloud} localDisplay={(text) => rehydrate(text, vault.current)} />}
               <div className="page-footer">
                 <LockKeyhole size={14} />
                 <span>

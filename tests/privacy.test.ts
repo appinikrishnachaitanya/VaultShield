@@ -657,3 +657,16 @@ it("does not count a positive flag with empty evidence", async () => {
   expect(result.stages.some((s) => s.found)).toBe(false);
   expect(result.ruleAssisted).toBe(true);
 });
+
+it.each(['hybrid','public-sources'] as const)('sends only typed placeholders in the exact %s SDK prompt',async purpose=>{
+ const {TokenVaultSession}=await import('../src/lib/tokenVault');
+ const vault=new TokenVaultSession();
+ const raw='Name: Demo Ravi\nPay ₹35,000 to demo@upi and call +91 90000 00000 at https://sbi-test.example/private.';
+ const approved=vault.tokenize(raw).text;
+ mocks.generateContent.mockResolvedValue({response:{inferenceSource:'in_cloud',text:()=> 'Check [UPI_1] independently.'}});
+ await verifyWithCloud(approved,true,raw,purpose);
+ const exact=mocks.generateContent.mock.calls[0][0] as string;
+ expect(exact).toContain(JSON.stringify(approved));
+ for(const entry of vault.entries())expect(exact).not.toContain(entry.original);
+ expect(exact).toContain('[PHONE_1]');expect(exact).not.toContain('90000');vault.clear();
+});

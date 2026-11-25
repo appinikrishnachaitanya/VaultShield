@@ -15,7 +15,7 @@ type Assessment = Omit<
   Awaited<ReturnType<typeof verifyWithCloud>>,
   "language"
 > & { language?: "en" | "hi" };
-export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
+export default function CloudAssessment({ cloud, localDisplay = (text: string) => text }: { cloud: Assessment; localDisplay?: (text: string) => string }) {
   const report = useRef<HTMLElement>(null);
   useEffect(() => {
     report.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -139,7 +139,7 @@ export default function CloudAssessment({ cloud }: { cloud: Assessment }) {
         </p>
       )}
       <div lang={display.language}>
-        <AssessmentMarkdown text={display.text} />
+        <AssessmentMarkdown text={localDisplay(display.text)} />
       </div>
       <div className="assessment-pause">
         <ShieldCheck size={24} aria-hidden="true" />
