@@ -375,7 +375,7 @@ export default function DocumentScanner() {
 
             <button
               type="button"
-              className="primary"
+              className="primary check-button"
               disabled={!canAnalyze}
               onClick={() => void analyze()}
             >
