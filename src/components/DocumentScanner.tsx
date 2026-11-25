@@ -227,8 +227,11 @@ export default function DocumentScanner() {
       setReceipt(rcpt);
     } catch (e) {
       setSteps((s) => completeSteps(s));
+      const msg = e instanceof Error ? e.message : "Analysis failed. Please try again.";
       setError(
-        e instanceof Error ? e.message : "Analysis failed. Please try again.",
+        msg.includes("private value remains")
+          ? "Some identifiers in the text could not be fully masked (possible tabular/column format). Try pasting just the relevant section without table formatting."
+          : msg,
       );
     } finally {
       setBusy(false);
