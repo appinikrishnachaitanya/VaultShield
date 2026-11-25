@@ -1,5 +1,6 @@
 import { usesAndroidModel } from "../../services/androidNano";
 import { countedFetch } from "../netProof";
+import type { PatternSignal, TrendingPatterns } from "../patterns";
 import { getToken as getAppCheckToken } from "firebase/app-check";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
 import {
@@ -49,6 +50,8 @@ export const createInvite = (name: string) => request("/pair/invite", { name: na
 export const joinFamily = (code: string, name: string) =>
   request("/pair/join", { code: code.trim(), name: name.trim() });
 export const sendAlert = (stages: number) => request("/alerts", { stages });
+export const sharePattern = (signal: PatternSignal) => request('/patterns', signal);
+export const loadTrendingPatterns = async (): Promise<TrendingPatterns> => request('/patterns/trending', undefined, 'GET');
 export const removeMember = (uid: string) =>
   request(`/pair/${encodeURIComponent(uid)}`, undefined, "DELETE");
 export const labelMember = (uid: string, name: string) =>

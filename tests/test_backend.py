@@ -130,4 +130,39 @@ class FamilyRoutes(unittest.TestCase):
         self.assertEqual(self.client.post('/pair/invite',json={'name':'9876543210'}).status_code,422)
         self.assertEqual(self.client.post('/pair/invite',json={'name':'mum@example.com'}).status_code,422)
 
+class PatternRoutes(unittest.TestCase):
+    def setUp(self):
+        self.db = MagicMock()
+        service.db = self.db
+        service.app.dependency_overrides[service.identity] = lambda: 'contributor'
+        self.client = TestClient(service.app)
+        self.payload = {'tacticTypes':['Fear'],'urlFeature':'shortener','amountBucket':'10k-50k','language':'hi'}
+    def tearDown(self): service.app.dependency_overrides.clear()
+    def test_rejects_free_text_and_identifiers(self):
+        for field in ['text','uid','name','message']:
+            self.assertEqual(self.client.post('/patterns',json={**self.payload,field:'private-value'}).status_code,422)
+        self.assertEqual(self.client.post('/patterns',json={**self.payload,'urlFeature':'private.example'}).status_code,422)
+    def test_requires_identity_for_both_endpoints(self):
+        service.app.dependency_overrides.clear()
+        self.assertEqual(self.client.post('/patterns',json=self.payload).status_code,401)
+        self.assertEqual(self.client.get('/patterns/trending').status_code,401)
+    def test_stores_only_aggregate_categories_and_count(self):
+        with patch.object(service,'reserve_action') as rate,patch.object(service.firestore,'transactional',lambda f:f):
+            response=self.client.post('/patterns',json=self.payload)
+        self.assertEqual(response.status_code,200)
+        rate.assert_called_once_with('contributor','pattern',3600)
+        stored=self.db.transaction.return_value.set.call_args.args[1]
+        self.assertEqual(set(stored),set(self.payload)|{'count'})
+        self.assertNotIn('contributor',str(stored))
+    def test_rate_limit_is_enforced(self):
+        with patch.object(service,'reserve_action',side_effect=service.HTTPException(429,'Wait')):
+            self.assertEqual(self.client.post('/patterns',json=self.payload).status_code,429)
+    def test_only_publishes_buckets_at_threshold(self):
+        low=MagicMock();low.to_dict.return_value={**self.payload,'count':4}
+        high=MagicMock();high.to_dict.return_value={**self.payload,'count':5}
+        self.db.collection.return_value.where.return_value.limit.return_value.stream.return_value=[low,high]
+        response=self.client.get('/patterns/trending')
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json(),{'threshold':5,'buckets':[{**self.payload,'count':5}]})
+
 if __name__=='__main__': unittest.main()

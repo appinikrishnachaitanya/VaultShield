@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/patterns{,/**}",
+        "run": { "serviceId": "vaultshield-api", "region": "europe-west1" }
+      },
+      {
         "source": "/pair/**",
         "run": {
           "serviceId": "vaultshield-api",

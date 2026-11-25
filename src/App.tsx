@@ -58,6 +58,8 @@ import PrivacyReceipt from "./components/PrivacyReceipt";
 import { runLeakTest, assertNoKnownLeak } from "./lib/leakTest";
 import LeakTestPanel from "./components/LeakTestPanel";
 import NetworkProof from "./components/NetworkProof";
+import CommunitySignal from "./components/CommunitySignal";
+import { patternSignal } from "./lib/patterns";
 import { startNetworkCheck } from "./lib/netProof";
 import type { TokenCounts } from "./lib/tokenVault";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
@@ -1139,6 +1141,7 @@ export default function App() {
               <AlreadyPaid key={result?.text ?? "no-report"} result={result} />
               {cloud && <CloudAssessment key={cloud.text} cloud={cloud} localDisplay={(text) => rehydrate(text, vault.current)} />}
               {receipt && <PrivacyReceipt receipt={receipt} original={input} entries={vault.current.entries()} />}
+              {result && <CommunitySignal key={result.text} signal={patternSignal(result.stages,vault.current.entries(),appLanguage)} />}
               <div className="page-footer">
                 <LockKeyhole size={14} />
                 <span>

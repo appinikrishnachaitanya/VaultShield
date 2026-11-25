@@ -186,3 +186,44 @@ def alert(body:Alert,uid=Depends(identity)):
             pass  # Firestore inbox remains the durable delivery path.
     return {'inboxes':inboxes,'pushNotifications':delivered}
 
+
+# Pattern submissions contain closed categories only. No message text, token mapping or user IDs enter aggregate documents.
+from typing import Literal
+import json
+from google.cloud.firestore_v1.base_query import FieldFilter
+class Pattern(Payload):
+    tacticTypes: list[Literal['Authority','Fear','Urgency','Secrecy']] = Field(max_length=4)
+    urlFeature: Literal['none','shortener','bank-like','agency-like','other']
+    amountBucket: Literal['none','lt1k','1k-10k','10k-50k','50k-plus']
+    language: Literal['en','hi']
+
+    @field_validator('tacticTypes')
+    @classmethod
+    def unique_tactics(cls, value):
+        if len(value) != len(set(value)): raise ValueError('Duplicate tactics')
+        return sorted(value)
+
+@app.post('/patterns')
+def contribute_pattern(body:Pattern,uid=Depends(identity)):
+    reserve_action(uid,'pattern',3600)
+    categories=body.model_dump()
+    ref=db.collection('patternAggregates').document(digest(json.dumps(categories,sort_keys=True)))
+    @firestore.transactional
+    def increment(tx):
+        tx.set(ref,{**categories,'count':firestore.Increment(1)},merge=True)
+    increment(db.transaction())
+    return {'accepted':True}
+
+@app.get('/patterns/trending')
+def trending_patterns(uid=Depends(identity)):
+    threshold=max(5,int(os.environ.get('PATTERN_K','5')))
+    docs=db.collection('patternAggregates').where(filter=FieldFilter('count','>=',threshold)).limit(10).stream()
+    buckets=[]
+    for doc in docs:
+        data=doc.to_dict()
+        if type(data.get('count')) is not int or data['count']<threshold: continue
+        try:
+            categories=Pattern.model_validate({key:data[key] for key in Pattern.model_fields}).model_dump()
+        except (ValueError,KeyError): continue
+        buckets.append({**categories,'count':data['count']})
+    return {'threshold':threshold,'buckets':buckets}
