@@ -10,7 +10,7 @@ export default function RoutingBanner({ route }: { route: PrivacyRoute }) {
       <strong>
         {t(
           route.tier === "LOCAL_ONLY"
-            ? "Stays on this device"
+            ? "Local by default"
             : route.tier === "TOKENIZE_THEN_CLOUD_OK"
               ? "Will be tokenized before leaving"
               : "No identifiers detected",
@@ -20,7 +20,9 @@ export default function RoutingBanner({ route }: { route: PrivacyRoute }) {
       <p>
         {t(
           route.tier === "LOCAL_ONLY"
-            ? "Only on-device AI or local rules can analyze this content. Cloud actions are disabled."
+            ? route.overrideAllowed
+              ? "Cloud stays off unless you review the tokens and explicitly override this restriction."
+              : "An image must be read locally before any text can be reviewed."
             : "Review the tokens and approve the text before any cloud-capable analysis.",
         )}
       </p>

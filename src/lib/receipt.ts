@@ -8,6 +8,7 @@ export type ReceiptSource =
   | "CLOUD-PUBLIC-SOURCE"
   | "LOCAL RULES";
 export type PrivacyReceiptData = {
+  sensitiveOverrideApproved: boolean;
   timestamp: string;
   routeTier: PrivacyRoute["tier"];
   source: ReceiptSource;
@@ -33,6 +34,7 @@ export function receiptSource(
     : "HYBRID-CLOUD-FALLBACK";
 }
 export function buildReceipt(input: {
+  sensitiveOverride?: boolean;
   route: PrivacyRoute;
   source: "ON_DEVICE" | "IN_CLOUD" | "LOCAL_RULES";
   purpose?: "hybrid" | "public-sources";
@@ -48,6 +50,7 @@ export function buildReceipt(input: {
     throw new Error("Exact cloud payload required for a receipt.");
   const outboundText = (cloud ? input.payload! : "") as SanitizedText;
   return {
+    sensitiveOverrideApproved: Boolean(input.sensitiveOverride),
     timestamp: new Date().toISOString(),
     routeTier: input.route.tier,
     source: receiptSource(input.source, input.purpose),

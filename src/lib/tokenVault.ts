@@ -14,10 +14,27 @@ export type TokenEntry = {
 export type TokenCounts = Partial<Record<IdentifierCategory, number>>;
 export function countTokens(text: string): TokenCounts {
   const counts: TokenCounts = {};
-  const categories: IdentifierCategory[] = ['PERSON','PHONE','BANK_ACC','UPI','AADHAAR','PAN','EMAIL','URL','AMOUNT','OTP','ORG','REFERENCE','IFSC','PRIVATE'];
+  const categories: IdentifierCategory[] = [
+    "PERSON",
+    "PHONE",
+    "BANK_ACC",
+    "UPI",
+    "AADHAAR",
+    "PAN",
+    "EMAIL",
+    "URL",
+    "AMOUNT",
+    "OTP",
+    "ORG",
+    "REFERENCE",
+    "IFSC",
+    "PRIVATE",
+  ];
   for (const match of text.matchAll(/\[([A-Z_]+)_\d+(?::[^\]]+)?\]/gi)) {
-    const category=categories.find(value=>value===match[1].toUpperCase());
-    if(category)counts[category]=(counts[category]??0)+1;
+    const category = categories.find(
+      (value) => value === match[1].toUpperCase(),
+    );
+    if (category) counts[category] = (counts[category] ?? 0) + 1;
   }
   return counts;
 }
@@ -43,8 +60,22 @@ export function tokenAttribute(
     }
     if (/^(?:bit\.ly|t\.co|tinyurl\.com|wa\.me|shorturl\.at)$/.test(host))
       return "shortener";
-    if (/sbi|hdfc|icici|axis|bank|kyc/.test(host)) return "bank-like";
-    if (/cbi|police|gov|court|aadhaar/.test(host)) return "agency-like";
+    if (
+      host
+        .split(/[.-]/)
+        .some((label) =>
+          /^(?:sbi|hdfc(?:bank)?|icici(?:bank)?|axis(?:bank)?|bank|kyc)$/.test(
+            label,
+          ),
+        )
+    )
+      return "bank-like";
+    if (
+      host
+        .split(/[.-]/)
+        .some((label) => /^(?:cbi|police|gov|court|aadhaar)$/.test(label))
+    )
+      return "agency-like";
     return "other";
   }
   if (category === "AMOUNT") {
@@ -60,6 +91,11 @@ export function tokenAttribute(
   return "";
 }
 /** This object and its Maps are tab-memory only. Never serialize an instance or its entries. */
+const tokenIdentity = (token: string) =>
+  token
+    .toUpperCase()
+    .replace(/\s/g, "")
+    .replace(/:[^\]]*(?=\])/g, "");
 export class TokenVaultSession {
   onExpire?: () => void;
   private values = new Map<string, TokenEntry>();
@@ -131,7 +167,7 @@ export class TokenVaultSession {
           end: offsets[m.end - 1]?.end ?? m.end,
         };
         this.values.set(key, entry);
-        this.tokens.set(entry.token.toUpperCase().replace(/\s/g, ""), entry);
+        this.tokens.set(tokenIdentity(entry.token), entry);
       }
       entries.push({
         ...entry,
@@ -153,7 +189,7 @@ export class TokenVaultSession {
     return { text: text as SanitizedText, entries, counts };
   }
   resolve(token: string) {
-    return this.tokens.get(token.toUpperCase().replace(/\s/g, ""))?.original;
+    return this.tokens.get(tokenIdentity(token))?.original;
   }
 }
 export function rehydrate(text: string, session: TokenVaultSession): string {

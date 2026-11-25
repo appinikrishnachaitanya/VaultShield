@@ -348,9 +348,10 @@ export async function checkAndroidReviewedText(
   text: SanitizedText,
   consent: boolean,
   session?: TokenVaultSession,
+  sensitiveOverride = false,
 ): Promise<LocalResult> {
   assertNoKnownLeak(text, session);
-  assertCloudRoute(routeInput(text));
+  assertCloudRoute(routeInput(text), sensitiveOverride);
   if (!usesAndroidModel) throw new Error("This hybrid scan is Android-only.");
   if (!consent) throw new Error("Explicit permission is required.");
   if (!text.trim() || !hasAssessableText(text))
@@ -402,10 +403,11 @@ export async function verifyWithCloud(
   purpose: "hybrid" | "public-sources" = "hybrid",
   language: "en" | "hi" = "en",
   session?: TokenVaultSession,
+  sensitiveOverride = false,
 ) {
   assertNoKnownLeak(text, session);
-  assertCloudRoute(routeInput(original || text));
-  assertCloudRoute(routeInput(text));
+  assertCloudRoute(routeInput(original || text), sensitiveOverride);
+  assertCloudRoute(routeInput(text), sensitiveOverride);
   if (
     import.meta.env.DEV &&
     original?.trim() &&
@@ -505,7 +507,14 @@ export async function verifyWithCloud(
         ? String(error.code)
         : "unknown";
     console.warn("VaultShield verification failed", {
-      code: ['AI/fetch-error','AI/invalid-response','appCheck/fetch-status-error','auth/network-request-failed'].includes(code) ? code : 'unknown',
+      code: [
+        "AI/fetch-error",
+        "AI/invalid-response",
+        "appCheck/fetch-status-error",
+        "auth/network-request-failed",
+      ].includes(code)
+        ? code
+        : "unknown",
       status: message.match(/\b(?:401|403|404|429|500|503)\b/)?.[0],
     });
     if (/\b429\b|quota|RESOURCE_EXHAUSTED/i.test(message))

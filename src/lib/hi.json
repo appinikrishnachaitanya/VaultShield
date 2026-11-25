@@ -550,5 +550,19 @@
   "This content stays on this device. Cloud actions are disabled.": "यह सामग्री इसी डिवाइस पर रहेगी। क्लाउड विकल्प बंद हैं।",
   "A private value remains in the reviewed text. Remove it before approving.": "समीक्षा वाले पाठ में निजी जानकारी मौजूद है। अनुमति से पहले इसे हटाएँ।",
   "Privacy Router for AI": "AI के लिए गोपनीयता राउटर",
-  "Cloud reasons over placeholders. This device holds the values. A receipt shows what the app submitted.": "क्लाउड टोकन पर विचार करता है। असली जानकारी इसी डिवाइस पर रहती है। रसीद बताती है कि ऐप ने क्या भेजा।"
+  "Cloud reasons over placeholders. This device holds the values. A receipt shows what the app submitted.": "क्लाउड टोकन पर विचार करता है। असली जानकारी इसी डिवाइस पर रहती है। रसीद बताती है कि ऐप ने क्या भेजा।",
+  "Local by default": "डिफ़ॉल्ट रूप से डिवाइस पर",
+  "Cloud stays off unless you review the tokens and explicitly override this restriction.": "क्लाउड बंद रहेगा, जब तक आप टोकन की समीक्षा करके अलग से अनुमति न दें।",
+  "An image must be read locally before any text can be reviewed.": "पाठ की समीक्षा से पहले तस्वीर को डिवाइस पर पढ़ना ज़रूरी है।",
+  "Medical document": "चिकित्सा दस्तावेज़",
+  "Minor-related document": "नाबालिग का निजी दस्तावेज़",
+  "Topic mention only": "केवल विषय का उल्लेख",
+  "Review needed": "समीक्षा ज़रूरी है",
+  "Manual review required": "खुद समीक्षा करना ज़रूरी है",
+  "No known patterns found. Names and addresses are not fully detected. Review manually.": "कोई ज्ञात पैटर्न नहीं मिला। सभी नाम और पते पहचानना संभव नहीं है। खुद समीक्षा करें।",
+  "Local AI did not run. Names and addresses were checked only by limited rules. Review them manually.": "स्थानीय AI नहीं चला। नाम और पते केवल सीमित नियमों से जाँचे गए हैं। खुद समीक्षा करें।",
+  "This content is sensitive. Tokens hide identifiers, but medical, financial or identity details may remain. Keep it local unless you have reviewed every detail.": "यह सामग्री संवेदनशील है। टोकन पहचान वाली जानकारी छिपाते हैं, पर चिकित्सा, वित्तीय या पहचान के विवरण रह सकते हैं। हर विवरण देखे बिना इसे क्लाउड पर न भेजें।",
+  "Allow a tokenized cloud check for this content. I understand sensitive details may remain.": "इस टोकन वाले पाठ की क्लाउड जाँच की अनुमति दें। मैं समझता/समझती हूँ कि संवेदनशील विवरण रह सकते हैं।",
+  "Sensitive-content override approved": "संवेदनशील सामग्री के लिए अलग अनुमति मिली",
+  "Experimental community observations, not a verified trend. Small samples and repeated anonymous accounts can skew counts.": "यह समुदाय का प्रयोगात्मक संकेत है, सत्यापित रुझान नहीं। छोटे नमूने और बार-बार बने अतिथि खाते गिनती को प्रभावित कर सकते हैं।"
 }

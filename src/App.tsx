@@ -138,6 +138,7 @@ export default function App() {
     Boolean(image && !result),
   );
   const localOnly = privacyRoute.tier === "LOCAL_ONLY";
+  const [sensitiveOverride, setSensitiveOverride] = useState(false);
   const [coolOffUntil, setCoolOffUntil] = useState<number | null>(null);
   const [cloud, setCloud] =
     useState<Awaited<ReturnType<typeof verifyWithCloud>>>();
@@ -147,6 +148,10 @@ export default function App() {
     "hybrid" | "public-sources"
   >("hybrid");
   const [review, setReview] = useState(false);
+  useEffect(() => {
+    setSensitiveOverride(false);
+    setConsent(false);
+  }, [edit, verificationPurpose]);
   const [busy, setBusy] = useState("");
   const taskRunning = useRef(false);
   const [localProgress, setLocalProgress] = useState("");
@@ -244,6 +249,7 @@ export default function App() {
   }
   async function analyze() {
     await task("Checking on your device", async () => {
+      setSensitiveOverride(false);
       startNetworkCheck();
       setResult(undefined);
       setCloud(undefined);
@@ -305,7 +311,7 @@ export default function App() {
   }
   function submitReviewedText() {
     void task("Verifying approved text", async () => {
-      assertCloudRoute(privacyRoute);
+      assertCloudRoute(privacyRoute, sensitiveOverride);
       assertNoKnownLeak(edit, vault.current);
       const version = vault.current.version;
       const sanitized = vault.current.tokenize(edit).text;
@@ -325,6 +331,7 @@ export default function App() {
           sanitized,
           consent,
           vault.current,
+          sensitiveOverride,
         );
         if (version !== vault.current.version) return;
         setReceipt(
@@ -335,6 +342,7 @@ export default function App() {
             model: hybridResult.cloudModel,
             elapsedMs: hybridResult.durationMs,
             counts: countTokens(sanitized),
+            sensitiveOverride,
             payload: hybridResult.requestPayload,
             approvedText: sanitized,
           }),
@@ -357,6 +365,7 @@ export default function App() {
         verificationPurpose,
         appLanguage,
         vault.current,
+        sensitiveOverride,
       );
       if (version !== vault.current.version) return;
       setCloud(verification);
@@ -368,6 +377,7 @@ export default function App() {
           model: verification.model,
           elapsedMs: verification.durationMs,
           counts: countTokens(sanitized),
+          sensitiveOverride,
           payload: verification.requestPayload,
           approvedText: sanitized,
           groundingUsed: verification.groundingUsed,
@@ -407,6 +417,7 @@ export default function App() {
   }
 
   function reset() {
+    setSensitiveOverride(false);
     startNetworkCheck();
     vault.current.clear();
     setReceipt(undefined);
@@ -441,7 +452,7 @@ export default function App() {
     reader.readAsDataURL(f);
   }
   const closeReview = useCallback(() => {
-    if (!busy) setReview(false);
+    if (!busy) { setReview(false); setSensitiveOverride(false); }
   }, [busy]);
   const dialogRef = useDialogFocus(review, closeReview);
   useEffect(() => {
@@ -599,41 +610,38 @@ export default function App() {
       </aside>
       <div className="main-shell" inert={review}>
         <header className="topbar">
-          <NetworkProof />
-          <Account />
-          <label className="app-language">
-            <span>{t("Language")}</span>
-            <select
-              aria-label="English / हिन्दी"
-              value={appLanguage}
-              onChange={(event) => {
-                setLanguage(event.target.value as "en" | "hi");
-                stopLocalReading();
-              }}
-            >
-              <option value="en" lang="en">
-                English
-              </option>
-              <option value="hi" lang="hi">
-                हिन्दी
-              </option>
-            </select>
-          </label>
-          <span className="breadcrumb">{t("Your safety workspace")}</span>
-          <span className="top-status ai-capability" role="status">
-            {t(capabilityLabel(capability))}
-          </span>
-          <span className="top-status">
-            {online ? <LockKeyhole size={14} /> : <WifiOff size={14} />}{" "}
-            {online ? t("Private session ready") : t("Offline mode")}
-          </span>
-          <button
-            className="avatar"
-            aria-label={t("Open family circle")}
-            onClick={() => setTab("family")}
-          >
-            VS
-          </button>
+          <div className="topbar-primary">
+            <span className="breadcrumb">{t("Your safety workspace")}</span>
+            <label className="app-language">
+              <span>{t("Language")}</span>
+              <select
+                aria-label="English / हिन्दी"
+                value={appLanguage}
+                onChange={(event) => {
+                  setLanguage(event.target.value as "en" | "hi");
+                  stopLocalReading();
+                }}
+              >
+                <option value="en" lang="en">
+                  English
+                </option>
+                <option value="hi" lang="hi">
+                  हिन्दी
+                </option>
+              </select>
+            </label>
+            <Account />
+          </div>
+          <div className="topbar-secondary">
+            <NetworkProof />
+            <span className="top-status ai-capability" role="status">
+              {t(capabilityLabel(capability))}
+            </span>
+            <span className="top-status">
+              {online ? <LockKeyhole size={14} /> : <WifiOff size={14} />}{" "}
+              {online ? t("Private session ready") : t("Offline mode")}
+            </span>
+          </div>
         </header>
         <main>
           <section
@@ -1036,7 +1044,9 @@ export default function App() {
                         type="button"
                         className="primary"
                         disabled={
-                          !!busy || localOnly || !hasAssessableText(result.text)
+                          !!busy ||
+                          (localOnly && !privacyRoute.overrideAllowed) ||
+                          !hasAssessableText(result.text)
                         }
                         onClick={() => {
                           setConsent(false);
@@ -1100,6 +1110,13 @@ export default function App() {
                         </ul>
                       )}
                     </div>
+                  )}
+                  {result.source === "LOCAL_RULES" && (
+                    <p className="routing-banner" role="status">
+                      {t(
+                        "Local AI did not run. Names and addresses were checked only by limited rules. Review them manually.",
+                      )}
+                    </p>
                   )}
                   {hasAssessableText(result.text) && !awaitingAndroidHybrid && (
                     <>
@@ -1210,7 +1227,9 @@ export default function App() {
                       <button
                         className="primary"
                         disabled={
-                          !!busy || localOnly || !hasAssessableText(result.text)
+                          !!busy ||
+                          (localOnly && !privacyRoute.overrideAllowed) ||
+                          !hasAssessableText(result.text)
                         }
                         onClick={() => {
                           setReview(true);
@@ -1407,7 +1426,7 @@ export default function App() {
               className="modal-close"
               aria-label={t("Close review")}
               disabled={!!busy}
-              onClick={() => setReview(false)}
+              onClick={closeReview}
             >
               <X />
             </button>
@@ -1426,9 +1445,32 @@ export default function App() {
               )}
             </p>
             <RoutingBanner route={privacyRoute} />
+            {localOnly && privacyRoute.overrideAllowed && (
+              <div className="routing-banner route-LOCAL_ONLY">
+                <p>
+                  {t(
+                    "This content is sensitive. Tokens hide identifiers, but medical, financial or identity details may remain. Keep it local unless you have reviewed every detail.",
+                  )}
+                </p>
+                <label className="consent">
+                  <input
+                    type="checkbox"
+                    checked={sensitiveOverride}
+                    disabled={!!busy}
+                    onChange={(event) => {
+                      setSensitiveOverride(event.target.checked);
+                      setConsent(false);
+                    }}
+                  />
+                  {t(
+                    "Allow a tokenized cloud check for this content. I understand sensitive details may remain.",
+                  )}
+                </label>
+              </div>
+            )}
             <fieldset
               className="verification-options"
-              disabled={!!busy || localOnly}
+              disabled={!!busy || (localOnly && !sensitiveOverride)}
             >
               <legend>{t("What would you like to check?")}</legend>
               <label>
@@ -1493,6 +1535,7 @@ export default function App() {
               </p>
             )}
             <CloudApproval
+              sensitiveOverride={sensitiveOverride}
               route={privacyRoute}
               blocked={leakResult.blocked}
               busy={!!busy}

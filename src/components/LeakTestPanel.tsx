@@ -26,7 +26,10 @@ export default function LeakTestPanel({
       role="status"
     >
       <strong>
-        {t("Leak test")}: {t(result.status)}
+        {t("Leak test")}:{" "}
+        {t(
+          result.status === "WARN" ? "Review needed" : "Manual review required",
+        )}
       </strong>
       <p>
         {t(
@@ -34,7 +37,7 @@ export default function LeakTestPanel({
             ? "A known private value remains. Remove the highlighted text before approving."
             : result.status === "WARN"
               ? "Review these possible identifiers before approving."
-              : "No known private values or identifier patterns found. Review is still required.",
+              : "No known patterns found. Names and addresses are not fully detected. Review manually.",
         )}
       </p>
       {result.findings.length > 0 && (

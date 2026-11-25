@@ -1,6 +1,6 @@
 import { Cloud } from "lucide-react";
 import { t } from "../lib/i18n";
-import type { PrivacyRoute } from "../lib/router";
+import { cloudRouteBlocked, type PrivacyRoute } from "../lib/router";
 export default function CloudApproval({
   route,
   blocked,
@@ -10,6 +10,7 @@ export default function CloudApproval({
   onConsent,
   onSubmit,
   purpose,
+  sensitiveOverride = false,
 }: {
   route: PrivacyRoute;
   blocked: boolean;
@@ -19,8 +20,10 @@ export default function CloudApproval({
   onConsent: (value: boolean) => void;
   onSubmit: () => void;
   purpose: "hybrid" | "public-sources";
+  sensitiveOverride?: boolean;
 }) {
-  const disabled = route.tier === "LOCAL_ONLY" || blocked || busy || !readable;
+  const disabled =
+    cloudRouteBlocked(route, sensitiveOverride) || blocked || busy || !readable;
   return (
     <>
       <label className="consent">

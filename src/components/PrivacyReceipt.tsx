@@ -59,6 +59,8 @@ export default function PrivacyReceipt({
             <dd>{receipt.model}</dd>
           </>
         )}
+        <dt>{t("Sensitive-content override approved")}</dt>
+        <dd>{t(receipt.sensitiveOverrideApproved ? "Yes" : "No")}</dd>
         <dt>{t("Tokens")}</dt>
         <dd>
           {Object.entries(receipt.tokenCounts)

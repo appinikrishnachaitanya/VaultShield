@@ -37,6 +37,12 @@ export function detectIdentifiers(input: string): {
   const add = (category: IdentifierCategory, regex: RegExp, group = 0) => {
     for (const m of text.matchAll(regex)) {
       const value = m[group];
+      if (
+        category === "PERSON" &&
+        group &&
+        /^(?:team|sir|madam|customer|support|bank|officer)$/i.test(value.trim())
+      )
+        continue;
       const start = m.index! + (group ? m[0].lastIndexOf(value) : 0);
       const end = start + value.length;
       const overlapping = matches
@@ -100,6 +106,28 @@ export function detectIdentifiers(input: string): {
   add("BANK_ACC", /\b\d[\d -]{11,22}\d\b/g);
   add("PERSON", /\b(?:name|customer|account holder)\s*:\s*[^\n,;]+/gi);
   add("ORG", /\b(?:client|company|employer)\s*:\s*[^\n,;]+/gi);
+  // Contextual name heuristics: helpful on rules-only devices, never a complete NER check.
+  add(
+    "PERSON",
+    /\b(?:[Mm]r\.?|[Mm]rs\.?|[Mm]s\.?|[Dd]r\.?|[Ii]nspector|[Oo]fficer|[Ss]hri|[Ss]mt\.?)\s+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+){0,3})/g,
+    1,
+  );
+  add(
+    "PERSON",
+    /\b(?:[Hh]i|[Hh]ello|[Dd]ear)\s+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+){0,2})/g,
+    1,
+  );
+  add(
+    "PERSON",
+    /\b(?:[Mm]y\s+name\s+is|[Ii]\s+am|[Mm]era\s+naam|[Nn]aam(?:\s+hai)?)\s+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+){0,2})/g,
+    1,
+  );
+  add("PERSON", /\bfrom\s+([A-Z][a-z]+[ \t]+[A-Z][a-z]+)(?=[,.!?\n]|\s|$)/g, 1);
+  add(
+    "PERSON",
+    /मेरा\s*नाम\s+([\p{Script=Devanagari}]+(?:\s+[\p{Script=Devanagari}]+){0,2}?)(?=\s+है|[।,.!?\n]|$)/gu,
+    1,
+  );
   return { text, matches: matches.sort((a, b) => a.start - b.start) };
 }
 // The brand is a compile-time aid. Review is still required before sending.

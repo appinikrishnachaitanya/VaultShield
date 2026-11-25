@@ -9,19 +9,19 @@ The application uses React 19, TypeScript, Vite and Tailwind as a PWA, with a Ca
 ## Privacy routing and token vault
 
 1. Paste text or choose one JPEG/PNG. The deterministic router runs before AI.
-2. The device replaces detected identifiers with typed tokens such as `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]` and `[AMOUNT_1:10k-50k]`. Repeated values reuse a token. Original values and the mapping exist only in tab memory.
+2. The device replaces detected identifiers with typed tokens such as `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]` and `[AMOUNT_1:10k-50k]`. Repeated values reuse a token. Original values and the mapping exist only in tab memory. Local restoration resolves category + number even if a model drops or changes a token attribute; unknown identities stay untouched.
 3. Run the first local check. Supported desktop Chrome uses Firebase AI Logic `ONLY_ON_DEVICE`. Android uses the native ML Kit Prompt API for this first scan. A clearly labeled local-rules result handles text when the local model cannot run; images need a local image model.
-4. For a cloud-eligible route, review the editable tokenized text and the leak check. Edits clear consent. Known original values reintroduced into the preview block approval.
+4. For a cloud-eligible route, review the editable tokenized text and the leak check. Edits clear consent. Known original values reintroduced into the preview block approval. The leak panel always calls for manual review; an absence of detected patterns is not a clean bill of health.
 5. Approve **Ask AI to check this** for SDK-managed `PREFER_ON_DEVICE`, or separately approve **Check trusted websites** for cloud search grounding. All Firebase AI Logic web calls are in `src/lib/firebase/ai.ts`.
 6. Read the tokenized answer and expand its plain-text local view to restore known values. Restored values never enter translation, summary, export or cloud requests.
 
 | Route | Policy |
 | --- | --- |
-| `LOCAL_ONLY` | Aadhaar/PAN, bank statements/accounts, medical, minor-related and identity-document content stays local. Cloud verification and cloud summary fallback are blocked. Images start here until local extraction can be classified. |
+| `LOCAL_ONLY` | Actual Aadhaar/PAN numbers, structured bank statements, medical reports, identity documents and identified minor records are local by default. A reviewed tokenized cloud check requires a separate sensitive-content override and normal consent. Unread images cannot be overridden. Topic mentions alone do not trigger this tier. |
 | `TOKENIZE_THEN_CLOUD_OK` | Suspicious messages, contracts and detected ordinary identifiers require tokenization, review and explicit consent before a cloud-capable request. |
 | `LOW_RISK` | No identifiers were detected. Review and consent still apply to a cloud-capable request. This label does not establish safety. |
 
-The shared detection layer applies NFKC normalization, zero-width removal, dash normalization and Devanagari-digit normalization. It covers Indian phone, Aadhaar, PAN, UPI, email, account, reference, IFSC, context-labeled OTP, amount and URL formats, plus labeled names/organisations. URL attributes use only `shortener`, `bank-like`, `agency-like` or `other`; amount attributes use only `lt1k`, `1k-10k`, `10k-50k` or `50k-plus`. Raw domains and exact amounts do not leave in these tokens. `[PRIVATE_n]` represents a model-masked span whose original value is unavailable for restoration.
+The shared detection layer applies NFKC normalization, zero-width removal, dash normalization and Devanagari-digit normalization. Contextual name heuristics cover titles, greetings, “my name is”, romanized “naam” and selected Hindi constructions; they are incomplete. It covers Indian phone, Aadhaar, PAN, UPI, email, account, reference, IFSC, context-labeled OTP, amount and URL formats, plus labeled names/organisations. URL attributes use only `shortener`, `bank-like`, `agency-like` or `other`; amount attributes use only `lt1k`, `1k-10k`, `10k-50k` or `50k-plus`. Raw domains and exact amounts do not leave in these tokens. Link classes use exact domain labels or hyphen-delimited labels rather than arbitrary substrings; they indicate a naming pattern, never authenticity. `[PRIVATE_n]` represents a model-masked span whose original value is unavailable for restoration.
 
 Reset, unmount, page-hide and 15-minute idle expiry clear the vault. The original editor, screenshot, results, comparison spans and receipt are cleared on page-hide/idle expiry. The app does not put this content or mapping in localStorage, IndexedDB, Firestore, analytics, logs or service-worker caches. Saved language, family display names and account/family records are separate service data.
 
@@ -41,7 +41,7 @@ Review remains essential: the LLM may miss names, regexes focus on Indian format
 
 The off-by-default opt-in shares only tactic categories, one broad URL class, one amount bucket and English/Hindi. `/patterns` requires Firebase identity and App Check, rejects extra fields, and limits contributions to one per account per hour. Pattern documents contain aggregate categories and a count only. Existing rate-limit documents keep a separate hashed account/action key and last-request time; no per-account pattern history is stored.
 
-`GET /patterns/trending` publishes a bucket only at `PATTERN_K` observations (default 5, minimum 5). This is **k-threshold aggregation**, not a count of distinct contributors. Thresholds do not prevent repeated accounts or prove a scam. The UI displays a trending strip only when eligible buckets exist.
+`GET /patterns/trending` publishes a bucket only at `PATTERN_K` observations (default 5, minimum 5). This is **k-threshold aggregation**, not a count of distinct contributors. Thresholds do not prevent repeated accounts or prove a scam. With a small sample and inexpensive anonymous accounts, this is an experimental community-observation signal, not representative trend data. The UI displays a trending strip only when eligible buckets exist.
 
 ## Family circle
 
@@ -127,3 +127,11 @@ Use `npm run dev`, or set `VITE_ENABLE_DEMO_STORIES=true` for an explicitly desi
 6. Pair two separate browser profiles for a named family alert. Optional Google account linking keeps the family identity across devices.
 
 Keep demonstration inputs synthetic. A real completed result establishes that specific inference path on that tested device; browser model assets alone do not establish execution.
+
+## Threat model and measured rules evaluation
+
+The main threat is accidental disclosure of original message/document identifiers to a cloud AI service. The controls are local detection/tokenization, a memory-only map, final-preview leak checks, a route default, separate override/consent, and an export containing only the approved tokenized request. A malicious message or model response is untrusted data. The cloud still sees the approved semantic content, token categories and attributes; masking does not make sensitive medical or financial meaning disappear. The override warns about that explicitly.
+
+The browser/OS, installed extensions, Firebase identity/attestation and the chosen AI provider are trust boundaries. A compromised device or extension can read content before masking; this app does not protect against that. Family names/account settings and minimal alert metadata remain service data. Rate limits and publication thresholds do not stop an attacker creating multiple anonymous accounts. A receipt documents what app code submitted, not provider-side retention or an independently captured network trace.
+
+Measured on 2026-11-25 using `tests/fixtures/rules-name-evaluation.json` and `tests/rules-name-evaluation.test.ts`: 20 synthetic sentences, 15 expected name spans; 12 true positives, 1 false positive and 3 false negatives. On this small rules-only corpus, precision is **92.31%**, recall **80.00%**, and raw-name survival is **20.00% (3/15 expected names)**. The misses are names without a supported contextual pattern; the false positive is a two-word organisation after “from”. These are fixture-specific results, not production privacy guarantees, all-PII leak rates or on-device LLM measurements. Reproduce with `npx vitest run tests/rules-name-evaluation.test.ts --pool=threads --reporter=verbose --silent=false`.

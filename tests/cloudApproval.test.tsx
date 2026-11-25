@@ -9,3 +9,8 @@ describe('review approval controls',()=>{
  it('enables approved eligible text',()=>expect(render('LOW_RISK')).not.toContain('disabled'));
  it('atomically clears consent when approved text changes',()=>{const state=reviewReducer({text:'old',consent:true},{type:'edit',text:'new'});expect(state).toEqual({text:'new',consent:false});});
 });
+
+it('enables reviewed sensitive content only after a separate override',()=>{
+ const html=renderToStaticMarkup(<CloudApproval route={{tier:'LOCAL_ONLY',reasons:['AADHAAR'],overrideAllowed:true}} sensitiveOverride consent blocked={false} busy={false} readable onConsent={()=>{}} onSubmit={()=>{}} purpose="hybrid"/>);
+ expect(html).not.toContain('disabled');
+});

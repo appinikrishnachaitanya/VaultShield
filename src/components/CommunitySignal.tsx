@@ -10,6 +10,7 @@ export default function CommunitySignal({ signal }: { signal: PatternSignal }) {
   return (
     <section className="card community-signal">
       <h2>{t("Help spot shared pressure patterns")}</h2>
+      <p className="tool-hint">{t('Experimental community observations, not a verified trend. Small samples and repeated anonymous accounts can skew counts.')}</p>
       <p>
         {t(
           "Optional: share only pressure categories, one broad link class, one amount range, and English/Hindi. No message, name, token values or document is shared.",

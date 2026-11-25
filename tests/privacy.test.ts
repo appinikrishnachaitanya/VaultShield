@@ -242,7 +242,7 @@ describe("privacy firewall", () => {
         "Account: 12345678" as ReturnType<typeof maskIdentifiers>["text"],
         true,
       ),
-    ).rejects.toThrow("Cloud actions are disabled");
+    ).rejects.toThrow("redacted");
     expect(mocks.model).not.toHaveBeenCalled();
   });
   it("bounds an unresponsive Chrome availability probe without starting inference", async () => {
@@ -676,7 +676,7 @@ it.each(['hybrid','public-sources'] as const)('sends only typed placeholders in 
 });
 
 it.each(['hybrid','public-sources'] as const)('blocks LOCAL_ONLY before creating a %s SDK request',async purpose=>{
- const raw='Medical report: patient has diabetes.';
+ const raw='Medical report\nPatient: Demo\nGlucose: 99 mg/dL\nReference range: 70-100';
  await expect(verifyWithCloud(maskIdentifiers(raw).text,true,raw,purpose)).rejects.toThrow('Cloud actions are disabled');
  expect(mocks.model).not.toHaveBeenCalled();expect(mocks.generateContent).not.toHaveBeenCalled();
 });
@@ -691,4 +691,12 @@ it('does not log private content embedded in SDK error codes or messages',async(
  mocks.generateContent.mockRejectedValue(Object.assign(new Error('private-fixture-9000000000'),{code:'private-fixture-9000000000'}));
  await expect(verifyWithCloud(maskIdentifiers('Please verify this request.').text,true)).rejects.toThrow('Verification could not complete');
  expect(JSON.stringify(warn.mock.calls)).not.toContain('9000000000');warn.mockRestore();
+});
+
+it('permits only tokenized sensitive content after an explicit override',async()=>{
+ const {TokenVaultSession}=await import('../src/lib/tokenVault');const session=new TokenVaultSession();const raw='Aadhaar 1234 5678 9012: a threatening message.';const approved=session.tokenize(raw).text;
+ mocks.generateContent.mockResolvedValue({response:{inferenceSource:'in_cloud',text:()=> 'Verify the claim independently.'}});
+ await expect(verifyWithCloud(approved,true,raw,'hybrid','en',session)).rejects.toThrow('disabled');
+ const result=await verifyWithCloud(approved,true,raw,'hybrid','en',session,true);
+ expect(result.source).toBe('IN_CLOUD');expect(mocks.generateContent.mock.calls[0][0]).not.toContain('1234 5678 9012');session.clear();
 });
