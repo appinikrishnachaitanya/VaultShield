@@ -1179,7 +1179,9 @@ export default function App() {
                   <h2>{t("People & notifications")}</h2>
                   <p>
                     {members.length
-                      ? `${members.length} trusted connection(s)`
+                      ? members.length === 1
+                        ? t("1 person connected")
+                        : `${members.length} ${t("people connected")}`
                       : t(
                           "No one paired yet. Create or accept an invitation to get started.",
                         )}
