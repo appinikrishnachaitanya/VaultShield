@@ -165,4 +165,11 @@ class PatternRoutes(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json(),{'threshold':5,'buckets':[{**self.payload,'count':5}]})
 
+class DeploymentConfig(unittest.TestCase):
+    def test_production_requires_https_public_origin(self):
+        for value in ['', 'http://example.com', 'https://user:secret@example.com', 'https://example.com/path', 'https://example.com?token=secret']:
+            with self.assertRaises(RuntimeError): service.validate_public_app_url(value,True)
+        service.validate_public_app_url('https://vaultshield-2ace9.web.app',True)
+        service.validate_public_app_url('',False)
+
 if __name__=='__main__': unittest.main()

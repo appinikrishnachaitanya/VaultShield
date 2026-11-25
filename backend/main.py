@@ -4,6 +4,7 @@ import hashlib
 import os
 import re
 import secrets
+from urllib.parse import urlsplit
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +15,12 @@ import firebase_admin
 from firebase_admin import auth, app_check, firestore, messaging
 firebase_admin.initialize_app()
 db = firestore.client()
+PUBLIC_APP_URL = os.environ.get('PUBLIC_APP_URL','').strip()
+def validate_public_app_url(value: str, production: bool):
+    parsed_url=urlsplit(value)
+    if production and (parsed_url.scheme != 'https' or not parsed_url.netloc or parsed_url.query or parsed_url.fragment or parsed_url.path not in ('','/') or parsed_url.username or parsed_url.password):
+        raise RuntimeError('PUBLIC_APP_URL must be configured as the production HTTPS app URL')
+validate_public_app_url(PUBLIC_APP_URL,bool(os.environ.get('K_SERVICE') or os.environ.get('ENVIRONMENT') == 'production'))
 app = FastAPI(title='VaultShield family service', docs_url=None, redoc_url=None)
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get('ALLOWED_ORIGINS','http://127.0.0.1:5173').split(','), allow_methods=['GET','POST','DELETE'], allow_headers=['Authorization','X-Firebase-AppCheck','Content-Type'])
 @app.exception_handler(RequestValidationError)
@@ -70,7 +77,7 @@ class Alert(Payload):
             raise ValueError('Invalid tactic types')
         return value
 @app.get('/health')
-def health(): return {'status':'ok','familyApi':2}
+def health(): return {'status':'ok','familyApi':3}
 @app.post('/pair/invite')
 def invite(body:Invite,uid=Depends(identity)):
     reserve_action(uid, 'invite', 30)
@@ -174,7 +181,7 @@ def alert(body:Alert,uid=Depends(identity)):
         db.collection('users').document(member.id).collection('alerts').add({'tacticCount':body.stages,'tacticTypes':body.tacticTypes,'timestamp':stamp,'familyCircleId':digest('|'.join(sorted([uid,member.id]))),'senderName':sender_name,'status':'requested'})
         inboxes+=1
         for token in db.collection('users').document(member.id).collection('tokens').limit(5).stream():
-            push_jobs.append((token.reference,messaging.Message(token=token.to_dict()['token'],notification=messaging.Notification(title='VaultShield · Help requested',body=f'{sender_name} asked for help. Call them using your saved number. {body.stages}/4 pressure tactics.'),webpush=messaging.WebpushConfig(fcm_options=messaging.WebpushFCMOptions(link=os.environ.get('PUBLIC_APP_URL','https://vaultshield-2ace9.web.app'))))))
+            push_jobs.append((token.reference,messaging.Message(token=token.to_dict()['token'],notification=messaging.Notification(title='VaultShield · Help requested',body=f'{sender_name} asked for help. Call them using your saved number. {body.stages}/4 pressure tactics.'),webpush=messaging.WebpushConfig(fcm_options=messaging.WebpushFCMOptions(link=PUBLIC_APP_URL) if PUBLIC_APP_URL else None))))
     delivered=0
     if push_jobs:
         try:
