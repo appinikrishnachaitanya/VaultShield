@@ -2,19 +2,46 @@
 
 **Check it before you pay for it. Privately.**
 
-VaultShield helps Indian families and freelancers pause before acting on suspicious messages, screenshots, payment requests, invoices, and contracts. It is a React, TypeScript, Vite, and Tailwind progressive web app with a Capacitor Android package. Firebase AI Logic powers hybrid inference; a Python FastAPI service manages family pairing and alerts.
+VaultShield is a **Privacy Router for AI**, built for Indian families and freelancers. **Cloud reasons over placeholders. The device holds the secrets. A receipt proves what the app submitted.** Scam-message checks are the first use case; freelancer contracts and offer letters are the second.
 
-## How the privacy flow works
+The application uses React 19, TypeScript, Vite and Tailwind as a PWA, with a Capacitor Android wrapper. Firebase AI Logic runs the client AI flow. A Python FastAPI service handles family pairing, alerts and opt-in category aggregation; it never receives messages, images or token mappings for AI processing.
 
-1. Paste a message or add one JPEG or PNG screenshot.
-2. VaultShield checks the original locally, masks identifiers, and explains any Authority, Fear, Urgency, and Secrecy tactics it finds.
-3. Review and edit the exact redacted text. Editing clears the approval checkbox.
-4. Choose **Ask AI to check this** for Firebase AI Logic `PREFER_ON_DEVICE`, or **Check trusted websites** for cloud search grounding. Approve the reviewed text before either request.
-5. Read the result with its actual on-device or cloud source badge and measured elapsed time. Ask family for help with a separate tap.
+## Privacy routing and token vault
 
-The first scan uses `ONLY_ON_DEVICE` through Firebase AI Logic on supported desktop Chrome. The Android private scan uses the native VaultShieldNano bridge and ML Kit. Text can use clearly labeled local rules when a local model is unavailable. After approval, Firebase AI Logic chooses local or cloud inference for the reviewed text. The screenshot itself stays on the device; only reviewed redacted text is eligible for cloud inference. All Firebase AI Logic web calls are centralized in `src/lib/firebase/ai.ts`.
+1. Paste text or choose one JPEG/PNG. The deterministic router runs before AI.
+2. The device replaces detected identifiers with typed tokens such as `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]` and `[AMOUNT_1:10k-50k]`. Repeated values reuse a token. Original values and the mapping exist only in tab memory.
+3. Run the first local check. Supported desktop Chrome uses Firebase AI Logic `ONLY_ON_DEVICE`. Android uses the native ML Kit Prompt API for this first scan. A clearly labeled local-rules result handles text when the local model cannot run; images need a local image model.
+4. For a cloud-eligible route, review the editable tokenized text and the leak check. Edits clear consent. Known original values reintroduced into the preview block approval.
+5. Approve **Ask AI to check this** for SDK-managed `PREFER_ON_DEVICE`, or separately approve **Check trusted websites** for cloud search grounding. All Firebase AI Logic web calls are in `src/lib/firebase/ai.ts`.
+6. Read the tokenized answer and expand its plain-text local view to restore known values. Restored values never enter translation, summary, export or cloud requests.
 
-The local check can inspect original URLs and payment amounts. The outbound preview masks full URLs and exact amounts. For example, `Pay ₹50,000 at https://verify.example/path?token=secret` becomes `Pay [REDACTED] at [REDACTED]` before a cloud-eligible request. A user can edit the preview before approving it.
+| Route | Policy |
+| --- | --- |
+| `LOCAL_ONLY` | Aadhaar/PAN, bank statements/accounts, medical, minor-related and identity-document content stays local. Cloud verification and cloud summary fallback are blocked. Images start here until local extraction can be classified. |
+| `TOKENIZE_THEN_CLOUD_OK` | Suspicious messages, contracts and detected ordinary identifiers require tokenization, review and explicit consent before a cloud-capable request. |
+| `LOW_RISK` | No identifiers were detected. Review and consent still apply to a cloud-capable request. This label does not establish safety. |
+
+The shared detection layer applies NFKC normalization, zero-width removal, dash normalization and Devanagari-digit normalization. It covers Indian phone, Aadhaar, PAN, UPI, email, account, reference, IFSC, context-labeled OTP, amount and URL formats, plus labeled names/organisations. URL attributes use only `shortener`, `bank-like`, `agency-like` or `other`; amount attributes use only `lt1k`, `1k-10k`, `10k-50k` or `50k-plus`. Raw domains and exact amounts do not leave in these tokens. `[PRIVATE_n]` represents a model-masked span whose original value is unavailable for restoration.
+
+Reset, unmount, page-hide and 15-minute idle expiry clear the vault. The original editor, screenshot, results, comparison spans and receipt are cleared on page-hide/idle expiry. The app does not put this content or mapping in localStorage, IndexedDB, Firestore, analytics, logs or service-worker caches. Saved language, family display names and account/family records are separate service data.
+
+## Receipts, leak checks and app payload accounting
+
+A completed primary local check or reviewed verification creates a session-only receipt with timestamp, route, SDK-reported source, cloud model when applicable, measured elapsed time, token counts, search-grounding evidence, and UTF-8 byte length of the exact cloud prompt. Local inference records zero outbound AI payload bytes. Images sent to cloud are always `no`.
+
+**What left your device** compares the local original, with detected spans highlighted, against the exact SDK prompt. **Copy receipt** and **Download receipt (JSON)** contain metadata, the approved tokenized text and exact outbound prompt; neither contains the original or mapping. The statement “VaultShield stored nothing” is scoped to original content and token mappings, as stated beside it.
+
+Before approval, the leak test re-runs the identifier detector and scans digit runs, mixed high-entropy strings and known vault values. Known-value substring matches are case/space insensitive and are a hard block. Other findings are warnings with local highlights. The check is deterministic; no additional AI request is made for it.
+
+The header counts app-controlled AI payload strings and backend fetch bodies by category. SDK-reported local inference adds zero AI bytes; SDK-reported cloud inference adds the exact submitted prompt length. Failed/unknown hybrid delivery is labeled unconfirmed. This is app instrumentation, not a packet capture: HTTP headers, SDK envelopes and Firebase Auth/App Check/Remote Config/Firestore/push service traffic are excluded and disclosed separately. Receipts and counters do not independently prove what a remote provider retained.
+
+Review remains essential: the LLM may miss names, regexes focus on Indian formats, and broad classifications can be conservative. On-device AI is experimental and depends on browser, model and hardware availability. The Android first-scan bridge uses ML Kit; its separately consented hybrid follow-up uses native Firebase AI Logic. AI output is guidance for independent verification, not a guarantee about a sender, payment or legal clause.
+
+## Optional community pattern signal
+
+The off-by-default opt-in shares only tactic categories, one broad URL class, one amount bucket and English/Hindi. `/patterns` requires Firebase identity and App Check, rejects extra fields, and limits contributions to one per account per hour. Pattern documents contain aggregate categories and a count only. Existing rate-limit documents keep a separate hashed account/action key and last-request time; no per-account pattern history is stored.
+
+`GET /patterns/trending` publishes a bucket only at `PATTERN_K` observations (default 5, minimum 5). This is **k-threshold aggregation**, not a count of distinct contributors. Thresholds do not prevent repeated accounts or prove a scam. The UI displays a trending strip only when eligible buckets exist.
 
 ## Family circle
 
@@ -65,7 +92,7 @@ npm run build
 npx firebase deploy --only hosting,firestore,remoteconfig --project vaultshield-2ace9
 ```
 
-`firebase.json` serves `dist` and rewrites `/pair/**`, `/alerts`, and `/notifications/**` to the `vaultshield-api` Cloud Run service in **europe-west1**. Build the Dockerfile with `backend/` as its context and deploy the service in that region. Set `ALLOWED_ORIGINS` and `PUBLIC_APP_URL` to the exact Firebase Hosting origin. The container runs as a non-root user and exposes `/health`; Cloud Run can use that endpoint for an HTTP startup probe. In production, leave `VITE_BACKEND_URL` empty so the web app uses Hosting's same-origin routes.
+`firebase.json` serves `dist` and rewrites `/pair/**`, `/alerts`, `/notifications/**`, and `/patterns` routes to the `vaultshield-api` Cloud Run service in **europe-west1**. This region is retained because it is the existing deployed service; changing only a Hosting rewrite would disconnect it. Build the Dockerfile with `backend/` as its context and deploy the service in that region. Set `ALLOWED_ORIGINS` and `PUBLIC_APP_URL` to the exact Firebase Hosting origin. `PUBLIC_APP_URL` is required when `K_SERVICE` or `ENVIRONMENT=production` is present; invalid/missing HTTPS configuration fails startup. The container runs as a non-root user and exposes `/health`; Cloud Run can use that endpoint for an HTTP startup probe. In production, leave `VITE_BACKEND_URL` empty so the web app uses Hosting's same-origin routes.
 
 The PWA includes its own `/sw.js`, web manifest, offline app-shell cache, and family push handler. Edge and Chrome can install the hosted app. Desktop Chrome's built-in Prompt API provides the web on-device model path; the browser manages its model assets.
 
@@ -90,10 +117,13 @@ The web suite covers redaction, consent, local and hybrid routing, language beha
 
 ## Demo flow
 
-1. In desktop Chrome, prepare the built-in model, then run the synthetic **Digital arrest** example. Show the on-device badge, masked preview, and four pressure tactics.
-2. Run **A normal message** to show that a routine delivery update does not become an automatic scam verdict.
-3. Review the redacted text and approve an AI second opinion. Show the actual inference-source badge. Use **Check trusted websites** for a separately approved public-source check.
-4. Select Hindi and open the short Maa Mode explanation. Show the family-safe actions and the optional local reply tools.
-5. Pair two separate browser profiles with one family code. Send a synthetic help request and show the named sender in the recipient's inbox and push notification.
+Use `npm run dev`, or set `VITE_ENABLE_DEMO_STORIES=true` for an explicitly designated demo build. **Demo story** preloads a clearly synthetic freelancer contract or a synthetic legal notice. It does not simulate results; run the real check and SDK flow.
 
-Use synthetic messages and screenshots in the demo. AI guidance supports a pause and independent verification before any payment or disclosure.
+1. Show the route banner before starting the local scan.
+2. Inspect typed placeholders, including broad URL/amount attributes.
+3. Open review, show the leak check, and edit a known identifier back into the preview to demonstrate the hard block. Remove it and review again.
+4. Approve a hybrid second opinion. Show the actual SDK source, expand the plain local restored-value view, and inspect the receipt and app payload counter.
+5. Try a synthetic Aadhaar, medical report or minor-related example to demonstrate `LOCAL_ONLY`, with cloud actions blocked.
+6. Pair two separate browser profiles for a named family alert. Optional Google account linking keeps the family identity across devices.
+
+Keep demonstration inputs synthetic. A real completed result establishes that specific inference path on that tested device; browser model assets alone do not establish execution.
