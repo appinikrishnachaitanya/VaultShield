@@ -971,6 +971,11 @@ blockquote {
   padding: 12px;
   margin: 9px 0 15px;
 }
+.family-layout .field-hint {
+  margin: -6px 0 12px;
+  color: #92400e;
+  font-size: 0.9rem;
+}
 .invite-code {
   background: #f1f5f9;
   padding: 15px;

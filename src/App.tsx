@@ -1160,6 +1160,11 @@ export default function App() {
                     onChange={(e) => setCode(e.target.value)}
                     placeholder={t("Paste your family member’s code")}
                   />
+                  {code.trim() && familyName.trim().length < 2 && (
+                    <p className="field-hint" role="status">
+                      {t("Enter your family name above to join (at least 2 characters).")}
+                    </p>
+                  )}
                   <button
                     className="secondary"
                     disabled={!!busy || !code.trim() || familyName.trim().length < 2}
