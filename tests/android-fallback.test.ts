@@ -54,7 +54,7 @@ describe("Android model error 606", () => {
 
   it("blocks screenshots on native scan error 606", async () => {
     await expect(checkWithLocalFallback(original, screenshot)).rejects.toThrow(
-      "Screenshot check needs On-Device AI",
+      "This device cannot read screenshots privately yet",
     );
     expect(mocks.analyze).toHaveBeenCalledWith({
       text: expect.any(String),
@@ -69,7 +69,7 @@ describe("Android model error 606", () => {
       source: "LOCAL_RULES",
     });
     await expect(checkWithLocalFallback(original, screenshot)).rejects.toThrow(
-      "Screenshot check needs On-Device AI",
+      "This device cannot read screenshots privately yet",
     );
     expect(mocks.analyze).not.toHaveBeenCalled();
     expect(mocks.cloudModel).not.toHaveBeenCalled();

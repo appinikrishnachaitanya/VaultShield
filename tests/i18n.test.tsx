@@ -51,7 +51,7 @@ describe("global English and Hindi preference", () => {
     );
     expect(html).toContain('value="hi" lang="hi" selected=""');
     expect(html).toContain("रुकिए। पैसे मत भेजिए");
-    expect(html).toContain("मेरी भाषा में सार बनाएँ");
+    expect(html).toContain("मेरी भाषा में आसान शब्दों में समझाएँ");
     expect(html).toContain("संदेश");
   });
   it("changes preference without making requests or storing user content", () => {

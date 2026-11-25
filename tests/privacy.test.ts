@@ -487,7 +487,7 @@ describe("privacy firewall", () => {
     });
     await expect(
       checkWithLocalFallback("", { data: "AA==", mimeType: "image/png" }),
-    ).rejects.toThrow("Screenshot check needs On-Device AI");
+    ).rejects.toThrow("This device cannot read screenshots privately yet");
     expect(mocks.model).not.toHaveBeenCalled();
   });
 

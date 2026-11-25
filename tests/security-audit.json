@@ -1,6 +1,5 @@
 {
   "scope": "Firestore rules source review and backend privacy contract",
-  "score": 9,
   "summary": "Owner-only family and alert reads; all client writes denied. Source review only, not an emulator authorization certification.",
   "findings": [
     {

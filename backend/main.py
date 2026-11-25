@@ -21,9 +21,9 @@ async def invalid_payload(_request, _error):
     # FastAPI's default validation detail can echo rejected private inputs.
     return JSONResponse(status_code=422, content={'detail': 'Invalid request payload'})
 
-def identity(authorization: str = Header(), x_firebase_appcheck: str = Header()):
+def identity(authorization: str | None = Header(default=None), x_firebase_appcheck: str | None = Header(default=None)):
     try:
-        if not authorization.startswith('Bearer '): raise ValueError('Bearer token required')
+        if not authorization or not authorization.startswith('Bearer ') or not x_firebase_appcheck: raise ValueError('Credentials required')
         app_check.verify_token(x_firebase_appcheck)
         return auth.verify_id_token(authorization.removeprefix('Bearer '), check_revoked=True)['uid']
     except Exception:
@@ -164,8 +164,8 @@ def alert(body:Alert,uid=Depends(identity)):
         if previous.exists and (stamp-previous.to_dict()['last']).total_seconds()<60: raise HTTPException(429,'Please wait a minute before sending another alert')
         tx.set(rate,{'last':stamp})
     reserve(db.transaction())
-    delivered=0
     inboxes=0
+    push_jobs=[]
     for member in members:
         sender_ref=db.collection('users').document(member.id).collection('family').document(uid)
         sender_snap=sender_ref.get()
@@ -174,10 +174,15 @@ def alert(body:Alert,uid=Depends(identity)):
         db.collection('users').document(member.id).collection('alerts').add({'tacticCount':body.stages,'tacticTypes':body.tacticTypes,'timestamp':stamp,'familyCircleId':digest('|'.join(sorted([uid,member.id]))),'senderName':sender_name,'status':'requested'})
         inboxes+=1
         for token in db.collection('users').document(member.id).collection('tokens').limit(5).stream():
-            try:
-                messaging.send(messaging.Message(token=token.to_dict()['token'],notification=messaging.Notification(title='VaultShield · Help requested',body=f'{sender_name} asked for help. Call them using your saved number. {body.stages}/4 pressure tactics.'),webpush=messaging.WebpushConfig(fcm_options=messaging.WebpushFCMOptions(link=os.environ.get('PUBLIC_APP_URL','https://vaultshield-2ace9.web.app')))))
-                delivered+=1
-            except messaging.UnregisteredError: token.reference.delete()
-            except Exception: pass  # Firestore inbox remains the durable delivery path.
+            push_jobs.append((token.reference,messaging.Message(token=token.to_dict()['token'],notification=messaging.Notification(title='VaultShield · Help requested',body=f'{sender_name} asked for help. Call them using your saved number. {body.stages}/4 pressure tactics.'),webpush=messaging.WebpushConfig(fcm_options=messaging.WebpushFCMOptions(link=os.environ.get('PUBLIC_APP_URL','https://vaultshield-2ace9.web.app'))))))
+    delivered=0
+    if push_jobs:
+        try:
+            batch=messaging.send_each([message for _,message in push_jobs])
+            delivered=batch.success_count
+            for (token_ref,_),response in zip(push_jobs,batch.responses):
+                if isinstance(response.exception,messaging.UnregisteredError): token_ref.delete()
+        except Exception:
+            pass  # Firestore inbox remains the durable delivery path.
     return {'inboxes':inboxes,'pushNotifications':delivered}
 

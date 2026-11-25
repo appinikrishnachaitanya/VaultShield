@@ -21,8 +21,12 @@ class FamilyRoutes(unittest.TestCase):
     def test_requires_verified_identity(self):
         service.app.dependency_overrides.clear()
         with patch.object(service.app_check, 'verify_token', side_effect=ValueError('bad')):
-            response = self.client.post('/pair/invite', headers={'Authorization':'Bearer bad','X-Firebase-AppCheck':'bad'})
+            response = self.client.post('/pair/invite',json={'name':'Mum'}, headers={'Authorization':'Bearer bad','X-Firebase-AppCheck':'bad'})
         self.assertEqual(response.status_code,401)
+
+    def test_missing_auth_headers_return_401(self):
+        service.app.dependency_overrides.clear()
+        self.assertEqual(self.client.post('/pair/invite',json={'name':'Mum'}).status_code,401)
 
     def test_invite_stores_hash_not_bearer_secret(self):
         with patch.object(service.firestore,'transactional',lambda f:f):
@@ -78,6 +82,23 @@ class FamilyRoutes(unittest.TestCase):
         value=family.add.call_args.args[0]
         self.assertEqual(set(value),{'tacticCount','tacticTypes','timestamp','familyCircleId','senderName','status'})
         self.assertEqual(value['senderName'],'Mum')
+
+    def test_alert_batches_push_after_writing_inbox(self):
+        member=MagicMock(id='relative')
+        token=MagicMock()
+        token.to_dict.return_value={'token':'synthetic-token'}
+        family=self.db.collection.return_value.document.return_value.collection.return_value
+        family.limit.return_value.stream.side_effect=[[member],[token]]
+        family.document.return_value.get.return_value.exists=True
+        family.document.return_value.get.return_value.to_dict.return_value={'name':'Mum'}
+        self.db.collection.return_value.document.return_value.get.return_value.exists=False
+        batch_response=MagicMock(success_count=1)
+        batch_response.responses=[MagicMock(exception=None)]
+        with patch.object(service.firestore,'transactional',lambda f:f), patch.object(service.messaging,'send_each',return_value=batch_response) as send_each:
+            response=self.client.post('/alerts',json={'stages':4})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json(),{'inboxes':1,'pushNotifications':1})
+        self.assertEqual(len(send_each.call_args.args[0]),1)
 
     def test_rate_limit_blocks_repeated_alert(self):
         self.db.collection.return_value.document.return_value.collection.return_value.limit.return_value.stream.return_value=[MagicMock(id='relative')]
