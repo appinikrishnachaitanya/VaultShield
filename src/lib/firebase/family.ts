@@ -44,12 +44,14 @@ async function request(path: string, body?: unknown, method = "POST") {
     );
   return data;
 }
-export const createInvite = () => request("/pair/invite");
-export const joinFamily = (code: string) =>
-  request("/pair/join", { code: code.trim() });
+export const createInvite = (name: string) => request("/pair/invite", { name: name.trim() });
+export const joinFamily = (code: string, name: string) =>
+  request("/pair/join", { code: code.trim(), name: name.trim() });
 export const sendAlert = (stages: number) => request("/alerts", { stages });
 export const removeMember = (uid: string) =>
   request(`/pair/${encodeURIComponent(uid)}`, undefined, "DELETE");
+export const labelMember = (uid: string, name: string) =>
+  request(`/pair/${encodeURIComponent(uid)}/label`, { name: name.trim() });
 export function notificationPermissionHelp(permission: NotificationPermission) {
   if (permission === "denied")
     return "Notifications are blocked for VaultShield. Open this website's permissions in your browser, set Notifications to Allow, then try again. Family help requests still appear in your inbox.";
@@ -108,19 +110,19 @@ export async function enableNotifications() {
   await request("/notifications/token", { token });
 }
 export function watchFamily(
-  onMembers: (ids: string[]) => void,
-  onAlerts: (items: { id: string; stages: number }[]) => void,
+  onMembers: (members: { id: string; name: string }[]) => void,
+  onAlerts: (items: { id: string; stages: number; senderName: string; time: number }[]) => void,
   onError: (error: Error) => void,
 ) {
   if (!db || !auth?.currentUser) return () => {};
   const root = collection(db, "users", auth.currentUser.uid, "family");
   const a = onSnapshot(
     root,
-    (s) => onMembers(s.docs.map((d) => d.id)),
+    (s) => onMembers(s.docs.map((d) => ({ id: d.id, name: d.data().name || "Family member" }))),
     onError,
   );
   // Read both schema versions during the backend rollout; all writes remain server-only.
-  type InboxItem = { id: string; stages: number; time: number };
+  type InboxItem = { id: string; stages: number; time: number; senderName: string };
   const inbox = new Map<string, InboxItem[]>();
   const subscriptions = ["timestamp", "createdAt"].map((field) =>
     onSnapshot(
@@ -138,6 +140,7 @@ export function watchFamily(
               id: doc.id,
               stages: value.tacticCount ?? value.stages ?? 0,
               time: value[field]?.toMillis?.() ?? 0,
+              senderName: typeof value.senderName === "string" ? value.senderName : "Family member",
             };
           }),
         );
@@ -148,7 +151,7 @@ export function watchFamily(
           [...unique.values()]
             .sort((left, right) => right.time - left.time)
             .slice(0, 10)
-            .map(({ id, stages }) => ({ id, stages })),
+            .map(({ id, stages, senderName, time }) => ({ id, stages, senderName, time })),
         );
       },
       onError,

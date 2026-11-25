@@ -986,14 +986,35 @@ blockquote {
 .member {
   display: flex;
   gap: 10px;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 14px;
+}
+.member-details {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.member-details strong {
+  display: block;
+  margin-bottom: 8px;
+}
+.member-details label {
+  display: block;
+}
+.member-details input {
+  margin-bottom: 0;
 }
 .member button {
-  margin-left: auto;
   background: none;
   border: 0;
   color: #64748b;
+  min-height: 44px;
+  padding: 8px;
+}
+.member button:disabled {
+  opacity: 0.5;
 }
 .inbox-title {
   margin-top: 25px;

@@ -43,6 +43,7 @@ import {
   watchFamily,
   enableNotifications,
   removeMember,
+  labelMember,
 } from "./lib/firebase/family";
 import { useDialogFocus } from "./lib/useDialogFocus";
 import { takeSharedInput } from "./lib/share";
@@ -117,10 +118,15 @@ export default function App() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting securely…");
   const [online, setOnline] = useState(navigator.onLine);
-  const [members, setMembers] = useState<string[]>([]);
-  const [alerts, setAlerts] = useState<{ id: string; stages: number }[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
+  const [alerts, setAlerts] = useState<{ id: string; stages: number; senderName: string; time: number }[]>([]);
   const [invite, setInvite] = useState("");
   const [code, setCode] = useState("");
+  const [familyName, setFamilyName] = useState(() => {
+    try { return localStorage.getItem("vaultshield-family-name") || ""; }
+    catch { return ""; }
+  });
+  const [memberLabels, setMemberLabels] = useState<Record<string,string>>({});
   const [diagnostics, setDiagnostics] = useState<{
     modelStatus: string;
     mlKitStatus?: number;
@@ -392,9 +398,7 @@ export default function App() {
         watchAndroidPush(
           () => {
             if (active)
-              setNotice(
-                "A family member requested help. Open Family circle and call them on their saved number.",
-              );
+              setTab("family");
           },
           () => {
             if (active) setTab("family");
@@ -414,10 +418,7 @@ export default function App() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
     const receive = (event: MessageEvent) => {
-      if (event.data?.type === "VAULTSHIELD_FAMILY_ALERT")
-        setNotice(
-          "A family member requested help. Open Family circle and call them on their saved number.",
-        );
+      if (event.data?.type === "VAULTSHIELD_FAMILY_ALERT") setTab("family");
       if (event.data?.type === "VAULTSHIELD_OPEN_FAMILY") setTab("family");
     };
     navigator.serviceWorker.addEventListener("message", receive);
@@ -1106,16 +1107,25 @@ export default function App() {
                   <h2>{t("Connect someone you trust")}</h2>
                   <p>
                     {t(
-                      " Each code connects one person and expires in 10 minutes. Create another code for each family member. ",
+                      " Share one code with your family. Up to 9 relatives can join before it expires in 10 minutes. ",
                     )}
                   </p>
+                  <label htmlFor="family-name">{t("Your name in the family")}</label>
+                  <input
+                    id="family-name"
+                    value={familyName}
+                    maxLength={40}
+                    onChange={(event) => setFamilyName(event.target.value)}
+                    placeholder={t("For example, Mum or Ravi")}
+                  />
                   <button
                     className="primary"
-                    disabled={!!busy}
+                    disabled={!!busy || familyName.trim().length < 2}
                     onClick={() =>
-                      void task("Creating invite", async () =>
-                        setInvite((await createInvite()).code),
-                      )
+                      void task("Creating invite", async () => {
+                        try { localStorage.setItem("vaultshield-family-name", familyName.trim()); } catch { /* Optional preference. */ }
+                        setInvite((await createInvite(familyName)).code);
+                      })
                     }
                   >
                     <Users size={18} />
@@ -1152,10 +1162,11 @@ export default function App() {
                   />
                   <button
                     className="secondary"
-                    disabled={!!busy || !code.trim()}
+                    disabled={!!busy || !code.trim() || familyName.trim().length < 2}
                     onClick={() =>
                       void task("Joining family", async () => {
-                        await joinFamily(code);
+                        await joinFamily(code, familyName);
+                        try { localStorage.setItem("vaultshield-family-name", familyName.trim()); } catch { /* Optional preference. */ }
                         setCode("");
                         setNotice("Family connection established.");
                       })
@@ -1173,18 +1184,32 @@ export default function App() {
                           "No one paired yet. Create or accept an invitation to get started.",
                         )}
                   </p>
-                  {members.map((m, i) => (
-                    <div className="member" key={m}>
+                  {members.map((m) => (
+                    <div className="member" key={m.id}>
                       <Users size={20} />
-                      <span>
-                        {t("Family member ")}
-                        {i + 1}
-                      </span>
+                      <div className="member-details">
+                        <strong>{m.name}</strong>
+                        <label htmlFor={`member-label-${m.id}`}>{t("Name you recognize")}</label>
+                        <input
+                          id={`member-label-${m.id}`}
+                          value={memberLabels[m.id] ?? m.name}
+                          maxLength={40}
+                          onChange={(event) => setMemberLabels((labels) => ({...labels,[m.id]:event.target.value}))}
+                        />
+                      </div>
                       <button
-                        aria-label={`Remove family member ${i + 1}`}
+                        type="button"
+                        disabled={!!busy || (memberLabels[m.id] ?? m.name).trim().length < 2 || (memberLabels[m.id] ?? m.name).trim() === m.name}
+                        onClick={() => void task("Saving name", async () => {
+                          await labelMember(m.id, memberLabels[m.id]);
+                          setNotice("Family member name saved.");
+                        })}
+                      >{t("Save name")}</button>
+                      <button
+                        aria-label={`${t("Remove")} ${m.name}`}
                         onClick={() =>
                           void task("Removing connection", async () => {
-                            await removeMember(m);
+                            await removeMember(m.id);
                           })
                         }
                       >
@@ -1211,13 +1236,13 @@ export default function App() {
                       <div className="alert-item" key={a.id}>
                         <Bell size={18} />
                         <span>
-                          {t(" Help requested · ")}
-                          {a.stages}
-                          {t("/4 stages ")}
+                          <strong>{a.senderName} {t("asked for help")}</strong>
+                          <br />
+                          <small>{a.time ? `${new Date(a.time).toLocaleString(appLanguage === "hi" ? "hi-IN" : "en-IN")} · ` : ""}{a.stages}{t("/4 stages ")}</small>
                           <br />
                           <small>
                             {t(
-                              " Call your family member on their saved number. ",
+                              " Call this person using the number already saved in your contacts. No message or phone number was shared here. ",
                             )}
                           </small>
                         </span>
@@ -1225,7 +1250,7 @@ export default function App() {
                     ))
                   ) : (
                     <p className="empty-note">
-                      {t("Your family inbox is clear.")}
+                      {t("No help requests for this account yet.")}
                     </p>
                   )}
                 </section>
