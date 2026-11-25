@@ -73,7 +73,7 @@ def join(body:Pair, uid=Depends(identity)):
     @firestore.transactional
     def accept(tx):
         snap=ref.get(transaction=tx)
-        if not snap.exists: raise HTTPException(404,'Invite unavailable or already used')
+        if not snap.exists: raise HTTPException(404,'Invite code is incorrect, expired, or already used. Ask for a new code for each person.')
         value=snap.to_dict()
         if value['expires'] < now() or value['owner']==uid: raise HTTPException(400,'Invite expired or belongs to you')
         owner=value['owner']
@@ -113,7 +113,7 @@ def alert(body:Alert,uid=Depends(identity)):
         db.collection('users').document(member.id).collection('alerts').add({'tacticCount':body.stages,'tacticTypes':body.tacticTypes,'timestamp':stamp,'familyCircleId':digest('|'.join(sorted([uid,member.id]))),'status':'requested'})
         for token in db.collection('users').document(member.id).collection('tokens').limit(5).stream():
             try:
-                messaging.send(messaging.Message(token=token.to_dict()['token'],notification=messaging.Notification(title='VaultShield · Help requested',body=f'A family member asked for help. {body.stages}/4 manipulation stages. Open VaultShield.'),webpush=messaging.WebpushConfig(fcm_options=messaging.WebpushFCMOptions(link=os.environ.get('PUBLIC_APP_URL','http://127.0.0.1:5173')))))
+                messaging.send(messaging.Message(token=token.to_dict()['token'],notification=messaging.Notification(title='VaultShield · Help requested',body=f'A family member asked for help. {body.stages}/4 manipulation stages. Open VaultShield.'),webpush=messaging.WebpushConfig(fcm_options=messaging.WebpushFCMOptions(link=os.environ.get('PUBLIC_APP_URL','https://vaultshield-2ace9.web.app')))))
                 delivered+=1
             except messaging.UnregisteredError: token.reference.delete()
             except Exception: pass  # Firestore inbox remains the durable delivery path.

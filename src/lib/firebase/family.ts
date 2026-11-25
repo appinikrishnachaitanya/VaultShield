@@ -50,6 +50,13 @@ export const joinFamily = (code: string) =>
 export const sendAlert = (stages: number) => request("/alerts", { stages });
 export const removeMember = (uid: string) =>
   request(`/pair/${encodeURIComponent(uid)}`, undefined, "DELETE");
+export function notificationPermissionHelp(permission: NotificationPermission) {
+  if (permission === "denied")
+    return "Notifications are blocked for VaultShield. Open this website's permissions in your browser, set Notifications to Allow, then try again. Family help requests still appear in your inbox.";
+  if (permission === "default")
+    return "No notification choice was received. Check the browser's permission prompt near the address bar, or allow Notifications in this website's permissions, then try again. Family help requests still appear in your inbox.";
+  return "Notifications are allowed.";
+}
 export async function enableNotifications() {
   if (usesAndroidModel) {
     const { androidPushToken } =
@@ -65,28 +72,39 @@ export async function enableNotifications() {
   if (!window.isSecureContext)
     throw new Error("Notifications require the secure VaultShield website (HTTPS).");
   if (Notification.permission === "denied")
-    throw new Error(
-      "Notifications are blocked for this website. Open the site controls beside the address bar, allow Notifications, then try again. Family alerts still appear in your inbox.",
-    );
+    throw new Error(notificationPermissionHelp("denied"));
   const permission =
     Notification.permission === "granted"
       ? "granted"
       : await Notification.requestPermission();
   if (permission !== "granted")
-    throw new Error(
-      "Notifications were not allowed. Check Chrome's permission chip or this site's notification setting, then try again. Family alerts still appear in your inbox.",
-    );
+    throw new Error(notificationPermissionHelp(permission));
   if (!(await isSupported()))
     throw new Error("Push notifications are unavailable in this browser.");
   if (!("serviceWorker" in navigator))
     throw new Error("Background notifications are unavailable in this browser.");
-  await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-  const registration = await navigator.serviceWorker.ready;
+  try {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  } catch {
+    throw new Error("VaultShield could not start background notifications. Reload the website and try again; your family inbox still works.");
+  }
+  let readyTimer: ReturnType<typeof setTimeout> | undefined;
+  const registration = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<never>((_, reject) => {
+      readyTimer = setTimeout(
+        () => reject(new Error("Background notifications did not become ready. Reload the website and try again; your family inbox still works.")),
+        15000,
+      );
+    }),
+  ]).finally(() => clearTimeout(readyTimer));
   const messaging = getMessaging(app);
   const token = await getToken(messaging, {
     vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
     serviceWorkerRegistration: registration,
   });
+  if (!token)
+    throw new Error("This browser did not provide a notification token. Your family inbox still works.");
   await request("/notifications/token", { token });
 }
 export function watchFamily(

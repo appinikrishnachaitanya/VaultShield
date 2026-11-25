@@ -1106,7 +1106,7 @@ export default function App() {
                   <h2>{t("Connect someone you trust")}</h2>
                   <p>
                     {t(
-                      " Invite one person using a single-use code. It expires in 10 minutes. ",
+                      " Each code connects one person and expires in 10 minutes. Create another code for each family member. ",
                     )}
                   </p>
                   <button
