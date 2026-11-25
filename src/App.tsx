@@ -18,6 +18,7 @@ import {
   CircleCheck,
   Shield,
   FileText,
+  Menu,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
 import {
@@ -123,6 +124,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
@@ -567,9 +569,54 @@ export default function App() {
   const count = result?.stages.filter((s) => s.found).length ?? 0;
   const awaitingAndroidHybrid =
     usesAndroidModel && result?.source === "LOCAL_RULES" && !localOnly;
+  const navItems = [
+    { id: "check", icon: ScanLine, label: t("Check something") },
+    { id: "family", icon: Users, label: t("Family circle") },
+    { id: "docs", icon: FileText, label: t("Scan document") },
+    { id: "privacy", icon: LockKeyhole, label: t("Your privacy") },
+  ] as const;
   return (
     <div className="app">
       <Welcome />
+      {/* Mobile drawer overlay */}
+      <div
+        className={`drawer-overlay${drawerOpen ? " open" : ""}`}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+      />
+      {/* Mobile slide-out drawer */}
+      <div className={`drawer${drawerOpen ? " open" : ""}`} role="navigation" aria-label={t("Main menu")}>
+        <div className="drawer-header">
+          <a className="brand" href="/" aria-label="VaultShield home">
+            <span className="brand-icon"><ShieldCheck size={25} /></span>
+            VaultShield
+          </a>
+          <button className="drawer-close" onClick={() => setDrawerOpen(false)} aria-label={t("Close menu")}>
+            <X size={20} />
+          </button>
+        </div>
+        <nav className="drawer-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              className={tab === item.id ? "nav-item active" : "nav-item"}
+              onClick={() => { setTab(item.id); setDrawerOpen(false); }}
+            >
+              <item.icon size={21} />
+              {t(item.label)}
+              {item.id === "family" && alerts.length > 0 && (
+                <span className="nav-count">{alerts.length}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="drawer-bottom">
+          <div className="session">
+            <span className="dot" />
+            {online ? t("Private by design") : t("You are offline")}
+          </div>
+        </div>
+      </div>
       <aside className="sidebar" inert={review}>
         <a className="brand" href="/" aria-label="VaultShield home">
           <span className="brand-icon">
@@ -581,14 +628,7 @@ export default function App() {
           {t("YOUR PEACE OF MIND, PROTECTED")}
         </div>
         <nav>
-          {(
-            [
-              { id: "check", icon: ScanLine, label: t("Check something") },
-              { id: "family", icon: Users, label: t("Family circle") },
-              { id: "docs", icon: FileText, label: t("Scan document") },
-              { id: "privacy", icon: LockKeyhole, label: t("Your privacy") },
-            ] as const
-          ).map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               className={tab === item.id ? "nav-item active" : "nav-item"}
@@ -622,6 +662,15 @@ export default function App() {
             {online ? t("Private by design") : t("You are offline")}
           </div>
         </div>
+        {/* Mobile: hamburger button shown via CSS */}
+        <button
+          className="menu-toggle"
+          onClick={() => setDrawerOpen(true)}
+          aria-label={t("Open menu")}
+          aria-expanded={drawerOpen}
+        >
+          <Menu size={22} />
+        </button>
       </aside>
       <div className="main-shell" inert={review}>
         <header className="topbar">
