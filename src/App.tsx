@@ -51,8 +51,7 @@ import { buildReceipt, type PrivacyReceiptData } from "./lib/receipt";
 import PrivacyReceipt from "./components/PrivacyReceipt";
 import LocalCheckNotice from "./components/LocalCheckNotice";
 import { runLeakTest, assertNoKnownLeak } from "./lib/leakTest";
-import LeakTestPanel from "./components/LeakTestPanel";
-import CloudApproval from "./components/CloudApproval";
+import ReviewDialog from "./components/ReviewDialog";
 import { useReviewedText } from "./lib/useReviewedText";
 import NetworkProof from "./components/NetworkProof";
 import CommunitySignal from "./components/CommunitySignal";
@@ -1372,149 +1371,33 @@ export default function App() {
         </main>
       </div>
       {review && result && (
-        <div className="modal-overlay">
-          <section
-            ref={dialogRef}
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="consent-title"
-          >
-            <button
-              className="modal-close"
-              aria-label={t("Close review")}
-              disabled={!!busy}
-              onClick={closeReview}
-            >
-              <X />
-            </button>
-            <span className="badge cloud">
-              <Cloud size={14} />
-              {awaitingAndroidHybrid
-                ? t(" ANDROID HYBRID · REVIEW REQUIRED ")
-                : t(" OPTIONAL · REVIEW & VERIFY ")}
-            </span>
-            <h2 id="consent-title">{t("You choose what leaves.")}</h2>
-            <p>
-              {t(
-                awaitingAndroidHybrid
-                  ? " The Android local model is unavailable, so no AI assessment has run yet. Review this redacted text; after approval, Firebase AI Logic prefers on-device AI and may send only this text to cloud if needed. Screenshots are never sent. "
-                  : " Remove any remaining private details. Only the reviewed text can go to the cloud. Your screenshot stays on this device. ",
-              )}
-            </p>
-            <RoutingBanner route={privacyRoute} />
-            {localOnly && privacyRoute.overrideAllowed && (
-              <div className="routing-banner route-LOCAL_ONLY">
-                <p>
-                  {t(
-                    "This content is sensitive. Tokens hide identifiers, but medical, financial or identity details may remain. Keep it local unless you have reviewed every detail.",
-                  )}
-                </p>
-                <label className="consent">
-                  <input
-                    type="checkbox"
-                    checked={sensitiveOverride}
-                    disabled={!!busy}
-                    onChange={(event) => {
-                      setSensitiveOverride(event.target.checked);
-                      setConsent(false);
-                    }}
-                  />
-                  {t(
-                    "Allow a tokenized cloud check for this content. I understand sensitive details may remain.",
-                  )}
-                </label>
-              </div>
-            )}
-            <fieldset
-              className="verification-options"
-              disabled={!!busy || (localOnly && !sensitiveOverride)}
-            >
-              <legend>{t("What would you like to check?")}</legend>
-              <label>
-                <input
-                  type="radio"
-                  name="verification-purpose"
-                  value="hybrid"
-                  checked={verificationPurpose === "hybrid"}
-                  onChange={() => {
-                    setVerificationPurpose("hybrid");
-                    setConsent(false);
-                  }}
-                />
-                <span>
-                  <strong>{t("Ask AI to check this")}</strong>
-                  <small>
-                    {t(
-                      " Firebase prefers local AI, with approved cloud fallback. No live web search. ",
-                    )}
-                  </small>
-                </span>
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="verification-purpose"
-                  value="public-sources"
-                  checked={verificationPurpose === "public-sources"}
-                  onChange={() => {
-                    setVerificationPurpose("public-sources");
-                    setConsent(false);
-                  }}
-                />
-                <span>
-                  <strong>{t("Check trusted websites")}</strong>
-                  <small>
-                    {t(
-                      " Send the reviewed text to cloud AI with Google Search. Sources may be unavailable or inconclusive. ",
-                    )}
-                  </small>
-                </span>
-              </label>
-            </fieldset>
-            <label htmlFor="redacted">{t("Text approved for AI")}</label>
-            <textarea
-              id="redacted"
-              value={edit}
-              maxLength={16000}
-              disabled={!!busy}
-              onChange={(e) => {
-                vault.current.touch();
-                setEdit(e.target.value);
-                setConsent(false);
-              }}
-            />
-            <LeakTestPanel result={leakResult} text={edit} />
-            {!hasAssessableText(edit) && (
-              <p className="local-progress" role="status">
-                {t(
-                  " There is no readable message left to verify—only masked details or empty text. Add the message wording before approving. Your screenshot stays on this device. ",
-                )}
-              </p>
-            )}
-            <CloudApproval
-              sensitiveOverride={sensitiveOverride}
-              route={privacyRoute}
-              blocked={leakResult.blocked}
-              busy={!!busy}
-              readable={hasAssessableText(edit)}
-              consent={consent}
-              onConsent={setConsent}
-              onSubmit={submitReviewedText}
-              purpose={verificationPurpose}
-            />
-            <p>
-              {t(
-                " Only the reviewed text is approved. AI can miss details; review names, account details and private clauses before continuing. ",
-              )}
-            </p>
-            {error && (
-              <p role="alert" className="modal-error">
-                {t(error)}
-              </p>
-            )}
-          </section>
-        </div>
+        <ReviewDialog
+          dialogRef={dialogRef}
+          text={edit}
+          onEdit={(text) => {
+            vault.current.touch();
+            setEdit(text);
+            setConsent(false);
+          }}
+          route={privacyRoute}
+          leak={leakResult}
+          busy={!!busy}
+          error={error}
+          purpose={verificationPurpose}
+          onPurpose={(purpose) => {
+            setVerificationPurpose(purpose);
+            setConsent(false);
+          }}
+          sensitiveOverride={sensitiveOverride}
+          onOverride={(value) => {
+            setSensitiveOverride(value);
+            setConsent(false);
+          }}
+          consent={consent}
+          onConsent={setConsent}
+          onSubmit={submitReviewedText}
+          onClose={closeReview}
+        />
       )}
     </div>
   );

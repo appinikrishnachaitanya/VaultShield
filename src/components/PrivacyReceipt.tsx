@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { t, useAppLanguage } from "../lib/i18n";
 import { exportReceipt, type PrivacyReceiptData } from "../lib/receipt";
+import { privacyCategoryLabel } from "../lib/privacyLabels";
 import type { TokenEntry } from "../lib/tokenVault";
 const sourceLabels = {
   "ON-DEVICE": "On-device AI",
@@ -20,22 +21,6 @@ const sourceLabels = {
   "CLOUD-PUBLIC-SOURCE": "Cloud · public sources",
   "LOCAL RULES": "Basic text check · not AI",
 } as const;
-const categoryLabels: Record<string, string> = {
-  PERSON: "Names",
-  PHONE: "Phone numbers",
-  BANK_ACC: "Bank accounts",
-  UPI: "UPI IDs",
-  AADHAAR: "Aadhaar numbers",
-  PAN: "PAN numbers",
-  EMAIL: "Email addresses",
-  URL: "Links",
-  AMOUNT: "Amounts",
-  OTP: "One-time codes",
-  ORG: "Organisations",
-  REFERENCE: "Payment references",
-  IFSC: "Bank routing codes",
-  PRIVATE: "Other masked details",
-};
 function OriginalPreview({
   original,
   entries,
@@ -161,7 +146,7 @@ export default function PrivacyReceipt({
           <div className="receipt-token-list">
             {Object.entries(receipt.tokenCounts).map(([category, count]) => (
               <span className="receipt-token" key={category}>
-                {t(categoryLabels[category] ?? "Other masked details")}
+                {t(privacyCategoryLabel(category))}
                 <b>{count}</b>
               </span>
             ))}

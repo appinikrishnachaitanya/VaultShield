@@ -1,5 +1,7 @@
 import { t } from "../lib/i18n";
+import { Info, CircleAlert } from "lucide-react";
 import type { LeakResult } from "../lib/leakTest";
+import { privacyCategoryLabel } from "../lib/privacyLabels";
 export default function LeakTestPanel({
   result,
   text,
@@ -21,40 +23,47 @@ export default function LeakTestPanel({
   parts.push(text.slice(cursor));
   return (
     <section
-      className="routing-banner"
+      className={`review-leakcheck ${result.blocked ? "is-blocked" : result.status === "WARN" ? "has-warning" : ""}`}
       aria-label={t("Leak test")}
       role="status"
     >
-      <strong>
-        {t("Leak test")}:{" "}
-        {t(
-          result.status === "WARN" ? "Review needed" : "Manual review required",
-        )}
-      </strong>
-      <p>
-        {t(
-          result.blocked
-            ? "A known private value remains. Remove the highlighted text before approving."
-            : result.status === "WARN"
-              ? "Review these possible identifiers before approving."
-              : "No known patterns found. Names and addresses are not fully detected. Review manually.",
-        )}
-      </p>
-      {result.findings.length > 0 && (
-        <>
-          <p>
-            {[...new Set(result.findings.map((f) => t(f.category)))].join(
-              " · ",
-            )}
-          </p>
-          <pre className="leak-preview">{parts}</pre>
-        </>
+      {result.blocked ? (
+        <CircleAlert size={19} aria-hidden="true" />
+      ) : (
+        <Info size={19} aria-hidden="true" />
       )}
-      <small>
-        {t(
-          "Deterministic check. Names and unusual identifiers can still be missed.",
+      <div>
+        <strong>
+          {t(
+            result.blocked
+              ? "Remove these private details"
+              : "A final privacy review",
+          )}
+        </strong>
+        <p>
+          {t(
+            result.blocked
+              ? "A known private value remains. Remove the highlighted text before approving."
+              : result.status === "WARN"
+                ? "Review these possible identifiers before approving."
+                : "No known patterns found. Names and addresses are not fully detected. Review manually.",
+          )}
+        </p>
+        {result.findings.length > 0 && (
+          <>
+            <p>
+              {[
+                ...new Set(
+                  result.findings.map((f) =>
+                    t(privacyCategoryLabel(f.category)),
+                  ),
+                ),
+              ].join(" · ")}
+            </p>
+            <pre className="leak-preview">{parts}</pre>
+          </>
         )}
-      </small>
+      </div>
     </section>
   );
 }
