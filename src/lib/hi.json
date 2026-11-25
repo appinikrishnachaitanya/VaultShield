@@ -419,5 +419,20 @@
   "Local summarization uses English internally. Hindi source text is translated on-device when supported.": "स्थानीय सार बनाने की सुविधा अंदरूनी तौर पर अंग्रेज़ी इस्तेमाल करती है। सुविधा उपलब्ध होने पर हिंदी मूल पाठ का अनुवाद इसी डिवाइस पर होता है।",
   "Translating the source on this device before summarizing…": "सार बनाने से पहले मूल पाठ का अनुवाद इसी डिवाइस पर हो रहा है…",
   "Android local AI could not run. Review the masked text to allow Firebase local-first verification with cloud fallback.": "Android पर स्थानीय AI नहीं चल पाया। निजी विवरण छिपाया पाठ देखकर Firebase की स्थानीय AI और ज़रूरत पर क्लाउड जाँच की अनुमति दें।",
-  "Android local AI is unavailable for this tool. No cloud fallback was used.": "इस सुविधा के लिए Android पर स्थानीय AI उपलब्ध नहीं है। क्लाउड का उपयोग नहीं किया गया।"
+  "Android local AI is unavailable for this tool. No cloud fallback was used.": "इस सुविधा के लिए Android पर स्थानीय AI उपलब्ध नहीं है। क्लाउड का उपयोग नहीं किया गया।",
+  "My account": "मेरा खाता",
+  "Save my account": "मेरा खाता सुरक्षित करें",
+  "Close": "बंद करें",
+  "Cancel": "रद्द करें",
+  "Save settings": "सेटिंग सेव करें",
+  "Sign out": "साइन आउट करें",
+  "Keep your family circle": "अपने परिवार का साथ बनाए रखें",
+  "Continue with Google": "Google से जारी रखें",
+  "Open existing account": "मौजूदा खाता खोलें",
+  "Your selected language is saved with your name.": "चुनी हुई भाषा आपके नाम के साथ सेव होगी।",
+  "Continue with Google to keep this family circle and open it on your other devices.": "यह परिवार सुरक्षित रखने और दूसरे डिवाइस पर खोलने के लिए Google से जारी रखें।",
+  "This Google account already has a family circle. Open that account? Your guest connections stay separate.": "इस Google खाते में पहले से परिवार जुड़ा है। वह खाता खोलें? आपके अतिथि कनेक्शन अलग रहेंगे।",
+  "Could not complete this action. Please try again.": "यह काम पूरा नहीं हुआ। फिर से कोशिश करें।",
+  "Could not load account settings. Please try again.": "खाते की सेटिंग नहीं खुली। फिर से कोशिश करें।",
+  "Enable Google sign-in in Firebase Authentication first.": "पहले Firebase Authentication में Google साइन-इन चालू करें।"
 }

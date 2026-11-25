@@ -10,6 +10,7 @@ class MainActivity : BridgeActivity() {
             AppAttestation.install()
         }
         registerPlugin(VaultShieldNano::class.java)
+        registerPlugin(VaultShieldAccount::class.java)
         super.onCreate(savedInstanceState)
     }
 }

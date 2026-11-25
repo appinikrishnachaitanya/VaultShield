@@ -48,6 +48,7 @@ import {
 import { useDialogFocus } from "./lib/useDialogFocus";
 import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
+import Account from "./components/Account";
 import { AlreadyPaid, FamilySafety } from "./components/FamilySafety";
 import LocalDictation from "./components/LocalDictation";
 import PressureEvidence from "./components/PressureEvidence";
@@ -127,6 +128,13 @@ export default function App() {
     catch { return ""; }
   });
   const [memberLabels, setMemberLabels] = useState<Record<string,string>>({});
+  useEffect(() => {
+    const update = () => {
+      try { setFamilyName(localStorage.getItem('vaultshield-family-name') || ''); } catch { /* Optional cache. */ }
+    };
+    window.addEventListener('vaultshield-profile', update);
+    return () => window.removeEventListener('vaultshield-profile', update);
+  }, []);
   const [editingMember, setEditingMember] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<{
     modelStatus: string;
@@ -492,6 +500,7 @@ export default function App() {
       </aside>
       <div className="main-shell" inert={review}>
         <header className="topbar">
+          <Account />
           <label className="app-language">
             <span>{t("Language")}</span>
             <select
@@ -516,7 +525,7 @@ export default function App() {
           </span>
           <span className="top-status">
             {online ? <LockKeyhole size={14} /> : <WifiOff size={14} />}{" "}
-            {online ? t("No account needed") : t("Offline mode")}
+            {online ? t("Private session ready") : t("Offline mode")}
           </span>
           <button
             className="avatar"

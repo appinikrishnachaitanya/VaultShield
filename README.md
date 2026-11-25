@@ -34,6 +34,14 @@ Use one Firebase project with a registered web app and Android app. Enable:
 
 Copy `.env.example` to `.env.local` and fill in the Firebase web configuration, reCAPTCHA Enterprise site key, and public VAPID key. Register your local App Check debug token in Firebase Console for development. Keep `.env.local`, native Firebase configuration, service account files, and signing keys outside Git.
 
+## Google accounts
+
+Use **Save my account → Continue with Google** to link the current guest identity and retain its family connections. An existing Google account opens its own saved circle after confirmation. **My account** saves a family display name and the selected English/Hindi language. Settings restore on other devices after signing in.
+
+Enable **Authentication → Sign-in method → Google** in Firebase Console and select your project support email. Under Authentication settings, authorize the Hosting domains and your development hostname. For Android, register the debug/release signing SHA-1 and SHA-256 fingerprints in Project settings, then download a fresh `google-services.json` to `android/app/`. Its generated `default_web_client_id` is used by Android Credential Manager. Rebuild the APK after updating the file. Google tokens are exchanged through Firebase Auth; passwords and tokens are never stored in profile documents.
+
+Profile documents at `users/{uid}/settings/profile` contain only `displayName` and `language`; security rules restrict access to that authenticated owner.
+
 ## Run locally
 
 ```bash

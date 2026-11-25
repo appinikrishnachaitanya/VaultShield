@@ -1,6 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
+  match /users/{uid}/settings/profile {
+   allow read: if request.auth != null && request.auth.uid == uid;
+   allow create, update: if request.auth != null && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(['displayName', 'language'])
+    && request.resource.data.displayName is string
+    && request.resource.data.displayName.size() >= 2
+    && request.resource.data.displayName.size() <= 40
+    && request.resource.data.language in ['en', 'hi'];
+  }
   match /users/{uid}/{collection}/{doc} {
    allow read: if request.auth != null && request.auth.uid == uid && collection in ['family', 'alerts'];
    allow write: if false;
