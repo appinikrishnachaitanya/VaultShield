@@ -159,7 +159,7 @@ export default function PrivacyReceipt({
           </p>
         )}
       </section>
-      <details className="receipt-disclosure">
+      <details className="receipt-disclosure" open>
         <summary>
           <span>{t("What left your device")}</span>
           <ChevronDown size={19} aria-hidden="true" />

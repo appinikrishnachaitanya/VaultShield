@@ -428,7 +428,13 @@ function NewEntry({
       await new Promise((r) => setTimeout(r, 500));
       onSaved(entry);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Analysis failed. Try again.");
+      const msg = e instanceof Error ? e.message : "Analysis failed.";
+      const isAppCheckErr = msg.includes("App Check") || msg.includes("fetch-error") || msg.includes("401");
+      setError(
+        isAppCheckErr
+          ? "Firebase AI not reachable. Register the App Check debug token in Firebase Console and try again."
+          : msg,
+      );
       setSteps([]);
     } finally {
       setBusy(false);
