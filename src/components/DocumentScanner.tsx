@@ -1,4 +1,5 @@
 ﻿import { useRef, useState } from "react";
+import { t, useAppLanguage } from "../lib/i18n";
 import {
   ScanLine,
   Upload,
@@ -63,6 +64,7 @@ type PipelineStep = {
 export default function DocumentScanner() {
   const vault = useRef(new TokenVaultSession());
   const fileRef = useRef<HTMLInputElement>(null);
+  const language = useAppLanguage();
   const [rawText, setRawText] = useState("");
   const [image, setImage] = useState<{
     data: string;
@@ -148,7 +150,7 @@ export default function DocumentScanner() {
     setChatMessages((prev) => [...prev, { role: "user", text: q }]);
     setChatBusy(true);
     try {
-      const { answer } = await chatWithDocument(q, tokenizedDocText || "(no document scanned)", vault.current);
+      const { answer } = await chatWithDocument(q, tokenizedDocText || "(no document scanned)", vault.current, language);
       setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
     } catch {
       setChatMessages((prev) => [...prev, { role: "ai", text: "Sorry, couldn't get an answer. Please try again." }]);
@@ -289,6 +291,8 @@ export default function DocumentScanner() {
         tokenized.text as SanitizedText,
         category,
         vault.current,
+        undefined,
+        language,
       );
 
       // Build privacy receipt
@@ -351,7 +355,7 @@ export default function DocumentScanner() {
         </p>
       </div>
 
-      <div className="workspace">
+      <div className={result ? "workspace has-result" : "workspace"}>
         <section className="check-column">
           {/* Input card */}
           <div className="card input-card">
@@ -662,70 +666,71 @@ export default function DocumentScanner() {
 
             {/* Full privacy receipt */}
             {receipt && <PrivacyReceipt receipt={receipt} original="" entries={[]} />}
-            {/* Doc chat */}
-            {result && (
-              <div className="card doc-chat">
-                <div className="card-title">
-                  <div className="icon-tile">
-                    <MessageSquare size={20} />
-                  </div>
-                  <div>
-                    <h2>Ask about this document</h2>
-                    <p>Questions are tokenized — your PII stays on this device.</p>
-                  </div>
+          </section>
+        )}
+        {result && (
+          <section className="doc-chat-column">
+            <div className="card doc-chat">
+              <div className="card-title">
+                <div className="icon-tile">
+                  <MessageSquare size={20} />
                 </div>
-                <div className="doc-chat-messages" aria-live="polite">
-                  {chatMessages.length === 0 && (
-                    <div className="doc-chat-empty">
-                      <Bot size={20} />
-                      <span>Ask anything about the scanned document.</span>
-                    </div>
-                  )}
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className={`doc-chat-bubble ${msg.role}`}>
-                      {msg.role === "ai" && (
-                        <span className="doc-chat-ai-label">
-                          <Lock size={10} /> AI · PII masked
-                        </span>
-                      )}
-                      <p>{msg.text}</p>
-                    </div>
-                  ))}
-                  {chatBusy && (
-                    <div className="doc-chat-bubble ai loading">
-                      <span className="step-spinner" aria-hidden="true" />
-                      <span>Thinking…</span>
-                    </div>
-                  )}
-                </div>
-                <div className="doc-chat-input-row">
-                  <textarea
-                    className="doc-chat-textarea"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        void handleChat();
-                      }
-                    }}
-                    placeholder="Ask a question about the document…"
-                    rows={2}
-                    disabled={chatBusy}
-                    maxLength={1000}
-                  />
-                  <button
-                    type="button"
-                    className="primary doc-chat-send"
-                    disabled={!chatInput.trim() || chatBusy}
-                    onClick={() => void handleChat()}
-                    aria-label="Send"
-                  >
-                    <Send size={16} />
-                  </button>
+                <div>
+                  <h2>{t("Ask about this document")}</h2>
+                  <p>{t("Questions are tokenized — your PII stays on this device.")}</p>
                 </div>
               </div>
-            )}
+              <div className="doc-chat-messages" aria-live="polite">
+                {chatMessages.length === 0 && (
+                  <div className="doc-chat-empty">
+                    <Bot size={20} />
+                    <span>{t("Ask anything about the scanned document.")}</span>
+                  </div>
+                )}
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`doc-chat-bubble ${msg.role}`}>
+                    {msg.role === "ai" && (
+                      <span className="doc-chat-ai-label">
+                        <Lock size={10} /> AI · {t("PII masked")}
+                      </span>
+                    )}
+                    <p>{msg.text}</p>
+                  </div>
+                ))}
+                {chatBusy && (
+                  <div className="doc-chat-bubble ai loading">
+                    <span className="step-spinner" aria-hidden="true" />
+                    <span>{t("Thinking…")}</span>
+                  </div>
+                )}
+              </div>
+              <div className="doc-chat-input-row">
+                <textarea
+                  className="doc-chat-textarea"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleChat();
+                    }
+                  }}
+                  placeholder={t("Ask a question about the document…")}
+                  rows={2}
+                  disabled={chatBusy}
+                  maxLength={1000}
+                />
+                <button
+                  type="button"
+                  className="primary doc-chat-send"
+                  disabled={!chatInput.trim() || chatBusy}
+                  onClick={() => void handleChat()}
+                  aria-label="Send"
+                >
+                  <Send size={16} />
+                </button>
+              </div>
+            </div>
           </section>
         )}
       </div>
