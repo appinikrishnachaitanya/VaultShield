@@ -309,7 +309,7 @@ export default function DocumentScanner() {
       <div className="page-heading">
         <span className="eyebrow">
           <span className="tiny-line" />
-          DOCUMENT PRIVACY SCANNER
+          DOCUMENT VAULT
         </span>
         <h1>
           AI reads the doc.{" "}

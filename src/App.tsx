@@ -577,7 +577,7 @@ export default function App() {
   const navItems = [
     { id: "call", icon: PhoneIncoming, label: t("Call Vault") },
     { id: "check", icon: ScanLine, label: t("Check something") },
-    { id: "docs", icon: FileText, label: t("Scan document") },
+    { id: "docs", icon: FileText, label: t("Document Vault") },
     { id: "family", icon: Users, label: t("Family circle") },
   ] as const;
   return (
@@ -704,7 +704,7 @@ export default function App() {
             <span className="topbar-page-title">
               {tab === "call" && t("Call Vault")}
               {tab === "check" && t("Safety Check")}
-              {tab === "docs" && t("Document Scanner")}
+              {tab === "docs" && t("Document Vault")}
               {tab === "family" && t("Family Circle")}
               {tab === "privacy" && t("Privacy & Data")}
             </span>
