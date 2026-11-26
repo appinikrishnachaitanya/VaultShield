@@ -78,9 +78,7 @@ export default function ScaredPanel({ members, onClose }: Props) {
 
   async function alertFamily() {
     try {
-      for (const m of members) {
-        await sendAlert(m.id, m.name, 1);
-      }
+        await sendAlert(1);
       setAlertSent(true);
     } catch {
       // best-effort silent fail
