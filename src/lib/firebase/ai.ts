@@ -1453,6 +1453,7 @@ export async function analyzeMediaFile(
   base64: string,
   mimeType: string,
   instruction: string,
+  language?: "en" | "hi",
 ): Promise<{ text: string }> {
   if (!ai) throw new Error("Firebase AI not configured.");
   const { model: modelName } = settings();
@@ -1461,11 +1462,14 @@ export async function analyzeMediaFile(
     inCloudParams: { model: modelName },
   });
   const mediaType = mimeType.split("/")[0];
+  const translationInstruction = language === "hi"
+    ? 'If you detect non-Hindi language, also include a "हिंदी अनुवाद:" section with a Hindi (Devanagari) translation.'
+    : 'If you detect non-English language, also include an "English translation:" section.';
   const prompt = `${instruction}
 
 Provide a thorough plain-text description of all content in this ${mediaType} file.
-If it contains speech or dialogue, transcribe verbatim.
-If you detect non-English language, also include an "English translation:" section.
+If it contains speech or dialogue, transcribe verbatim in the original spoken language.
+${translationInstruction}
 Do not add commentary — output the content directly.`;
 
   const result = await boundedWait(

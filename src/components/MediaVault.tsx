@@ -113,7 +113,7 @@ export default function MediaVault() {
       };
       setProcessStatus(`Sending ${mediaFile.kind} to cloud Gemini...`);
       const b64 = await fileToBase64(mediaFile.file);
-      const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, instructions[mediaFile.kind]);
+      const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, instructions[mediaFile.kind], language);
       const raw = text;
       setSource("IN_CLOUD");
       setAnalysis(raw);
@@ -291,6 +291,15 @@ export default function MediaVault() {
               </div>
             )}
           </div>
+
+          {analysis && language === "hi" && !/[ऀ-ॿ]/.test(analysis) && (
+            <div className="banner info doc-translate-banner">
+              <span>भाषा हिंदी में बदली - हिंदी में परिणाम पाने के लिए फिर से विश्लेषण करें।</span>
+              <button type="button" className="primary" onClick={() => void process()} disabled={processing}>
+                हिंदी में विश्लेषण करें
+              </button>
+            </div>
+          )}
 
           {analysis && (
             <div className="card call-vault-transcript-card">
