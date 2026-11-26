@@ -752,14 +752,9 @@ export async function analyzeDiaryEntry(
   if (!ai) throw new Error("Firebase AI not configured.");
   const cfg = settings();
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_IN_CLOUD,
-    inCloudParams: {
-      model: cfg.model,
-      generationConfig: { responseMimeType: "application/json" },
-    },
-    onDeviceParams: {
-      createOptions: chromeModelOptions(false),
-    },
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: chromeModelOptions(false) },
+    inCloudParams: { model: cfg.model },
   });
   const prompt = `You are a thoughtful personal AI reflecting on a private diary entry.
 Privacy tokens like [PERSON_1], [PHONE_1] replace real values — treat them as placeholders.
@@ -848,7 +843,8 @@ Use plain, calm language. No jargon. No personal information.`;
 
   onProgress?.("Generating plain-language explanation…");
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_IN_CLOUD,
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: chromeModelOptions(false) },
     inCloudParams: { model: modelName },
   });
   const start = performance.now();
@@ -1276,7 +1272,8 @@ export async function proofreadReplyLocally(
       "Chrome Proofreader cancelled. Trying Firebase on-device proofreading…",
     );
     const model = getGenerativeModel(ai, {
-      mode: InferenceMode.ONLY_IN_CLOUD,
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      onDeviceParams: { createOptions: chromeModelOptions(false) },
       inCloudParams: { model: settings().model },
     });
     try {
@@ -1468,7 +1465,8 @@ export async function chatWithDocument(
   assertNoKnownLeak(tokenized.text, vault);
   const { model: modelName } = settings();
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_IN_CLOUD,
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: chromeModelOptions(false) },
     inCloudParams: { model: modelName },
   });
   const prompt = `You are a document assistant. Personal identifiers have been replaced with privacy tokens ([PERSON_1], [PHONE_1], etc.) to protect identity. Answer based only on the document content below.
@@ -1484,7 +1482,7 @@ Answer concisely and helpfully. If the document does not contain enough informat
     30_000,
     "Chat timed out.",
   );
-  recordAIResult(raw.response.text(), "IN_CLOUD");
+  recordAIResult(raw.response.text(), raw.response.inferenceSource === InferenceSource.ON_DEVICE ? "ON_DEVICE" : "IN_CLOUD");
   const answer = raw.response.text().replace(
     /\[\s*[a-z_]+\s*_\s*\d+\s*(?::\s*[a-z0-9 -]+\s*)?\]/gi,
     (token) => vault.resolve(token) ?? token,
