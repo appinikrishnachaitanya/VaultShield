@@ -2391,6 +2391,12 @@ html[lang="hi"] h3 {
   flex-shrink: 0;
 }
 .topbar-ai-pill.offline .topbar-ai-dot { background: #f97316; }
+.topbar-ai-pill.cloud {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+.topbar-ai-pill.cloud .topbar-ai-dot { background: #3b82f6; }
 .topbar-lang {
   height: 32px;
   padding: 0 8px;
@@ -4581,3 +4587,5 @@ html[lang="hi"] h3 {
   border-radius: 8px;
 }
 .diary-detail-privacy svg { color: #0f766e; }
+.diary-detail-privacy.cloud { background: #eff6ff; color: #1e40af; }
+.diary-detail-privacy.cloud svg { color: #2563eb; }

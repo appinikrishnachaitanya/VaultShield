@@ -31,6 +31,7 @@ export type DiaryEntry = {
   actionItems: string[];
   learnings: string[];
   createdAt: number;
+  aiSource?: "ON_DEVICE" | "IN_CLOUD";
 };
 
 /** Shape stored at rest (localStorage + Firestore) — no plaintext */

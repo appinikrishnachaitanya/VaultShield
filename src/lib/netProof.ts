@@ -60,6 +60,7 @@ export function recordAIResult(
   source: "ON_DEVICE" | "IN_CLOUD",
 ) {
   if (source === "IN_CLOUD") recordPayload("AI-cloud", payload);
+  void import("./aiSource").then(({ setLastAISource }) => setLastAISource(source)).catch(() => {});
 }
 export function markUnconfirmedAI() {
   snapshot = { ...snapshot, unconfirmedAI: snapshot.unconfirmedAI + 1 };

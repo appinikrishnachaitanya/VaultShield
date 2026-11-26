@@ -705,19 +705,24 @@ export type DiaryAnalysisResult = {
   summary: string;
   actionItems: string[];
   learnings: string[];
+  source: "ON_DEVICE" | "IN_CLOUD";
 };
 
-/** Analyze a diary entry with cloud AI. Text must be tokenized — no raw PII. */
+/** Analyze a diary entry with hybrid AI — on-device first, cloud fallback. Text must be tokenized — no raw PII. */
 export async function analyzeDiaryEntry(
   tokenizedText: string,
 ): Promise<DiaryAnalysisResult> {
   if (!ai) throw new Error("Firebase AI not configured.");
-  const { model: modelName } = settings();
+  const cfg = settings();
+  const cloudOnly = cfg.inferenceMode === "only_in_cloud";
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_IN_CLOUD,
+    mode: cloudOnly ? InferenceMode.ONLY_IN_CLOUD : InferenceMode.PREFER_ON_DEVICE,
     inCloudParams: {
-      model: modelName,
+      model: cfg.model,
       generationConfig: { responseMimeType: "application/json" },
+    },
+    onDeviceParams: {
+      createOptions: chromeModelOptions(false),
     },
   });
   const prompt = `You are a thoughtful personal AI reflecting on a private diary entry.
@@ -739,7 +744,10 @@ ${tokenizedText}`;
     30_000,
     "Diary analysis timed out.",
   );
-  recordAIResult(result.response.text(), "IN_CLOUD");
+  const diarySource = result.response.inferenceSource === InferenceSource.ON_DEVICE
+    ? ("ON_DEVICE" as const)
+    : ("IN_CLOUD" as const);
+  recordAIResult(result.response.text(), diarySource);
   let parsed: Partial<DiaryAnalysisResult>;
   try {
     parsed = JSON.parse(
@@ -763,6 +771,7 @@ ${tokenizedText}`;
     learnings: Array.isArray(parsed.learnings)
       ? parsed.learnings.filter((s): s is string => typeof s === "string").slice(0, 3)
       : [],
+    source: diarySource,
   };
 }
 
