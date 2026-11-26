@@ -19,6 +19,7 @@ import {
   Shield,
   FileText,
   Menu,
+  BookHeart,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
 import {
@@ -44,6 +45,7 @@ import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
+import PrivateDiary from "./components/PrivateDiary";
 import ExplainForFamily from "./components/ExplainForFamily";
 import TokenVaultPreview from "./components/TokenVaultPreview";
 import PrivacyStatsBar from "./components/PrivacyStatsBar";
@@ -125,7 +127,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -573,6 +575,7 @@ export default function App() {
     { id: "check", icon: ScanLine, label: t("Check something") },
     { id: "family", icon: Users, label: t("Family circle") },
     { id: "docs", icon: FileText, label: t("Scan document") },
+    { id: "diary", icon: BookHeart, label: t("Private Diary") },
     { id: "privacy", icon: LockKeyhole, label: t("Your privacy") },
   ] as const;
   return (
@@ -1312,6 +1315,7 @@ export default function App() {
             />
           )}
           {tab === "docs" && <DocumentScanner />}
+          {tab === "diary" && <PrivateDiary />}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">
