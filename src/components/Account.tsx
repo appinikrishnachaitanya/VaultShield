@@ -1,5 +1,11 @@
-import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  LogOut,
+  Settings,
+  UserRound,
+  X,
+  Chrome,
+} from "lucide-react";
 import {
   onAuthStateChanged,
   type User,
@@ -15,6 +21,24 @@ import {
   leaveAccount,
 } from "../lib/firebase/account";
 import { t, setLanguage, useAppLanguage } from "../lib/i18n";
+
+/** Deterministic avatar background from uid */
+function avatarColor(uid: string): string {
+  const palette = [
+    "#6366f1", "#8b5cf6", "#ec4899", "#f59e0b",
+    "#10b981", "#3b82f6", "#ef4444", "#0ea5e9",
+  ];
+  let hash = 0;
+  for (let i = 0; i < uid.length; i++) hash = (hash * 31 + uid.charCodeAt(i)) | 0;
+  return palette[Math.abs(hash) % palette.length];
+}
+
+function initials(nameOrEmail: string): string {
+  const parts = nameOrEmail.split(/[\s@]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (parts[0]?.[0] ?? "U").toUpperCase();
+}
+
 export default function Account() {
   const language = useAppLanguage();
   const [user, setUser] = useState<User | null>(null);
@@ -23,11 +47,17 @@ export default function Account() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [existing, setExisting] = useState<AuthCredential>();
+  const [settingsMode, setSettingsMode] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  /* open from external event (family circle etc.) */
   useEffect(() => {
     const show = () => setOpen(true);
     window.addEventListener("vaultshield-open-account", show);
     return () => window.removeEventListener("vaultshield-open-account", show);
   }, []);
+
+  /* Google redirect result */
   useEffect(() => {
     void (async () => {
       try {
@@ -35,8 +65,7 @@ export default function Account() {
         if (!linked) return;
         const displayName =
           localStorage.getItem("vaultshield-family-name") ||
-          auth?.currentUser?.displayName?.slice(0, 40) ||
-          "";
+          auth?.currentUser?.displayName?.slice(0, 40) || "";
         if (db && auth?.currentUser && displayName.trim().length >= 2) {
           await setDoc(
             doc(db, "users", auth.currentUser.uid, "settings", "profile"),
@@ -59,6 +88,8 @@ export default function Account() {
       }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* auth state */
   useEffect(() => {
     if (!auth) return;
     return onAuthStateChanged(auth, async (current) => {
@@ -66,22 +97,36 @@ export default function Account() {
       if (!current || current.isAnonymous || !db) return;
       setName(current.displayName?.slice(0, 40) || "");
       try {
-        const snapshot = await getDoc(
+        const snap = await getDoc(
           doc(db, "users", current.uid, "settings", "profile"),
         );
         if (auth?.currentUser?.uid !== current.uid) return;
-        if (snapshot.exists()) {
-          const profile = snapshot.data();
-          setName(profile.displayName);
-          setLanguage(profile.language);
-          localStorage.setItem("vaultshield-family-name", profile.displayName);
+        if (snap.exists()) {
+          const p = snap.data();
+          setName(p.displayName);
+          setLanguage(p.language);
+          localStorage.setItem("vaultshield-family-name", p.displayName);
           window.dispatchEvent(new Event("vaultshield-profile"));
         }
       } catch {
-        setMessage(t("Could not load account settings. Please try again."));
+        // non-fatal
       }
     });
   }, []);
+
+  /* close on outside click */
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSettingsMode(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   async function run(action: () => Promise<void>) {
     setBusy(true);
     setMessage("");
@@ -103,57 +148,73 @@ export default function Account() {
       setBusy(false);
     }
   }
+
+  const isSignedIn = user && !user.isAnonymous;
+  const displayLabel = isSignedIn
+    ? (name || user.email || "Account")
+    : "Guest";
+  const emailLabel = isSignedIn ? (user.email ?? "") : "";
+
   return (
-    <div className="account-control">
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}>
-        {t(user && !user.isAnonymous ? "My account" : "Save my account")}
+    <div className="account-control" ref={panelRef}>
+      {/* Avatar trigger */}
+      <button
+        type="button"
+        className="avatar-btn"
+        onClick={() => { setOpen((o) => !o); setSettingsMode(false); }}
+        aria-expanded={open}
+        aria-label={isSignedIn ? displayLabel : t("Sign in")}
+        title={isSignedIn ? displayLabel : t("Sign in")}
+      >
+        {isSignedIn ? (
+          user.photoURL ? (
+            <img src={user.photoURL} className="avatar-photo" alt="" />
+          ) : (
+            <span
+              className="avatar-initials"
+              style={{ background: avatarColor(user.uid) }}
+            >
+              {initials(name || user.email || "U")}
+            </span>
+          )
+        ) : (
+          <span className="avatar-guest">
+            <UserRound size={16} />
+          </span>
+        )}
       </button>
+
+      {/* Dropdown panel */}
       {open && (
-        <section className="card account-panel" aria-label={t("My account")}>
-          <button type="button" className="account-panel-close" aria-label={t("Close")} onClick={() => setOpen(false)}>
-            <X size={18} />
-          </button>
-          {user && !user.isAnonymous ? (
+        <div className="account-dropdown" role="dialog" aria-label={t("Account")}>
+          {isSignedIn && !settingsMode && (
             <>
-              <h2>{t("My account")}</h2>
-              <p>{user.email}</p>
-              <label htmlFor="account-name">
-                {t("Your name in the family")}
-              </label>
-              <input
-                id="account-name"
-                value={name}
-                maxLength={40}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <p>{t("Your selected language is saved with your name.")}</p>
+              {/* User identity block */}
+              <div className="acct-identity">
+                <span
+                  className="acct-avatar-lg"
+                  style={{ background: avatarColor(user.uid) }}
+                >
+                  {user.photoURL
+                    ? <img src={user.photoURL} alt="" />
+                    : initials(name || user.email || "U")}
+                </span>
+                <div>
+                  <div className="acct-name">{name || t("My account")}</div>
+                  <div className="acct-email">{emailLabel}</div>
+                </div>
+              </div>
+              <div className="acct-divider" />
               <button
-                disabled={busy || name.trim().length < 2}
-                onClick={() =>
-                  void run(async () => {
-                    if (!db || !auth?.currentUser) return;
-                    await setDoc(
-                      doc(
-                        db,
-                        "users",
-                        auth.currentUser.uid,
-                        "settings",
-                        "profile",
-                      ),
-                      { displayName: name.trim(), language },
-                    );
-                    localStorage.setItem(
-                      "vaultshield-family-name",
-                      name.trim(),
-                    );
-                    window.dispatchEvent(new Event("vaultshield-profile"));
-                    setOpen(false);
-                  })
-                }
+                className="acct-menu-item"
+                onClick={() => setSettingsMode(true)}
               >
-                {t("Save settings")}
+                <Settings size={15} />
+                {t("Account settings")}
               </button>
+              <div className="acct-divider" />
               <button
+                className="acct-menu-item acct-signout"
                 disabled={busy}
                 onClick={() =>
                   void run(async () => {
@@ -163,39 +224,77 @@ export default function Account() {
                   })
                 }
               >
+                <LogOut size={15} />
                 {t("Sign out")}
               </button>
             </>
-          ) : (
+          )}
+
+          {isSignedIn && settingsMode && (
             <>
-              <h2>{t("Keep your family circle")}</h2>
-              <p>
-                {t(
-                  "Continue with Google to keep this family circle and open it on your other devices.",
-                )}
-              </p>
+              <div className="acct-settings-header">
+                <button
+                  className="acct-back-btn"
+                  onClick={() => setSettingsMode(false)}
+                >
+                  ← {t("Back")}
+                </button>
+                <span>{t("Account settings")}</span>
+              </div>
+              <div className="acct-divider" />
+              <div className="acct-field">
+                <label>{t("Your name")}</label>
+                <input
+                  value={name}
+                  maxLength={40}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("Display name")}
+                />
+              </div>
               <button
+                className="acct-save-btn"
+                disabled={busy || name.trim().length < 2}
+                onClick={() =>
+                  void run(async () => {
+                    if (!db || !auth?.currentUser) return;
+                    await setDoc(
+                      doc(db, "users", auth.currentUser.uid, "settings", "profile"),
+                      { displayName: name.trim(), language },
+                    );
+                    localStorage.setItem("vaultshield-family-name", name.trim());
+                    window.dispatchEvent(new Event("vaultshield-profile"));
+                    setSettingsMode(false);
+                    setOpen(false);
+                  })
+                }
+              >
+                {t("Save")}
+              </button>
+            </>
+          )}
+
+          {!isSignedIn && (
+            <>
+              <div className="acct-signin-header">
+                <div className="acct-guest-icon"><UserRound size={28} /></div>
+                <div className="acct-signin-title">{t("Save your account")}</div>
+                <div className="acct-signin-sub">
+                  {t("Sign in to sync your diary and family circle across devices.")}
+                </div>
+              </div>
+              <div className="acct-divider" />
+              <button
+                className="acct-google-btn"
                 disabled={busy || !user}
                 onClick={() =>
                   void run(async () => {
                     await continueWithGoogle();
                     const displayName =
                       localStorage.getItem("vaultshield-family-name") ||
-                      auth?.currentUser?.displayName?.slice(0, 40) ||
-                      "";
-                    if (
-                      db &&
-                      auth?.currentUser &&
-                      displayName.trim().length >= 2
-                    ) {
+                      auth?.currentUser?.displayName?.slice(0, 40) || "";
+                    if (db && auth?.currentUser && displayName.trim().length >= 2) {
                       await setDoc(
-                        doc(
-                          db,
-                          "users",
-                          auth.currentUser.uid,
-                          "settings",
-                          "profile",
-                        ),
+                        doc(db, "users", auth.currentUser.uid, "settings", "profile"),
                         { displayName: displayName.trim(), language },
                       );
                     }
@@ -203,35 +302,40 @@ export default function Account() {
                   })
                 }
               >
+                <Chrome size={16} />
                 {t("Continue with Google")}
               </button>
             </>
           )}
+
           {existing && (
-            <div role="alert">
-              <p>
-                {t(
-                  "This Google account already has a family circle. Open that account? Your guest connections stay separate.",
-                )}
-              </p>
-              <button
-                disabled={busy}
-                onClick={() =>
-                  void run(async () => {
-                    await openExistingAccount(existing);
-                    location.reload();
-                  })
-                }
-              >
-                {t("Open existing account")}
-              </button>
-              <button disabled={busy} onClick={() => setExisting(undefined)}>
-                {t("Cancel")}
-              </button>
+            <div className="acct-existing">
+              <p>{t("This Google account already has a family circle. Open that account?")}</p>
+              <div className="acct-existing-actions">
+                <button
+                  className="acct-save-btn"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      await openExistingAccount(existing);
+                      location.reload();
+                    })
+                  }
+                >
+                  {t("Open existing account")}
+                </button>
+                <button
+                  className="acct-menu-item"
+                  disabled={busy}
+                  onClick={() => setExisting(undefined)}
+                >
+                  {t("Cancel")}
+                </button>
+              </div>
             </div>
           )}
-          {message && <p role="status">{message}</p>}
-        </section>
+          {message && <p className="acct-message">{message}</p>}
+        </div>
       )}
     </div>
   );
