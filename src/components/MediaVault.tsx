@@ -2,9 +2,7 @@
 import {
   Film,
   Upload,
-  Mic,
   Lock,
-  Cpu,
   Cloud,
   MessageSquare,
   Send,
@@ -19,7 +17,6 @@ import {
 } from "lucide-react";
 import { TokenVaultSession } from "../lib/tokenVault";
 import { chatWithDocument, analyzeMediaFile } from "../lib/firebase/ai";
-import { transcribeAudio } from "../lib/localTranscription";
 import TokenVaultPreview from "./TokenVaultPreview";
 
 type ChatMsg = { role: "user" | "ai"; text: string };
@@ -107,33 +104,16 @@ export default function MediaVault() {
     setProcessed(false);
     vault.current.clear();
     try {
-      let raw = "";
-      if (mediaFile.kind === "image") {
-        setProcessStatus("Sending image to cloud Gemini for analysis…");
-        const b64 = await fileToBase64(mediaFile.file);
-        const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, "Describe and extract all text from this image.");
-        raw = text;
-        setSource("IN_CLOUD");
-      } else {
-        // Try local Whisper first
-        let whisperErr: unknown = null;
-        try {
-          raw = await transcribeAudio(mediaFile.file, setProcessStatus);
-          setSource("ON_DEVICE");
-        } catch (err) {
-          whisperErr = err;
-          setProcessStatus("Local transcription unavailable — trying cloud Gemini (file sent once)…");
-        }
-        if (whisperErr !== null) {
-          const b64 = await fileToBase64(mediaFile.file);
-          const instruction = mediaFile.kind === "video"
-            ? "Transcribe all speech from this video verbatim."
-            : "Transcribe this audio recording verbatim.";
-          const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, instruction);
-          raw = text;
-          setSource("IN_CLOUD");
-        }
-      }
+      const instructions: Record<MediaKind, string> = {
+        image: "Describe this image and extract all visible text.",
+        audio: "Transcribe this audio recording verbatim. Note any suspicious patterns.",
+        video: "Transcribe all speech from this video verbatim. Note any suspicious visual or audio patterns.",
+      };
+      setProcessStatus(`Sending ${mediaFile.kind} to cloud Gemini…`);
+      const b64 = await fileToBase64(mediaFile.file);
+      const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, instructions[mediaFile.kind]);
+      const raw = text;
+      setSource("IN_CLOUD");
       setAnalysis(raw);
       const tokenized = vault.current.tokenize(raw);
       setTokenizedAnalysis(tokenized.text);
@@ -177,19 +157,12 @@ export default function MediaVault() {
   const kind = mediaFile?.kind ?? "audio";
   const KindIcon = kind === "image" ? Image : kind === "video" ? Video : FileAudio;
 
-  const flowSteps = kind === "image"
-    ? [
-        { icon: Upload, label: "Upload image", sub: "Stays local" },
-        { icon: Cloud, label: "Cloud AI reads", sub: "Gemini Vision" },
-        { icon: Lock, label: "PII masked", sub: "TokenVault on-device" },
-        { icon: MessageSquare, label: "Chat privately", sub: "Tokens only" },
-      ]
-    : [
-        { icon: Upload, label: "Upload file", sub: "Stays local" },
-        { icon: Cpu, label: "Transcribe locally", sub: "Whisper · on-device" },
-        { icon: Lock, label: "PII masked", sub: "TokenVault on-device" },
-        { icon: MessageSquare, label: "Chat privately", sub: "Tokens only" },
-      ];
+  const flowSteps = [
+    { icon: Upload, label: "Upload file", sub: "Stays local until sent" },
+    { icon: Cloud, label: "Cloud AI reads", sub: "Gemini · sent once" },
+    { icon: Lock, label: "PII masked", sub: "TokenVault on-device" },
+    { icon: MessageSquare, label: "Chat privately", sub: "Tokens only to cloud" },
+  ];
 
   const quickQuestions = kind === "image"
     ? ["What does this image show?", "Any red flags?", "Extract all text", "Summarise in 3 points"]
@@ -276,27 +249,18 @@ export default function MediaVault() {
 
             {mediaFile && !processed && (
               <>
-                {kind === "image" ? (
-                  <div className="call-vault-cloud-note" style={{ background: "#fefce8", border: "1px solid #fde68a", color: "#854d0e" }}>
-                    <Cloud size={14} />
-                    <span>Image analyzed once by cloud Gemini — not stored. Follow-up chat stays local with PII masked.</span>
-                  </div>
-                ) : (
-                  <div className="call-vault-local-note">
-                    <Cpu size={14} />
-                    <span>Transcription runs fully on your device using Whisper AI. If unavailable, falls back to cloud (audio sent once).</span>
-                  </div>
-                )}
+                <div className="call-vault-cloud-note" style={{ background: "#fefce8", border: "1px solid #fde68a", color: "#854d0e" }}>
+                  <Cloud size={14} />
+                  <span>File sent once to cloud Gemini for analysis — not stored. All follow-up chat masks PII before leaving your device.</span>
+                </div>
                 <button
                   type="button"
                   className="primary check-button"
                   disabled={processing}
                   onClick={() => void process()}
                 >
-                  {kind === "image" ? <Image size={18} /> : <Mic size={18} />}
-                  {processing
-                    ? (kind === "image" ? "Analyzing…" : "Transcribing…")
-                    : (kind === "image" ? "Analyze image" : "Transcribe on-device")}
+                  <Cloud size={18} />
+                  {processing ? "Analyzing…" : "Analyze with Gemini"}
                   {processing && <span className="step-spinner" aria-hidden="true" />}
                 </button>
                 {processing && processStatus && (
@@ -313,7 +277,7 @@ export default function MediaVault() {
                   <span className="call-vault-src-badge cloud"><Cloud size={10} /> Cloud AI</span>
                 )}
                 {source === "ON_DEVICE" && (
-                  <span className="call-vault-src-badge ondevice"><Cpu size={10} /> On-device</span>
+                  <span className="call-vault-src-badge ondevice"> On-device</span>
                 )}
               </div>
             )}
