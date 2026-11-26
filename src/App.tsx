@@ -742,6 +742,15 @@ export default function App() {
           </div>
         </header>
         <main>
+          {!online && (
+            <div className="offline-mode-banner" role="status">
+              <WifiOff size={18} />
+              <div>
+                <strong>{t("Works offline")}</strong>
+                <span>{t(" — on-device AI active. No internet needed.")}</span>
+              </div>
+            </div>
+          )}
           <section
             className="privacy-router-intro"
             aria-label={t("Privacy Router for AI")}
