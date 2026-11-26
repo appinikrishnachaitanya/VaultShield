@@ -240,7 +240,7 @@ export default function DocumentScanner() {
       setSteps((s) => advanceStep(s, "route"));
       const route = routeInput(textToAnalyze);
 
-      // Step 4: cloud analysis
+      // Step 4: local or cloud analysis
       setSteps((s) => advanceStep(s, "cloud"));
       const analysisResult = await analyzeDocumentText(
         tokenized.text as SanitizedText,
@@ -251,7 +251,7 @@ export default function DocumentScanner() {
       // Build privacy receipt
       const rcpt = buildReceipt({
         route,
-        source: "IN_CLOUD",
+        source: analysisResult.source ?? "IN_CLOUD",
         elapsedMs: analysisResult.durationMs,
         counts,
         payload: tokenized.text as SanitizedText,
@@ -260,7 +260,17 @@ export default function DocumentScanner() {
         model: analysisResult.model,
       });
 
-      setSteps((s) => completeSteps(s));
+      setSteps((s) => {
+        const done = completeSteps(s);
+        if (analysisResult.source === "ON_DEVICE") {
+          return done.map((step) =>
+            step.id === "cloud"
+              ? { ...step, label: "On-device analysis", detail: "Gemma4 / Nano — your data never left this device", icon: Cpu }
+              : step,
+          );
+        }
+        return done;
+      });
       setResult({ ...analysisResult, masked: totalMasked });
       setReceipt(rcpt);
     } catch (e) {

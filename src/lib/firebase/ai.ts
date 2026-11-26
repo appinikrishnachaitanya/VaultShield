@@ -143,7 +143,8 @@ export async function checkLocally(
   const createOptions = chromeModelOptions(Boolean(image));
   onProgress?.(`Chrome local model: ${availability}.`);
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_IN_CLOUD,
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions },
     inCloudParams: { model: settings().model },
   });
   if (availability !== "available")
@@ -588,7 +589,8 @@ export async function extractTextFromDocument(
     );
   const createOptions = chromeModelOptions(true);
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_IN_CLOUD,
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions },
     inCloudParams: { model: settings().model },
   });
   onProgress?.("Reading document text on your device…");
@@ -608,7 +610,27 @@ export async function extractTextFromDocument(
   return result.response.text().trim();
 }
 
-/** Analyze tokenized document text using cloud AI. Input must be fully tokenized — no raw PII. */
+async function runCloudDocumentAnalysis(
+  aiInstance: NonNullable<typeof ai>,
+  modelName: string,
+  prompt: string,
+): Promise<string> {
+  const model = getGenerativeModel(aiInstance, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName, generationConfig: { responseMimeType: "application/json" } },
+  });
+  const result = await boundedWait(
+    model.generateContent(prompt),
+    60_000,
+    "Document analysis timed out.",
+  );
+  if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) markUnconfirmedAI();
+  const text = result.response.text();
+  recordAIResult(text, "IN_CLOUD");
+  return text;
+}
+
+/** Analyze tokenized document text — tries on-device (Android/Chrome) first, falls back to cloud. Input must be fully tokenized — no raw PII. */
 export async function analyzeDocumentText(
   tokenizedText: SanitizedText,
   category: DocumentCategory,
@@ -619,30 +641,59 @@ export async function analyzeDocumentText(
   assertNoKnownLeak(tokenizedText, vault);
   const { model: modelName } = settings();
   const payloadBytes = new TextEncoder().encode(tokenizedText).length;
-  onProgress?.(`Analyzing document with cloud AI (${payloadBytes} bytes, fully tokenized)…`);
-  const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_IN_CLOUD,
-    inCloudParams: {
-      model: modelName,
-      generationConfig: { responseMimeType: "application/json" },
-    },
-  });
   const start = performance.now();
   const prompt = buildDocumentAnalysisPrompt(tokenizedText, category);
-  const result = await boundedWait(
-    model.generateContent(prompt),
-    60_000,
-    "Document analysis timed out.",
-  );
-  if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) {
-    markUnconfirmedAI();
-    throw new Error("Expected cloud inference for document analysis.");
+  let responseText: string;
+  let inferenceSource: "ON_DEVICE" | "IN_CLOUD" = "IN_CLOUD";
+
+  // Android on-device path
+  if (usesAndroidModel) {
+    onProgress?.("Analyzing document on-device with Android AI…");
+    await prepareAndroidModel();
+    const r = await androidAI.analyze({ text: prompt });
+    if (r.status === "READY" && r.text) {
+      responseText = r.text;
+      inferenceSource = "ON_DEVICE";
+    } else {
+      onProgress?.("Android AI unavailable, falling back to cloud…");
+      inferenceSource = "IN_CLOUD";
+      responseText = await runCloudDocumentAnalysis(ai, modelName, prompt);
+    }
+  } else {
+    // Chrome on-device path (Gemma4 / Nano v3 — text only, no image)
+    const chromeAvail = await chromeAvailability(false);
+    if (chromeAvail !== "unavailable") {
+      onProgress?.(`Analyzing document on-device (${chromeAvail === "available" ? "ready" : "downloading model…"})…`);
+      const textOnlyParams = chromeModelOptions(false);
+      const model = getGenerativeModel(ai, {
+        mode: InferenceMode.PREFER_ON_DEVICE,
+        onDeviceParams: { createOptions: textOnlyParams },
+        inCloudParams: { model: modelName, generationConfig: { responseMimeType: "application/json" } },
+      });
+      const result = await boundedWait(
+        model.generateContent(prompt),
+        90_000,
+        "Document analysis timed out.",
+      );
+      if (result.response.inferenceSource === InferenceSource.ON_DEVICE) {
+        responseText = result.response.text();
+        inferenceSource = "ON_DEVICE";
+      } else {
+        // Firebase routed to cloud despite PREFER_ON_DEVICE — accept it
+        responseText = result.response.text();
+        inferenceSource = "IN_CLOUD";
+      }
+      recordAIResult(responseText, inferenceSource === "ON_DEVICE" ? "ON_DEVICE" : "IN_CLOUD");
+    } else {
+      onProgress?.(`Analyzing document with cloud AI (${payloadBytes} bytes, fully tokenized)…`);
+      responseText = await runCloudDocumentAnalysis(ai, modelName, prompt);
+    }
   }
-  recordAIResult(result.response.text(), "IN_CLOUD");
+
   let parsed: Partial<DocumentAnalysisResult>;
   try {
     parsed = JSON.parse(
-      result.response.text().replace(/^```(?:json)?\s*|\s*```$/g, "").trim(),
+      responseText.replace(/^```(?:json)?\s*|\s*```$/g, "").trim(),
     ) as Partial<DocumentAnalysisResult>;
   } catch {
     throw new Error(
@@ -678,7 +729,8 @@ export async function analyzeDocumentText(
     masked: vault.entries().length,
     payloadBytes,
     durationMs: performance.now() - start,
-    model: modelName,
+    model: inferenceSource === "ON_DEVICE" ? "chrome-on-device" : modelName,
+    source: inferenceSource,
   };
 }
 
