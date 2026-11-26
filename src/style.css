@@ -763,11 +763,23 @@ textarea::placeholder {
   background: #ecfdf5;
   color: #047857;
 }
+.doc-translate-banner {
+  background: #f0fdf9;
+  border: 1px solid #99f6e4;
+}
 .doc-translate-banner span {
   flex: 1;
+  color: #0f172a;
 }
-.doc-translate-banner button {
+.doc-translate-banner .primary {
   white-space: nowrap;
+  margin-left: 0;
+  background: #0f766e;
+  color: white;
+  border: 0;
+}
+.doc-translate-banner .primary:hover:not(:disabled) {
+  background: #115e59;
 }
 .banner button {
   margin-left: auto;
