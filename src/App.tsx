@@ -575,9 +575,9 @@ export default function App() {
   const awaitingAndroidHybrid =
     usesAndroidModel && result?.source === "LOCAL_RULES" && !localOnly;
   const navItems = [
-    { id: "call", icon: PhoneIncoming, label: t("Call Vault") },
     { id: "check", icon: ScanLine, label: t("Check something") },
     { id: "docs", icon: FileText, label: t("Document Vault") },
+    { id: "call", icon: PhoneIncoming, label: t("Call Vault") },
     { id: "family", icon: Users, label: t("Family circle") },
   ] as const;
   return (
@@ -1514,3 +1514,4 @@ export default function App() {
     </div>
   );
 }
+

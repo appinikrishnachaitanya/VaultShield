@@ -5177,3 +5177,21 @@ html[lang="hi"] h3 {
   background: #eff6ff;
   color: var(--accent, #0f4c75);
 }
+
+.call-vault-local-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #15803d;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.call-vault-local-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}

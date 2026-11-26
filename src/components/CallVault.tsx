@@ -4,7 +4,6 @@ import {
   Upload,
   Mic,
   Lock,
-  Cloud,
   Cpu,
   MessageSquare,
   Send,
@@ -16,7 +15,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { TokenVaultSession } from "../lib/tokenVault";
-import { transcribeCallRecording, chatWithDocument } from "../lib/firebase/ai";
+import { chatWithDocument } from "../lib/firebase/ai";
+import { transcribeAudio } from "../lib/localTranscription";
 import TokenVaultPreview from "./TokenVaultPreview";
 
 type ChatMsg = { role: "user" | "ai"; text: string };
@@ -29,13 +29,13 @@ export default function CallVault() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [audioFile, setAudioFile] = useState<{
-    name: string; size: number; mimeType: string; base64: string; url: string;
+    name: string; size: number; mimeType: string; url: string; file: File;
   } | null>(null);
   const [transcript, setTranscript] = useState("");
   const [tokenizedTranscript, setTokenizedTranscript] = useState("");
   const [transcribing, setTranscribing] = useState(false);
+  const [transcribeStatus, setTranscribeStatus] = useState("");
   const [transcribed, setTranscribed] = useState(false);
-  const [source, setSource] = useState<"ON_DEVICE" | "IN_CLOUD" | null>(null);
   const [error, setError] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -48,8 +48,8 @@ export default function CallVault() {
     setTranscript("");
     setTokenizedTranscript("");
     setTranscribing(false);
+    setTranscribeStatus("");
     setTranscribed(false);
-    setSource(null);
     setError("");
     setChatMessages([]);
     setChatInput("");
@@ -68,14 +68,8 @@ export default function CallVault() {
       setError(`File must be under ${MAX_MB} MB.`);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      const base64 = dataUrl.split(",")[1];
-      reset();
-      setAudioFile({ name: f.name, size: f.size, mimeType: f.type, base64, url: URL.createObjectURL(f) });
-    };
-    reader.readAsDataURL(f);
+    reset();
+    setAudioFile({ name: f.name, size: f.size, mimeType: f.type, url: URL.createObjectURL(f), file: f });
   }
 
   async function transcribe() {
@@ -87,12 +81,8 @@ export default function CallVault() {
     setTranscribed(false);
     vault.current.clear();
     try {
-      const { transcript: raw, source: src } = await transcribeCallRecording(
-        audioFile.base64,
-        audioFile.mimeType,
-      );
+      const raw = await transcribeAudio(audioFile.file, setTranscribeStatus);
       setTranscript(raw);
-      setSource(src);
       const tokenized = vault.current.tokenize(raw);
       setTokenizedTranscript(tokenized.text);
       setTranscribed(true);
@@ -100,6 +90,7 @@ export default function CallVault() {
       setError(e instanceof Error ? e.message : "Transcription failed. Try again.");
     } finally {
       setTranscribing(false);
+      setTranscribeStatus("");
     }
   }
 
@@ -133,15 +124,15 @@ export default function CallVault() {
           Your call. <span>Your transcript.</span>
         </h1>
         <p>
-          Audio transcribed once, never stored. Every follow-up question is
-          PII-masked before cloud sees it.
+          Transcription runs entirely on your device — audio never leaves.
+          Follow-up chat masks PII before any cloud request.
         </p>
       </div>
 
       <div className="call-vault-flow">
         {[
-          { icon: Upload, label: "Upload recording", sub: "Audio stays local" },
-          { icon: Cpu, label: "Transcribe", sub: "Gemini Vision once" },
+          { icon: Upload, label: "Upload recording", sub: "Stays on device" },
+          { icon: Cpu, label: "Transcribe locally", sub: "Whisper · on-device" },
           { icon: Lock, label: "PII masked", sub: "TokenVault on-device" },
           { icon: MessageSquare, label: "Chat privately", sub: "Tokens only to cloud" },
         ].map(({ icon: Icon, label, sub }) => (
@@ -202,12 +193,11 @@ export default function CallVault() {
 
             {audioFile && !transcribed && (
               <>
-                <div className="call-vault-cloud-note">
-                  <Cloud size={14} />
+                <div className="call-vault-local-note">
+                  <Cpu size={14} />
                   <span>
-                    Audio is transcribed by cloud Gemini once — not stored after
-                    transcription. All follow-up analysis uses only your local
-                    transcript with PII masked.
+                    Transcription runs fully on your device using the Whisper AI model.
+                    Audio never leaves your browser.
                   </span>
                 </div>
                 <button
@@ -217,26 +207,22 @@ export default function CallVault() {
                   onClick={() => void transcribe()}
                 >
                   <Mic size={18} />
-                  {transcribing ? "Transcribing…" : "Transcribe privately"}
+                  {transcribing ? "Transcribing locally…" : "Transcribe on-device"}
                   {transcribing && <span className="step-spinner" aria-hidden="true" />}
                 </button>
+                {transcribing && transcribeStatus && (
+                  <p className="local-progress" role="status">{transcribeStatus}</p>
+                )}
               </>
             )}
 
             {transcribed && (
               <div className="call-vault-done-badge">
                 <CheckCircle size={16} />
-                Transcribed · Stored locally · PII masked
-                {source === "IN_CLOUD" && (
-                  <span className="call-vault-src-badge cloud">
-                    <Cloud size={10} /> Cloud AI
-                  </span>
-                )}
-                {source === "ON_DEVICE" && (
-                  <span className="call-vault-src-badge ondevice">
-                    <Cpu size={10} /> On-device
-                  </span>
-                )}
+                Transcribed locally · Stored on device · PII masked
+                <span className="call-vault-src-badge ondevice">
+                  <Cpu size={10} /> On-device
+                </span>
               </div>
             )}
 
