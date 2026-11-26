@@ -64,10 +64,10 @@ export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const ai = app ? getAI(app, { backend: new GoogleAIBackend() }) : null;
 const defaults = {
-  cloud_model_name: "gemini-2.0-flash",
+  cloud_model_name: "gemini-3.5-flash-lite",
   enable_search_grounding: true,
   strict_privacy_mode: true,
-  ai_inference_mode: "prefer_on_device",
+  ai_inference_mode: "only_in_cloud",
 };
 export const remoteConfig = app ? getRemoteConfig(app) : null;
 if (remoteConfig) {
@@ -75,16 +75,15 @@ if (remoteConfig) {
   remoteConfig.settings.minimumFetchIntervalMillis = 3600000;
   remoteConfig.settings.fetchTimeoutMillis = 5000;
 }
+// Remap shut-down or non-existent model IDs to working equivalents
 const MODEL_FIX: Record<string, string> = {
-  "gemini-2.0-flash-lite": "gemini-2.0-flash",
-  "gemini-3.5-flash-lite": "gemini-2.0-flash",
-  "gemini-3.5-flash": "gemini-2.0-flash",
+  "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
 };
 export const settings = () => {
   const raw = remoteConfig
     ? getValue(remoteConfig, "cloud_model_name").asString() || defaults.cloud_model_name
     : defaults.cloud_model_name;
-  const model = MODEL_FIX[raw] ?? (raw || "gemini-2.0-flash");
+  const model = MODEL_FIX[raw] ?? (raw || "gemini-3.5-flash-lite");
   return {
   model,
   grounding: remoteConfig
