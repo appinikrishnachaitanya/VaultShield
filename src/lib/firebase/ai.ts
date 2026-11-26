@@ -660,34 +660,28 @@ export async function analyzeDocumentText(
       responseText = await runCloudDocumentAnalysis(ai, modelName, prompt);
     }
   } else {
-    // Chrome on-device path — call window.LanguageModel directly (Firebase PREFER_ON_DEVICE
-    // falls back to cloud silently; direct API guarantees on-device or throws).
+    // Chrome on-device path (Gemma4 / Nano v3 — text only, no image).
+    // Use PREFER_ON_DEVICE: routes to Chrome local model when available, cloud only as fallback.
+    // No responseMimeType in inCloudParams — that flag biases Firebase routing toward cloud.
     const chromeAvail = await chromeAvailability(false);
-    type LMSession = { prompt: (t: string) => Promise<string>; destroy?: () => void };
-    type LMType = { create: (o: ReturnType<typeof chromeModelOptions>) => Promise<LMSession> };
-    const LM = chromeAvail !== "unavailable"
-      ? (window as Window & { LanguageModel?: LMType }).LanguageModel
-      : undefined;
-
-    if (LM?.create) {
+    if (chromeAvail !== "unavailable") {
       onProgress?.(`Analyzing document on-device (${chromeAvail === "available" ? "Gemma4/Nano ready" : "downloading model…"})…`);
       const textOnlyParams = chromeModelOptions(false);
-      let session: LMSession | undefined;
-      try {
-        session = await LM.create(textOnlyParams);
-        responseText = await boundedWait(
-          session.prompt(prompt),
-          90_000,
-          "On-device document analysis timed out.",
-        );
-        inferenceSource = "ON_DEVICE";
-        recordAIResult(responseText, "ON_DEVICE");
-      } catch {
-        onProgress?.(`On-device model failed, falling back to cloud (${payloadBytes} bytes, fully tokenized)…`);
-        responseText = await runCloudDocumentAnalysis(ai, modelName, prompt);
-      } finally {
-        session?.destroy?.();
-      }
+      const model = getGenerativeModel(ai, {
+        mode: InferenceMode.PREFER_ON_DEVICE,
+        onDeviceParams: { createOptions: textOnlyParams },
+        inCloudParams: { model: modelName },
+      });
+      const result = await boundedWait(
+        model.generateContent(prompt),
+        90_000,
+        "Document analysis timed out.",
+      );
+      responseText = result.response.text();
+      inferenceSource = result.response.inferenceSource === InferenceSource.ON_DEVICE
+        ? "ON_DEVICE"
+        : "IN_CLOUD";
+      recordAIResult(responseText, inferenceSource);
     } else {
       onProgress?.(`Analyzing document with cloud AI (${payloadBytes} bytes, fully tokenized)…`);
       responseText = await runCloudDocumentAnalysis(ai, modelName, prompt);
