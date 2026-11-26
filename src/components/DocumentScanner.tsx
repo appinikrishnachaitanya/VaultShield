@@ -76,6 +76,7 @@ export default function DocumentScanner() {
   const [steps, setSteps] = useState<PipelineStep[]>([]);
   const [result, setResult] = useState<DocumentAnalysisResult | null>(null);
   const [receipt, setReceipt] = useState<PrivacyReceiptData | null>(null);
+  const [pdfImages, setPdfImages] = useState<Array<{ data: string; mimeType: string; name: string; url: string }>>([]);
   const [ocrText, setOcrText] = useState("");
   const [error, setError] = useState("");
   type ChatMessage = { role: "user" | "ai"; text: string };
@@ -84,16 +85,19 @@ export default function DocumentScanner() {
   const [chatBusy, setChatBusy] = useState(false);
   const [tokenizedDocText, setTokenizedDocText] = useState("");
 
-  function buildSteps(hasImage: boolean, hasPdfText: boolean): PipelineStep[] {
+  function buildSteps(hasImage: boolean, hasPdfText: boolean, pdfImageCount = 0): PipelineStep[] {
+    const ocrLabel = pdfImageCount > 1
+      ? `On-device OCR — ${pdfImageCount} pages`
+      : hasPdfText ? "PDF text extracted" : "On-device OCR";
     return [
       {
         id: "ocr",
-        label: hasPdfText ? "PDF text extracted" : "On-device OCR",
+        label: ocrLabel,
         detail: hasPdfText
           ? "Text layer parsed on-device — nothing sent to cloud"
           : "Extract text from image — nothing sent to cloud",
         icon: Cpu,
-        status: hasImage || hasPdfText ? "pending" : "skipped",
+        status: hasImage || hasPdfText || pdfImageCount > 0 ? "pending" : "skipped",
       },
       {
         id: "vault",
@@ -156,6 +160,7 @@ export default function DocumentScanner() {
   function clearFile() {
     if (image) URL.revokeObjectURL(image.url);
     setImage(null);
+    setPdfImages([]);
     setPdfMeta(null);
     setOcrText("");
     setResult(null);
@@ -184,12 +189,11 @@ export default function DocumentScanner() {
       extractPdfContent(f)
         .then((extracted) => {
           setPdfMeta({ name: f.name, pageCount: extracted.pageCount });
-          if (extracted.method === "text-layer" && extracted.text.length > 30) {
-            setRawText(extracted.text);
-          } else if (extracted.images.length > 0) {
-            // Use first rendered page image for OCR
-            setImage(extracted.images[0]);
-          } else {
+          if (extracted.text.length > 30) setRawText(extracted.text);
+          if (extracted.images.length > 0) {
+            // Store all rendered page images for multi-page OCR
+            setPdfImages(extracted.images);
+          } else if (extracted.text.length <= 30) {
             setError("Could not extract text from this PDF. Try pasting the text manually.");
           }
         })
@@ -222,17 +226,30 @@ export default function DocumentScanner() {
     setOcrText("");
     vault.current.clear();
 
-    const hasPdfText = Boolean(pdfMeta && rawText && !image);
-    const pipeline = buildSteps(Boolean(image), hasPdfText);
+    const hasPdfText = Boolean(pdfMeta && rawText);
+    const hasPdfImages = pdfImages.length > 0;
+    const pipeline = buildSteps(Boolean(image), hasPdfText && !hasPdfImages, hasPdfImages ? pdfImages.length : 0);
     setSteps(pipeline);
 
     try {
       let textToAnalyze = rawText;
 
-      // Step 1: on-device OCR (images only) or PDF text-layer mark-done
-      if (hasPdfText) {
-        setSteps((s) => advanceStep(s, "ocr"));  // ocr: running
-        setSteps((s) => advanceStep(s, "vault")); // ocr: done, vault: running
+      // Step 1: on-device OCR
+      if (hasPdfImages) {
+        // Multi-page image PDF (or mixed): OCR each rendered page, combine with any text-layer text
+        setSteps((s) => advanceStep(s, "ocr"));
+        const pageTexts: string[] = rawText ? [rawText] : [];
+        for (const pageImg of pdfImages) {
+          const pageText = await extractTextFromDocument(pageImg, category, () => {});
+          if (pageText) pageTexts.push(pageText);
+        }
+        const combined = pageTexts.join("\n\n");
+        setOcrText(combined);
+        textToAnalyze = combined;
+        setSteps((s) => advanceStep(s, "vault"));
+      } else if (hasPdfText) {
+        setSteps((s) => advanceStep(s, "ocr"));
+        setSteps((s) => advanceStep(s, "vault"));
       } else if (image) {
         setSteps((s) => advanceStep(s, "ocr"));
         const extracted = await extractTextFromDocument(
