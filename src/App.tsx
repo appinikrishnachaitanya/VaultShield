@@ -572,11 +572,10 @@ export default function App() {
   const awaitingAndroidHybrid =
     usesAndroidModel && result?.source === "LOCAL_RULES" && !localOnly;
   const navItems = [
-    { id: "check", icon: ScanLine, label: t("Check something") },
-    { id: "family", icon: Users, label: t("Family circle") },
-    { id: "docs", icon: FileText, label: t("Scan document") },
     { id: "diary", icon: BookHeart, label: t("Private Diary") },
-    { id: "privacy", icon: LockKeyhole, label: t("Your privacy") },
+    { id: "check", icon: ScanLine, label: t("Check something") },
+    { id: "docs", icon: FileText, label: t("Scan document") },
+    { id: "family", icon: Users, label: t("Family circle") },
   ] as const;
   return (
     <div className="app">
@@ -618,6 +617,13 @@ export default function App() {
             <span className="dot" />
             {online ? t("Private by design") : t("You are offline")}
           </div>
+          <button
+            className={`nav-privacy-link${tab === "privacy" ? " active" : ""}`}
+            onClick={() => { setTab("privacy"); setDrawerOpen(false); }}
+          >
+            <LockKeyhole size={13} />
+            {t("Privacy & Data")}
+          </button>
         </div>
       </div>
       <aside className="sidebar" inert={review}>
@@ -664,6 +670,13 @@ export default function App() {
             <span className="dot" />
             {online ? t("Private by design") : t("You are offline")}
           </div>
+          <button
+            className={`nav-privacy-link${tab === "privacy" ? " active" : ""}`}
+            onClick={() => setTab("privacy")}
+          >
+            <LockKeyhole size={13} />
+            {t("Privacy & Data")}
+          </button>
         </div>
         {/* Mobile: hamburger button shown via CSS */}
         <button
