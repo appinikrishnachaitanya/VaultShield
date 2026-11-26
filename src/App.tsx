@@ -1,4 +1,4 @@
-import { stopLocalReading } from "./lib/localVoice";
+﻿import { stopLocalReading } from "./lib/localVoice";
 import { t, useAppLanguage, setLanguage, tacticCount } from "./lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -19,7 +19,7 @@ import {
   Shield,
   FileText,
   Menu,
-  BookHeart,
+  PhoneIncoming,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
 import {
@@ -46,7 +46,7 @@ import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
-import PrivateDiary from "./components/PrivateDiary";
+import CallVault from "./components/CallVault";
 import ExplainForFamily from "./components/ExplainForFamily";
 import TokenVaultPreview from "./components/TokenVaultPreview";
 import PrivacyStatsBar from "./components/PrivacyStatsBar";
@@ -128,7 +128,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "call">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -575,7 +575,7 @@ export default function App() {
   const awaitingAndroidHybrid =
     usesAndroidModel && result?.source === "LOCAL_RULES" && !localOnly;
   const navItems = [
-    { id: "diary", icon: BookHeart, label: t("Personal Diary") },
+    { id: "call", icon: PhoneIncoming, label: t("Call Vault") },
     { id: "check", icon: ScanLine, label: t("Check something") },
     { id: "docs", icon: FileText, label: t("Scan document") },
     { id: "family", icon: Users, label: t("Family circle") },
@@ -702,7 +702,7 @@ export default function App() {
               <Menu size={20} />
             </button>
             <span className="topbar-page-title">
-              {tab === "diary" && t("Personal Diary")}
+              {tab === "call" && t("Call Vault")}
               {tab === "check" && t("Safety Check")}
               {tab === "docs" && t("Document Scanner")}
               {tab === "family" && t("Family Circle")}
@@ -1357,7 +1357,7 @@ export default function App() {
             />
           )}
           {tab === "docs" && <DocumentScanner />}
-          {tab === "diary" && <PrivateDiary />}
+          {tab === "call" && <CallVault />}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">

@@ -1460,3 +1460,37 @@ Answer concisely and helpfully. If the document does not contain enough informat
   );
   return { answer, masked: vault.entries().length };
 }
+
+/** Transcribe a call recording — audio sent to cloud Gemini once, transcript stored locally. */
+export async function transcribeCallRecording(
+  audioBase64: string,
+  mimeType: string,
+): Promise<{ transcript: string; source: "ON_DEVICE" | "IN_CLOUD"; durationMs: number }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName },
+  });
+  const start = performance.now();
+  const result = await boundedWait(
+    model.generateContent([
+      { inlineData: { data: audioBase64, mimeType } },
+      `Transcribe this call recording verbatim and completely.
+If multiple speakers are audible, label them Speaker 1:, Speaker 2:, etc.
+If the language is not English, also provide an English translation after the original transcript, labelled "English translation:".
+Output only the transcript (and translation if needed). No commentary.`,
+    ]),
+    90_000,
+    "Transcription timed out.",
+  );
+  if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) {
+    markUnconfirmedAI();
+  }
+  recordAIResult(result.response.text(), "IN_CLOUD");
+  return {
+    transcript: result.response.text().trim(),
+    source: "IN_CLOUD",
+    durationMs: performance.now() - start,
+  };
+}
