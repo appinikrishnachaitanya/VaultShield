@@ -392,7 +392,7 @@ function NewEntry({
     vault.current.clear();
     const pipeline: AnalysisStep[] = [
       { id: "vault", label: "Token vault — mask private details", status: "pending" },
-      { id: "ai", label: "Cloud AI — analyze mood & insights", status: "pending" },
+      { id: "ai", label: "Hybrid AI — analyze mood & insights", status: "pending" },
       { id: "save", label: "Save encrypted to your account", status: "pending" },
     ];
     setSteps(pipeline);
@@ -419,6 +419,7 @@ function NewEntry({
         actionItems: result.actionItems,
         learnings: result.learnings,
         createdAt: existing?.createdAt ?? Date.now(),
+        aiSource: result.source,
       };
       await saveEntry(entry);
 
@@ -627,9 +628,13 @@ function EntryDetail({
         </div>
       )}
 
-      <div className="diary-detail-privacy">
+      <div className={`diary-detail-privacy${entry.aiSource === "IN_CLOUD" ? " cloud" : ""}`}>
         <LockKeyhole size={13} />
-        AI saw only privacy tokens — your real details stayed on this device
+        {entry.aiSource === "ON_DEVICE"
+          ? "Analyzed on-device — your diary never left this device"
+          : entry.aiSource === "IN_CLOUD"
+            ? "AI saw only privacy tokens — your real details stayed on this device"
+            : "AI saw only privacy tokens — your real details stayed on this device"}
       </div>
     </div>
   );

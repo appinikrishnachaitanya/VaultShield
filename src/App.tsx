@@ -34,6 +34,7 @@ import {
   useAICapability,
   localAIDiagnostics,
 } from "./services/aiCapability";
+import { useLastAISource } from "./lib/aiSource";
 import { maskIdentifiers, hasAssessableText } from "./lib/privacy";
 import {
   sendAlert,
@@ -165,6 +166,7 @@ export default function App() {
   const taskRunning = useRef(false);
   const [localProgress, setLocalProgress] = useState("");
   const capability = useAICapability();
+  const lastAISource = useLastAISource();
   const [localDiagnostics, setLocalDiagnostics] =
     useState<Awaited<ReturnType<typeof localAIDiagnostics>>>();
   const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
@@ -707,13 +709,21 @@ export default function App() {
             </span>
           </div>
           <div className="topbar-right">
-            <span className={`topbar-ai-pill${!online ? " offline" : ""}`} role="status">
+            <span
+              className={`topbar-ai-pill${!online ? " offline" : lastAISource === "IN_CLOUD" ? " cloud" : ""}`}
+              role="status"
+              title={lastAISource === "ON_DEVICE" ? "Last inference: on-device (private)" : lastAISource === "IN_CLOUD" ? "Last inference: cloud (tokenized text only)" : ""}
+            >
               <span className="topbar-ai-dot" />
               {!online
                 ? t("Offline")
-                : t(capabilityLabel(capability)).includes("on-device") || t(capabilityLabel(capability)).includes("On-device")
+                : lastAISource === "ON_DEVICE"
                   ? t("On-device AI")
-                  : t("AI Ready")}
+                  : lastAISource === "IN_CLOUD"
+                    ? t("Cloud AI")
+                    : capabilityLabel(capability).toLowerCase().includes("on-device")
+                      ? t("On-device AI")
+                      : t("AI Ready")}
             </span>
             <select
               className="topbar-lang"
