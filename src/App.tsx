@@ -20,6 +20,8 @@ import {
   FileText,
   Menu,
   BookHeart,
+  IndianRupee,
+  ShieldAlert,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
 import {
@@ -48,6 +50,9 @@ import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
 import PrivateDiary from "./components/PrivateDiary";
 import ExplainForFamily from "./components/ExplainForFamily";
+import UPIVerify from "./components/UPIVerify";
+import ScaredPanel from "./components/ScaredPanel";
+import KnowYourRights from "./components/KnowYourRights";
 import TokenVaultPreview from "./components/TokenVaultPreview";
 import PrivacyStatsBar from "./components/PrivacyStatsBar";
 import { recordCheck } from "./lib/privacyStats";
@@ -128,11 +133,12 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary" | "upi">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
   );
+  const [scaredOpen, setScaredOpen] = useState(false);
   const [input, setInput] = useState("");
   const [image, setImage] = useState<{
     data: string;
@@ -171,6 +177,7 @@ export default function App() {
     useState<Awaited<ReturnType<typeof localAIDiagnostics>>>();
   const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
   const messageEditor = useRef<HTMLTextAreaElement>(null);
+  const [piiCount, setPiiCount] = useState(0);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting securely…");
   const [online, setOnline] = useState(navigator.onLine);
@@ -576,6 +583,7 @@ export default function App() {
   const navItems = [
     { id: "diary", icon: BookHeart, label: t("Private Diary") },
     { id: "check", icon: ScanLine, label: t("Check something") },
+    { id: "upi", icon: IndianRupee, label: t("UPI Verify") },
     { id: "docs", icon: FileText, label: t("Scan document") },
     { id: "family", icon: Users, label: t("Family circle") },
   ] as const;
@@ -703,6 +711,7 @@ export default function App() {
             <span className="topbar-page-title">
               {tab === "diary" && t("Private Diary")}
               {tab === "check" && t("Safety Check")}
+              {tab === "upi" && t("UPI Verify")}
               {tab === "docs" && t("Document Scanner")}
               {tab === "family" && t("Family Circle")}
               {tab === "privacy" && t("Privacy & Data")}
@@ -741,6 +750,15 @@ export default function App() {
           </div>
         </header>
         <main>
+          {!online && (
+            <div className="offline-mode-banner" role="status">
+              <WifiOff size={18} />
+              <div>
+                <strong>{t("Works offline")}</strong>
+                <span>{t(" — on-device AI active. No internet needed.")}</span>
+              </div>
+            </div>
+          )}
           <section
             className="privacy-router-intro"
             aria-label={t("Privacy Router for AI")}
@@ -793,6 +811,14 @@ export default function App() {
                   {t(" Let’s check it together. ")}
                 </h1>
                 <p>{t("Check it before you pay for it. Privately.")}</p>
+                <button
+                  className="scared-trigger-btn"
+                  onClick={() => setScaredOpen(true)}
+                  aria-label="I’m scared — get immediate guidance"
+                >
+                  <ShieldAlert size={18} />
+                  {t("I’m Scared — help me now")}
+                </button>
               </div>
               <div className="workspace">
                 <section className="check-column">
@@ -860,7 +886,7 @@ export default function App() {
                       <span>{t("English, हिंदी & Hinglish welcome")}</span>
                       <span>{input.length.toLocaleString()}/16,000</span>
                     </div>
-                    <TokenVaultPreview input={input} />
+                    <TokenVaultPreview input={input} onCountChange={setPiiCount} />
                     <div className="divider">
                       <span>{t("or add a screenshot")}</span>
                     </div>
@@ -902,20 +928,22 @@ export default function App() {
                         <Upload size={22} />
                         <span>
                           <strong>{t("Upload a screenshot")}</strong>
-                          <small>{t("One JPG or PNG · up to 8 MB")}</small>
+                          <small>{t("WhatsApp, SMS, any app · JPG or PNG")}</small>
                         </span>
                         <span className="upload-plus">+</span>
                       </button>
                     )}
                     <button
-                      className="primary check-button"
+                      className={`primary check-button${piiCount > 0 && !busy ? " has-pii" : ""}`}
                       disabled={!!busy || (!input.trim() && !image)}
                       onClick={() => void analyze()}
                     >
                       <ShieldCheck size={21} />
                       {busy === "Checking on your device"
                         ? t("Checking on your device…")
-                        : t("Check privately")}
+                        : piiCount > 0
+                          ? t(`Check privately — ${piiCount} identifier${piiCount !== 1 ? "s" : ""} masked`)
+                          : t("Check privately")}
                       {!busy && <span className="button-key">↵</span>}
                     </button>
                     {busy === "Checking on your device" && (
@@ -1346,6 +1374,7 @@ export default function App() {
           )}
           {tab === "docs" && <DocumentScanner />}
           {tab === "diary" && <PrivateDiary />}
+          {tab === "upi" && <UPIVerify />}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">
@@ -1410,6 +1439,7 @@ export default function App() {
                   </div>
                 </section>
               </div>
+              <KnowYourRights />
               <div className="privacy-footer">
                 <button
                   type="button"
@@ -1470,6 +1500,12 @@ export default function App() {
           )}
         </main>
       </div>
+      {scaredOpen && (
+        <ScaredPanel
+          members={members}
+          onClose={() => setScaredOpen(false)}
+        />
+      )}
       {review && result && (
         <ReviewDialog
           dialogRef={dialogRef}

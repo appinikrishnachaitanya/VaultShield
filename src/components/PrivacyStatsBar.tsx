@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Lock, Shield, FileText, TrendingUp } from "lucide-react";
 import { getStats, onStatsChange } from "../lib/privacyStats";
 import { t } from "../lib/i18n";
@@ -12,6 +12,27 @@ function fmtBytes(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${bytes} B`;
+}
+
+function AnimatedNum({ value, label }: { value: string; label: string }) {
+  const prevRef = useRef(value);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (prevRef.current !== value) {
+      prevRef.current = value;
+      setTick((t) => t + 1);
+    }
+  }, [value]);
+
+  return (
+    <span>
+      <strong key={tick} className={tick > 0 ? "stat-num-pop" : ""}>
+        {value}
+      </strong>
+      <small>{label}</small>
+    </span>
+  );
 }
 
 export default function PrivacyStatsBar() {
@@ -32,24 +53,15 @@ export default function PrivacyStatsBar() {
       <div className="stats-bar-grid">
         <div className="stat-cell">
           <Lock size={14} />
-          <span>
-            <strong>{fmt(stats.identifiersMasked)}</strong>
-            <small>{t("masked")}</small>
-          </span>
+          <AnimatedNum value={fmt(stats.identifiersMasked)} label={t("masked")} />
         </div>
         <div className="stat-cell">
           <Shield size={14} />
-          <span>
-            <strong>{fmtBytes(stats.bytesSaved)}</strong>
-            <small>{t("protected")}</small>
-          </span>
+          <AnimatedNum value={fmtBytes(stats.bytesSaved)} label={t("protected")} />
         </div>
         <div className="stat-cell">
           <FileText size={14} />
-          <span>
-            <strong>{stats.checksRun + stats.documentsScanned}</strong>
-            <small>{t("checks")}</small>
-          </span>
+          <AnimatedNum value={String(stats.checksRun + stats.documentsScanned)} label={t("checks")} />
         </div>
       </div>
     </div>

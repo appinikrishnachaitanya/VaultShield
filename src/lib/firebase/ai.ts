@@ -705,6 +705,8 @@ export type DiaryAnalysisResult = {
   summary: string;
   actionItems: string[];
   learnings: string[];
+  memories: string[];
+  personalMessage: string;
   source: "ON_DEVICE" | "IN_CLOUD";
 };
 
@@ -734,7 +736,9 @@ Analyze the diary entry and return ONLY valid JSON (no markdown):
   "moodScore": 1-5,
   "summary": "2-3 warm, supportive sentences summarizing the day",
   "actionItems": ["concrete action for tomorrow 1", "action 2", "action 3"],
-  "learnings": ["key insight 1", "key insight 2"]
+  "learnings": ["key insight 1", "key insight 2"],
+  "memories": ["one specific moment from the day (10-15 words)", "another specific moment", "a third moment"],
+  "personalMessage": "1-2 sentences — if moodScore<=2: compassionate motivation referencing something specific from the day; if moodScore>=4: genuine celebration of what they did; if moodScore 3: warm acknowledgement. Speak directly to the person."
 }
 
 Diary entry:
@@ -771,6 +775,10 @@ ${tokenizedText}`;
     learnings: Array.isArray(parsed.learnings)
       ? parsed.learnings.filter((s): s is string => typeof s === "string").slice(0, 3)
       : [],
+    memories: Array.isArray(parsed.memories)
+      ? parsed.memories.filter((s): s is string => typeof s === "string").slice(0, 3)
+      : [],
+    personalMessage: typeof parsed.personalMessage === "string" ? parsed.personalMessage : "",
     source: diarySource,
   };
 }

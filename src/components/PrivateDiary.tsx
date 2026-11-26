@@ -14,7 +14,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { analyzeDiaryEntry } from "../lib/firebase/ai";
+import { analyzeDiaryEntry, type DiaryAnalysisResult } from "../lib/firebase/ai";
+import DayMemoryCard from "./DayMemoryCard";
 import {
   deleteEntry,
   getAllEntries,
@@ -317,6 +318,7 @@ function NewEntry({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [steps, setSteps] = useState<AnalysisStep[]>([]);
+  const [memoryResult, setMemoryResult] = useState<{ result: DiaryAnalysisResult; entry: DiaryEntry } | null>(null);
   const recogRef = useRef<{ stop(): void } | null>(null);
   const vault = useRef(new TokenVaultSession());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -426,13 +428,34 @@ function NewEntry({
       // mark last step done
       setSteps((prev) => prev.map((s) => (s.status === "running" ? { ...s, status: "done" } : s)));
       await new Promise((r) => setTimeout(r, 500));
-      onSaved(entry);
+      // show Day Memory Card if AI returned memories/personalMessage
+      if (result.memories?.length > 0 || result.personalMessage) {
+        setMemoryResult({ result, entry });
+      } else {
+        onSaved(entry);
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Analysis failed. Try again.");
+      const msg = e instanceof Error ? e.message : "Analysis failed.";
+      const isAppCheckErr = msg.includes("App Check") || msg.includes("fetch-error") || msg.includes("401");
+      setError(
+        isAppCheckErr
+          ? "Firebase AI not reachable. Register the App Check debug token in Firebase Console and try again."
+          : msg,
+      );
       setSteps([]);
     } finally {
       setBusy(false);
     }
+  }
+
+  if (memoryResult) {
+    return (
+      <DayMemoryCard
+        date={date}
+        result={memoryResult.result}
+        onContinue={() => onSaved(memoryResult.entry)}
+      />
+    );
   }
 
   return (
