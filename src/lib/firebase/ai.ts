@@ -699,6 +699,73 @@ export async function analyzeDocumentText(
 
 export type { DocumentAnalysisResult, DocumentCategory };
 
+export type DiaryAnalysisResult = {
+  mood: "joyful" | "calm" | "neutral" | "anxious" | "sad";
+  moodScore: number;
+  summary: string;
+  actionItems: string[];
+  learnings: string[];
+};
+
+/** Analyze a diary entry with cloud AI. Text must be tokenized — no raw PII. */
+export async function analyzeDiaryEntry(
+  tokenizedText: string,
+): Promise<DiaryAnalysisResult> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: {
+      model: modelName,
+      generationConfig: { responseMimeType: "application/json" },
+    },
+  });
+  const prompt = `You are a thoughtful personal AI reflecting on a private diary entry.
+Privacy tokens like [PERSON_1], [PHONE_1] replace real values — treat them as placeholders.
+
+Analyze the diary entry and return ONLY valid JSON (no markdown):
+{
+  "mood": "joyful" | "calm" | "neutral" | "anxious" | "sad",
+  "moodScore": 1-5,
+  "summary": "2-3 warm, supportive sentences summarizing the day",
+  "actionItems": ["concrete action for tomorrow 1", "action 2", "action 3"],
+  "learnings": ["key insight 1", "key insight 2"]
+}
+
+Diary entry:
+${tokenizedText}`;
+  const result = await boundedWait(
+    model.generateContent(prompt),
+    30_000,
+    "Diary analysis timed out.",
+  );
+  recordAIResult(result.response.text(), "IN_CLOUD");
+  let parsed: Partial<DiaryAnalysisResult>;
+  try {
+    parsed = JSON.parse(
+      result.response.text().replace(/^```(?:json)?\s*|\s*```$/g, "").trim(),
+    ) as Partial<DiaryAnalysisResult>;
+  } catch {
+    throw new Error("Could not read diary analysis. Please try again.");
+  }
+  const moods = ["joyful", "calm", "neutral", "anxious", "sad"] as const;
+  return {
+    mood: moods.includes(parsed.mood as typeof moods[number])
+      ? (parsed.mood as typeof moods[number])
+      : "neutral",
+    moodScore: typeof parsed.moodScore === "number"
+      ? Math.min(5, Math.max(1, Math.round(parsed.moodScore)))
+      : 3,
+    summary: typeof parsed.summary === "string" ? parsed.summary : "",
+    actionItems: Array.isArray(parsed.actionItems)
+      ? parsed.actionItems.filter((s): s is string => typeof s === "string").slice(0, 5)
+      : [],
+    learnings: Array.isArray(parsed.learnings)
+      ? parsed.learnings.filter((s): s is string => typeof s === "string").slice(0, 3)
+      : [],
+  };
+}
+
 /**
  * Generate a plain-language explanation of scam findings for a family member.
  * Uses PREFER_ON_DEVICE so it works on-device when available, falls back to cloud
