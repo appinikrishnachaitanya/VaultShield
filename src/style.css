@@ -455,6 +455,15 @@ textarea::placeholder {
   position: relative;
   font-size: 0.94rem;
   padding: 12px;
+  transition: box-shadow 0.3s ease, transform 0.15s ease;
+}
+.check-button.has-pii {
+  box-shadow: 0 0 0 3px #0f766e30, 0 2px 8px #0f766e25;
+  animation: buttonGlow 2s ease-in-out infinite;
+}
+@keyframes buttonGlow {
+  0%, 100% { box-shadow: 0 0 0 3px #0f766e30, 0 2px 8px #0f766e25; }
+  50% { box-shadow: 0 0 0 5px #0f766e45, 0 4px 16px #0f766e35; }
 }
 .button-key {
   position: absolute;

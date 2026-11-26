@@ -81,9 +81,9 @@ function buildCategoryCounts(entries: { category: string }[]): CategoryCount[] {
   return Array.from(map.entries()).map(([category, count]) => ({ category, count }));
 }
 
-type Props = { input: string };
+type Props = { input: string; onCountChange?: (count: number) => void };
 
-export default function TokenVaultPreview({ input }: Props) {
+export default function TokenVaultPreview({ input, onCountChange }: Props) {
   const vaultRef = useRef(new TokenVaultSession());
   const [segments, setSegments] = useState<Segment[]>([]);
   const [catCounts, setCatCounts] = useState<CategoryCount[]>([]);
@@ -100,6 +100,7 @@ export default function TokenVaultPreview({ input }: Props) {
       setCatCounts([]);
       setTokenCount(0);
       setScanning(false);
+      onCountChange?.(0);
       return;
     }
     setScanning(true);
@@ -114,7 +115,9 @@ export default function TokenVaultPreview({ input }: Props) {
       }));
       setSegments(buildSegments(result.text, entries));
       setCatCounts(buildCategoryCounts(entries));
-      setTokenCount(entries.length);
+      const count = entries.length;
+      setTokenCount(count);
+      onCountChange?.(count);
       setScanning(false);
     }, 400);
     return () => {

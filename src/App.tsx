@@ -171,6 +171,7 @@ export default function App() {
     useState<Awaited<ReturnType<typeof localAIDiagnostics>>>();
   const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
   const messageEditor = useRef<HTMLTextAreaElement>(null);
+  const [piiCount, setPiiCount] = useState(0);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting securely…");
   const [online, setOnline] = useState(navigator.onLine);
@@ -860,7 +861,7 @@ export default function App() {
                       <span>{t("English, हिंदी & Hinglish welcome")}</span>
                       <span>{input.length.toLocaleString()}/16,000</span>
                     </div>
-                    <TokenVaultPreview input={input} />
+                    <TokenVaultPreview input={input} onCountChange={setPiiCount} />
                     <div className="divider">
                       <span>{t("or add a screenshot")}</span>
                     </div>
@@ -908,14 +909,16 @@ export default function App() {
                       </button>
                     )}
                     <button
-                      className="primary check-button"
+                      className={`primary check-button${piiCount > 0 && !busy ? " has-pii" : ""}`}
                       disabled={!!busy || (!input.trim() && !image)}
                       onClick={() => void analyze()}
                     >
                       <ShieldCheck size={21} />
                       {busy === "Checking on your device"
                         ? t("Checking on your device…")
-                        : t("Check privately")}
+                        : piiCount > 0
+                          ? t(`Check privately — ${piiCount} identifier${piiCount !== 1 ? "s" : ""} masked`)
+                          : t("Check privately")}
                       {!busy && <span className="button-key">↵</span>}
                     </button>
                     {busy === "Checking on your device" && (
