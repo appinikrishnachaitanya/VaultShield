@@ -4990,7 +4990,7 @@ html[lang="hi"] h3 {
 }
 .doc-chat-bubble.user {
   align-self: flex-end;
-  background: var(--accent, #0f4c75);
+  background: #0f766e;
   color: #fff;
   border-bottom-right-radius: 4px;
 }
