@@ -668,7 +668,7 @@ export async function analyzeDocumentText(
       const model = getGenerativeModel(ai, {
         mode: InferenceMode.PREFER_ON_DEVICE,
         onDeviceParams: { createOptions: textOnlyParams },
-        inCloudParams: { model: modelName, generationConfig: { responseMimeType: "application/json" } },
+        inCloudParams: { model: modelName },
       });
       const result = await boundedWait(
         model.generateContent(prompt),
