@@ -20,6 +20,8 @@ import {
   FileText,
   Menu,
   BookHeart,
+  IndianRupee,
+  ShieldAlert,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
 import {
@@ -48,6 +50,9 @@ import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
 import PrivateDiary from "./components/PrivateDiary";
 import ExplainForFamily from "./components/ExplainForFamily";
+import UPIVerify from "./components/UPIVerify";
+import ScaredPanel from "./components/ScaredPanel";
+import KnowYourRights from "./components/KnowYourRights";
 import TokenVaultPreview from "./components/TokenVaultPreview";
 import PrivacyStatsBar from "./components/PrivacyStatsBar";
 import { recordCheck } from "./lib/privacyStats";
@@ -128,11 +133,12 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary" | "upi">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
   );
+  const [scaredOpen, setScaredOpen] = useState(false);
   const [input, setInput] = useState("");
   const [image, setImage] = useState<{
     data: string;
@@ -577,6 +583,7 @@ export default function App() {
   const navItems = [
     { id: "diary", icon: BookHeart, label: t("Private Diary") },
     { id: "check", icon: ScanLine, label: t("Check something") },
+    { id: "upi", icon: IndianRupee, label: t("UPI Verify") },
     { id: "docs", icon: FileText, label: t("Scan document") },
     { id: "family", icon: Users, label: t("Family circle") },
   ] as const;
@@ -704,6 +711,7 @@ export default function App() {
             <span className="topbar-page-title">
               {tab === "diary" && t("Private Diary")}
               {tab === "check" && t("Safety Check")}
+              {tab === "upi" && t("UPI Verify")}
               {tab === "docs" && t("Document Scanner")}
               {tab === "family" && t("Family Circle")}
               {tab === "privacy" && t("Privacy & Data")}
@@ -803,6 +811,14 @@ export default function App() {
                   {t(" Let’s check it together. ")}
                 </h1>
                 <p>{t("Check it before you pay for it. Privately.")}</p>
+                <button
+                  className="scared-trigger-btn"
+                  onClick={() => setScaredOpen(true)}
+                  aria-label="I’m scared — get immediate guidance"
+                >
+                  <ShieldAlert size={18} />
+                  {t("I’m Scared — help me now")}
+                </button>
               </div>
               <div className="workspace">
                 <section className="check-column">
@@ -912,7 +928,7 @@ export default function App() {
                         <Upload size={22} />
                         <span>
                           <strong>{t("Upload a screenshot")}</strong>
-                          <small>{t("One JPG or PNG · up to 8 MB")}</small>
+                          <small>{t("WhatsApp, SMS, any app · JPG or PNG")}</small>
                         </span>
                         <span className="upload-plus">+</span>
                       </button>
@@ -1358,6 +1374,7 @@ export default function App() {
           )}
           {tab === "docs" && <DocumentScanner />}
           {tab === "diary" && <PrivateDiary />}
+          {tab === "upi" && <UPIVerify />}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">
@@ -1422,6 +1439,7 @@ export default function App() {
                   </div>
                 </section>
               </div>
+              <KnowYourRights />
               <div className="privacy-footer">
                 <button
                   type="button"
@@ -1482,6 +1500,12 @@ export default function App() {
           )}
         </main>
       </div>
+      {scaredOpen && (
+        <ScaredPanel
+          members={members}
+          onClose={() => setScaredOpen(false)}
+        />
+      )}
       {review && result && (
         <ReviewDialog
           dialogRef={dialogRef}
