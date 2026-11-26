@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+﻿import { initializeApp } from "firebase/app";
 import {
   initializeAppCheck,
   CustomProvider,
@@ -64,7 +64,7 @@ export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const ai = app ? getAI(app, { backend: new VertexAIBackend("global") }) : null;
 const defaults = {
-  cloud_model_name: "gemini-3.5-flash-lite",
+  cloud_model_name: "gemini-2.0-flash",
   enable_search_grounding: true,
   strict_privacy_mode: true,
   ai_inference_mode: "prefer_on_device",
@@ -75,11 +75,18 @@ if (remoteConfig) {
   remoteConfig.settings.minimumFetchIntervalMillis = 3600000;
   remoteConfig.settings.fetchTimeoutMillis = 5000;
 }
-export const settings = () => ({
-  model: remoteConfig
-    ? getValue(remoteConfig, "cloud_model_name").asString() ||
-      defaults.cloud_model_name
-    : defaults.cloud_model_name,
+const MODEL_FIX: Record<string, string> = {
+  "gemini-2.0-flash-lite": "gemini-2.0-flash",
+  "gemini-3.5-flash-lite": "gemini-2.0-flash",
+  "gemini-3.5-flash": "gemini-2.0-flash",
+};
+export const settings = () => {
+  const raw = remoteConfig
+    ? getValue(remoteConfig, "cloud_model_name").asString() || defaults.cloud_model_name
+    : defaults.cloud_model_name;
+  const model = MODEL_FIX[raw] ?? (raw || "gemini-2.0-flash");
+  return {
+  model,
   grounding: remoteConfig
     ? getValue(remoteConfig, "enable_search_grounding").asBoolean()
     : true,
@@ -90,7 +97,8 @@ export const settings = () => ({
     ? getValue(remoteConfig, "ai_inference_mode").asString() ||
       defaults.ai_inference_mode
     : defaults.ai_inference_mode,
-});
+  };
+};
 export async function initializeServices() {
   if (!auth)
     throw new Error(
@@ -102,3 +110,4 @@ export async function initializeServices() {
   if (!auth.currentUser) await signInAnonymously(auth);
   if (remoteConfig) void fetchAndActivate(remoteConfig).catch(() => {});
 }
+

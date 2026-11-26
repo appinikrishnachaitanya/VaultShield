@@ -1425,3 +1425,100 @@ export async function startLocalDictation(
     },
   };
 }
+
+/** Chat about a scanned document — question is tokenized before cloud, answer is rehydrated. */
+export async function chatWithDocument(
+  question: string,
+  tokenizedDocText: string,
+  vault: TokenVaultSession,
+): Promise<{ answer: string; masked: number }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const tokenized = vault.tokenize(question);
+  assertNoKnownLeak(tokenized.text, vault);
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName },
+  });
+  const prompt = `You are a document assistant. Personal identifiers have been replaced with privacy tokens ([PERSON_1], [PHONE_1], etc.) to protect identity. Answer based only on the document content below.
+
+Document:
+${tokenizedDocText}
+
+Question: ${tokenized.text}
+
+Answer concisely and helpfully. If the document does not contain enough information to answer the question, say so clearly.`;
+  const raw = await boundedWait(
+    model.generateContent(prompt),
+    30_000,
+    "Chat timed out.",
+  );
+  recordAIResult(raw.response.text(), "IN_CLOUD");
+  const answer = raw.response.text().replace(
+    /\[\s*[a-z_]+\s*_\s*\d+\s*(?::\s*[a-z0-9 -]+\s*)?\]/gi,
+    (token) => vault.resolve(token) ?? token,
+  );
+  return { answer, masked: vault.entries().length };
+}
+
+/** Transcribe a call recording — audio sent to cloud Gemini once, transcript stored locally. */
+export async function transcribeCallRecording(
+  audioBase64: string,
+  mimeType: string,
+): Promise<{ transcript: string; source: "ON_DEVICE" | "IN_CLOUD"; durationMs: number }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName },
+  });
+  const start = performance.now();
+  const result = await boundedWait(
+    model.generateContent([
+      { inlineData: { data: audioBase64, mimeType } },
+      `Transcribe this call recording verbatim and completely.
+If multiple speakers are audible, label them Speaker 1:, Speaker 2:, etc.
+If the language is not English, also provide an English translation after the original transcript, labelled "English translation:".
+Output only the transcript (and translation if needed). No commentary.`,
+    ]),
+    90_000,
+    "Transcription timed out.",
+  );
+  if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) {
+    markUnconfirmedAI();
+  }
+  recordAIResult(result.response.text(), "IN_CLOUD");
+  return {
+    transcript: result.response.text().trim(),
+    source: "IN_CLOUD",
+    durationMs: performance.now() - start,
+  };
+}
+
+export async function analyzeMediaFile(
+  base64: string,
+  mimeType: string,
+  instruction: string,
+): Promise<{ text: string }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName },
+  });
+  const mediaType = mimeType.split("/")[0];
+  const prompt = `${instruction}
+
+Provide a thorough plain-text description of all content in this ${mediaType} file.
+If it contains speech or dialogue, transcribe verbatim.
+If you detect non-English language, also include an "English translation:" section.
+Do not add commentary — output the content directly.`;
+
+  const result = await boundedWait(
+    model.generateContent([{ inlineData: { data: base64, mimeType } }, prompt]),
+    90_000,
+    "Media analysis timed out.",
+  );
+  recordAIResult(result.response.text(), "IN_CLOUD");
+  return { text: result.response.text().trim() };
+}

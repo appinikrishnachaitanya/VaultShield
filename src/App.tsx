@@ -22,6 +22,7 @@ import {
   BookHeart,
   IndianRupee,
   ShieldAlert,
+  Film,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
 import {
@@ -51,6 +52,7 @@ import DocumentScanner from "./components/DocumentScanner";
 import PrivateDiary from "./components/PrivateDiary";
 import ExplainForFamily from "./components/ExplainForFamily";
 import UPIVerify from "./components/UPIVerify";
+import MediaVault from "./components/MediaVault";
 import ScaredPanel from "./components/ScaredPanel";
 import KnowYourRights from "./components/KnowYourRights";
 import TokenVaultPreview from "./components/TokenVaultPreview";
@@ -133,7 +135,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary" | "upi">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary" | "upi" | "media">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -581,10 +583,9 @@ export default function App() {
   const awaitingAndroidHybrid =
     usesAndroidModel && result?.source === "LOCAL_RULES" && !localOnly;
   const navItems = [
-    { id: "diary", icon: BookHeart, label: t("Private Diary") },
     { id: "check", icon: ScanLine, label: t("Check something") },
-    { id: "upi", icon: IndianRupee, label: t("UPI Verify") },
-    { id: "docs", icon: FileText, label: t("Scan document") },
+    { id: "docs", icon: FileText, label: t("Document Vault") },
+    { id: "media", icon: Film, label: t("Media Vault") },
     { id: "family", icon: Users, label: t("Family circle") },
   ] as const;
   return (
@@ -709,10 +710,9 @@ export default function App() {
               <Menu size={20} />
             </button>
             <span className="topbar-page-title">
-              {tab === "diary" && t("Private Diary")}
               {tab === "check" && t("Safety Check")}
-              {tab === "upi" && t("UPI Verify")}
-              {tab === "docs" && t("Document Scanner")}
+              {tab === "docs" && t("Document Vault")}
+              {tab === "media" && t("Media Vault")}
               {tab === "family" && t("Family Circle")}
               {tab === "privacy" && t("Privacy & Data")}
             </span>
@@ -1373,8 +1373,7 @@ export default function App() {
             />
           )}
           {tab === "docs" && <DocumentScanner />}
-          {tab === "diary" && <PrivateDiary />}
-          {tab === "upi" && <UPIVerify />}
+          {tab === "media" && <MediaVault />}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">

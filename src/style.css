@@ -3912,6 +3912,25 @@ html[lang="hi"] h3 {
 /* ── Document Scanner ───────────────────────────────────── */
 .doc-scanner .page-heading { margin-bottom: 32px; }
 
+.doc-scanner .workspace {
+  grid-template-columns: 1fr;
+  max-width: 760px;
+}
+.doc-scanner .check-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.doc-scanner .input-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+.doc-scanner .input-card .primary {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .doc-categories { margin: 20px 0 0; }
 .doc-categories > .input-label { display: block; margin-bottom: 10px; }
 .doc-cat-pills {
@@ -4941,3 +4960,256 @@ html[lang="hi"] h3 {
   transition: opacity 0.15s;
 }
 .day-memory-continue:hover { opacity: 0.9; }
+
+/* -- Document Chat -------------------------------------------------------- */
+.doc-chat { margin-top: 0; }
+.doc-chat-messages {
+  min-height: 60px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 4px 0;
+}
+.doc-chat-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  padding: 8px 0;
+}
+.doc-chat-bubble {
+  max-width: 85%;
+  padding: 10px 13px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+.doc-chat-bubble.user {
+  align-self: flex-end;
+  background: var(--accent, #0f4c75);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.doc-chat-bubble.ai {
+  align-self: flex-start;
+  background: #f1f5f9;
+  color: #1e293b;
+  border-bottom-left-radius: 4px;
+}
+.doc-chat-bubble.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+.doc-chat-ai-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.doc-chat-bubble p { margin: 0; }
+.doc-chat-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.doc-chat-textarea {
+  flex: 1;
+  resize: none;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.4;
+  transition: border-color 0.15s;
+  background: #fff;
+  color: #1e293b;
+}
+.doc-chat-textarea:focus { outline: none; border-color: var(--accent, #0f4c75); }
+.doc-chat-send {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+/* -- Media Vault ---------------------------------------------------------- */
+.call-vault-flow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 0 auto 24px;
+}
+.call-vault-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 10px;
+  background: var(--surface, #f8fafc);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.call-vault-step svg { color: var(--accent, #0f4c75); margin-bottom: 2px; }
+.call-vault-step strong { font-size: 0.8rem; color: #1e293b; }
+@media (max-width: 540px) {
+  .call-vault-flow { grid-template-columns: repeat(2, 1fr); }
+}
+
+.call-vault-file-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+.call-vault-file-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.call-vault-fname { font-weight: 600; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.call-vault-fsize { font-size: 0.75rem; color: #64748b; }
+.call-vault-audio { width: 100%; margin-top: 6px; height: 32px; }
+
+.call-vault-cloud-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: #854d0e;
+  margin: 8px 0;
+}
+.call-vault-cloud-note svg { flex-shrink: 0; margin-top: 1px; }
+
+.call-vault-done-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #15803d;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.call-vault-src-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 700;
+}
+.call-vault-src-badge.cloud { background: #dbeafe; color: #1e40af; }
+.call-vault-src-badge.ondevice { background: #dcfce7; color: #166534; }
+
+.call-vault-transcript-card pre.call-vault-transcript {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  font-family: inherit;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 8px 0;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+}
+
+.call-vault-xray {
+  margin-top: 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.call-vault-xray summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.call-vault-xray-body { padding: 10px 12px; }
+.call-vault-xray-note { font-size: 0.78rem; color: #64748b; margin-top: 6px; }
+
+.call-vault-translate-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #fdf4ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #7e22ce;
+  font-weight: 500;
+}
+
+.call-vault-quick-qs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+.call-vault-q-chip {
+  font-size: 0.78rem;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.call-vault-q-chip:hover {
+  border-color: var(--accent, #0f4c75);
+  background: #eff6ff;
+  color: var(--accent, #0f4c75);
+}
+
+.call-vault-local-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #15803d;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.call-vault-local-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
