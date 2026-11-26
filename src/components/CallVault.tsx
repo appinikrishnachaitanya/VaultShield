@@ -151,7 +151,7 @@ export default function CallVault() {
               <div className="icon-tile"><PhoneIncoming size={23} /></div>
               <div>
                 <h2>Upload call recording</h2>
-                <p>MP3 · WAV · M4A · OGG · MP4 · AAC · FLAC — up to {MAX_MB} MB</p>
+                <p>MP3 · WAV · M4A · OGG · AAC · max {MAX_MB} MB</p>
               </div>
             </div>
 
@@ -365,3 +365,4 @@ export default function CallVault() {
     </div>
   );
 }
+
