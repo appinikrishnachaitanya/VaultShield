@@ -172,6 +172,23 @@ nav {
   align-items: center;
   gap: 8px;
 }
+.nav-privacy-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px 0;
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  cursor: pointer;
+  letter-spacing: .01em;
+  text-align: left;
+  width: 100%;
+}
+.nav-privacy-link:hover { color: #64748b; }
+.nav-privacy-link.active { color: #6366f1; font-weight: 600; }
 .dot {
   display: inline-block;
   width: 6px;
