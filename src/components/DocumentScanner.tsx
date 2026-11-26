@@ -354,16 +354,6 @@ export default function DocumentScanner() {
         </p>
       </div>
 
-
-      {/* Re-analyze in Hindi when language switched */}
-      {language === "hi" && result && !/[\u0900-\u097f]/.test(result.summary) && (
-        <div className="banner info" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <span style={{ flex: 1 }}>भाषा हिंदी में बदली - हिंदी में परिणाम पाने के लिए फिर से Analyze करें।</span>
-          <button type="button" className="primary" style={{ whiteSpace: "nowrap" }} onClick={() => void analyze()} disabled={busy}>
-            हिंदी में विश्लेषण करें
-          </button>
-        </div>
-      )}
       <div className={result ? "workspace has-result" : "workspace"}>
         <section className="check-column">
           {/* Input card */}
@@ -561,6 +551,15 @@ export default function DocumentScanner() {
                 }
               </span>
             </div>
+
+            {language === "hi" && !/[ऀ-ॿ]/.test(result.summary) && (
+              <div className="banner info doc-translate-banner">
+                <span>भाषा हिंदी में बदली - हिंदी में परिणाम पाने के लिए फिर से Analyze करें।</span>
+                <button type="button" className="primary" onClick={() => void analyze()} disabled={busy}>
+                  हिंदी में विश्लेषण करें
+                </button>
+              </div>
+            )}
 
             {/* Summary */}
             <div className="card doc-result-card">

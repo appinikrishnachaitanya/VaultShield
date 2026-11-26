@@ -763,6 +763,12 @@ textarea::placeholder {
   background: #ecfdf5;
   color: #047857;
 }
+.doc-translate-banner span {
+  flex: 1;
+}
+.doc-translate-banner button {
+  white-space: nowrap;
+}
 .banner button {
   margin-left: auto;
   background: none;
