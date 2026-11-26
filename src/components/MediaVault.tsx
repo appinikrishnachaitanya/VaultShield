@@ -109,19 +109,22 @@ export default function MediaVault() {
     try {
       let raw = "";
       if (mediaFile.kind === "image") {
-        // Images always go to cloud (no local vision model)
         setProcessStatus("Sending image to cloud Gemini for analysis…");
         const b64 = await fileToBase64(mediaFile.file);
         const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, "Describe and extract all text from this image.");
         raw = text;
         setSource("IN_CLOUD");
       } else {
-        // Audio and video: try local Whisper first, fall back to cloud
+        // Try local Whisper first
+        let whisperErr: unknown = null;
         try {
           raw = await transcribeAudio(mediaFile.file, setProcessStatus);
           setSource("ON_DEVICE");
-        } catch (localErr) {
-          setProcessStatus("Local model unavailable — sending to cloud Gemini (audio once)…");
+        } catch (err) {
+          whisperErr = err;
+          setProcessStatus("Local transcription unavailable — trying cloud Gemini (file sent once)…");
+        }
+        if (whisperErr !== null) {
           const b64 = await fileToBase64(mediaFile.file);
           const instruction = mediaFile.kind === "video"
             ? "Transcribe all speech from this video verbatim."
@@ -136,7 +139,12 @@ export default function MediaVault() {
       setTokenizedAnalysis(tokenized.text);
       setProcessed(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Analysis failed. Try again.");
+      const msg = e instanceof Error ? e.message : "Analysis failed.";
+      const isBilling = msg.includes("429") || msg.toLowerCase().includes("credit") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("billing");
+      setError(isBilling
+        ? "AI quota exhausted. Enable billing at aistudio.google.com then retry."
+        : msg,
+      );
     } finally {
       setProcessing(false);
       setProcessStatus("");
@@ -152,8 +160,15 @@ export default function MediaVault() {
     try {
       const { answer } = await chatWithDocument(q, tokenizedAnalysis, vault.current);
       setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
-    } catch {
-      setChatMessages((prev) => [...prev, { role: "ai", text: "Sorry, couldn't get a response. Please try again." }]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      const isBilling = msg.includes("429") || msg.toLowerCase().includes("credit") || msg.toLowerCase().includes("quota");
+      setChatMessages((prev) => [...prev, {
+        role: "ai",
+        text: isBilling
+          ? "AI quota exhausted. Enable billing at aistudio.google.com to continue."
+          : "Sorry, couldn't get a response. Please try again.",
+      }]);
     } finally {
       setChatBusy(false);
     }
