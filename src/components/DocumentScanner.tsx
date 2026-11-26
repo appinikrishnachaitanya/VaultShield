@@ -560,6 +560,14 @@ export default function DocumentScanner() {
                 </button>
               </div>
             )}
+            {language === "en" && /[ऀ-ॿ]/.test(result.summary) && (
+              <div className="banner info doc-translate-banner">
+                <span>Language switched to English - re-analyze to get results in English.</span>
+                <button type="button" className="primary" onClick={() => void analyze()} disabled={busy}>
+                  Analyze in English
+                </button>
+              </div>
+            )}
 
             {/* Summary */}
             <div className="card doc-result-card">
@@ -693,9 +701,9 @@ export default function DocumentScanner() {
                 </div>
               </div>
               {language === "hi" && chatMessages.length > 0 && chatMessages.some(m => m.role === "ai" && !/[ऀ-ॿ]/.test(m.text)) && (
-                <div className="banner info" style={{ marginBottom: 8, fontSize: "0.82rem" }}>
-                  <span style={{ flex: 1 }}>भाषा हिंदी में बदली — अगले सवाल का जवाब हिंदी में होगा।</span>
-                  <button type="button" className="primary" style={{ whiteSpace: "nowrap", fontSize: "0.78rem", padding: "5px 10px" }}
+                <div className="banner info doc-translate-banner" style={{ marginBottom: 8, fontSize: "0.82rem" }}>
+                  <span>भाषा हिंदी में बदली — अगले सवाल का जवाब हिंदी में होगा।</span>
+                  <button type="button" className="primary" style={{ fontSize: "0.78rem", padding: "5px 10px" }}
                     onClick={() => setChatMessages([])}>
                     हिंदी में शुरू करें
                   </button>
