@@ -140,7 +140,7 @@ export default function MediaVault() {
     setChatMessages((prev) => [...prev, { role: "user", text: q }]);
     setChatBusy(true);
     try {
-      const { answer } = await chatWithDocument(q, tokenizedAnalysis, vault.current);
+      const { answer } = await chatWithDocument(q, tokenizedAnalysis, vault.current, language);
       setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
@@ -333,6 +333,15 @@ export default function MediaVault() {
                   <p>{t("Questions PII-masked - Cloud sees tokens only")}</p>
                 </div>
               </div>
+              {language === "hi" && chatMessages.length > 0 && chatMessages.some(m => m.role === "ai" && !/[ऀ-ॿ]/.test(m.text)) && (
+                <div className="banner info" style={{ marginBottom: 8, fontSize: "0.82rem" }}>
+                  <span style={{ flex: 1 }}>भाषा हिंदी में बदली — अगले सवाल का जवाब हिंदी में होगा।</span>
+                  <button type="button" className="primary" style={{ whiteSpace: "nowrap", fontSize: "0.78rem", padding: "5px 10px" }}
+                    onClick={() => setChatMessages([])}>
+                    हिंदी में शुरू करें
+                  </button>
+                </div>
+              )}
               <div className="doc-chat-messages" aria-live="polite">
                 {chatMessages.length === 0 && (
                   <div className="doc-chat-empty">
