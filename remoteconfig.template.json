@@ -2,19 +2,24 @@
   "conditions": [],
   "parameters": {
     "cloud_model_name": {
-      "defaultValue": { "value": "gemini-3.5-flash-lite" },
+      "defaultValue": { "value": "gemini-2.0-flash-lite" },
       "valueType": "STRING",
-      "description": "Cloud-only verification model. Local checks always use ONLY_ON_DEVICE."
+      "description": "Gemini model used for cloud verification. Switch without a redeploy."
     },
     "enable_search_grounding": {
       "defaultValue": { "value": "true" },
       "valueType": "BOOLEAN",
-      "description": "Offer public Search grounding during explicitly consented cloud verification."
+      "description": "Offer Google Search grounding during explicitly consented cloud verification."
     },
     "strict_privacy_mode": {
       "defaultValue": { "value": "true" },
       "valueType": "BOOLEAN",
-      "description": "Privacy policy indicator. Local redaction and explicit consent remain mandatory in code."
+      "description": "Enforces local redaction and explicit consent before any cloud call."
+    },
+    "ai_inference_mode": {
+      "defaultValue": { "value": "prefer_on_device" },
+      "valueType": "STRING",
+      "description": "Inference mode: prefer_on_device | only_in_cloud. Controls Firebase AI Logic routing."
     }
   },
   "parameterGroups": {}

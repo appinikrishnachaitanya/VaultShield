@@ -1,6 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
+
+  // User profile
   match /users/{uid}/settings/profile {
    allow read: if request.auth != null && request.auth.uid == uid;
    allow create, update: if request.auth != null && request.auth.uid == uid
@@ -10,10 +12,25 @@ service cloud.firestore {
     && request.resource.data.displayName.size() <= 40
     && request.resource.data.language in ['en', 'hi'];
   }
+
+  // Family circle & alerts (read-only from client)
   match /users/{uid}/{collection}/{doc} {
    allow read: if request.auth != null && request.auth.uid == uid && collection in ['family', 'alerts'];
    allow write: if false;
   }
+
+  // Private diary — encrypted entries, owner only
+  match /diary/{uid}/entries/{entryId} {
+   allow read, delete: if request.auth != null && request.auth.uid == uid;
+   allow create, update: if request.auth != null && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(['id', 'date', 'iv', 'ciphertext', 'mood', 'moodScore', 'summary', 'createdAt', 'aiSource'])
+    && request.resource.data.id is string
+    && request.resource.data.date is string
+    && request.resource.data.ciphertext is string
+    && request.resource.data.mood in ['joyful', 'calm', 'neutral', 'anxious', 'sad'];
+  }
+
+  // Deny everything else
   match /{document=**} { allow read, write: if false; }
  }
 }
