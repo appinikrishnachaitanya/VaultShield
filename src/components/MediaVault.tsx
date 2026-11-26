@@ -179,7 +179,7 @@ export default function MediaVault() {
           Your file. <span>Your analysis.</span>
         </h1>
         <p>
-          Audio &amp; video transcribed locally. Images analyzed by cloud AI.
+          All media analyzed by cloud Gemini — file sent once, not stored.
           Follow-up chat always masks PII before any cloud request.
         </p>
       </div>
