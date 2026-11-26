@@ -58,7 +58,6 @@ import FamilyCircle from "./components/FamilyCircle";
 import Welcome from "./components/Welcome";
 import { TokenVaultSession, rehydrate, countTokens } from "./lib/tokenVault";
 import { routeInput, assertCloudRoute } from "./lib/router";
-import RoutingBanner from "./components/RoutingBanner";
 import { buildReceipt, type PrivacyReceiptData } from "./lib/receipt";
 import PrivacyReceipt from "./components/PrivacyReceipt";
 import LocalCheckNotice from "./components/LocalCheckNotice";
@@ -756,18 +755,7 @@ export default function App() {
               </div>
             </div>
           )}
-          <section
-            className="privacy-router-intro"
-            aria-label={t("Privacy Router for AI")}
-          >
-            <strong>{t("Privacy Router for AI")}</strong>
-            <p>
-              {t(
-                "Cloud reasons over placeholders. This device holds the values. A receipt shows what the app submitted.",
-              )}
-            </p>
-          </section>
-          {(input.trim() || image) && <RoutingBanner route={privacyRoute} />}
+
           <p className="language-note">
             {t(
               "Source messages and quoted evidence stay in their original language. New AI explanations use your selected language.",
