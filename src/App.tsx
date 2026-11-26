@@ -690,37 +690,44 @@ export default function App() {
       </aside>
       <div className="main-shell" inert={review}>
         <header className="topbar">
-          <div className="topbar-primary">
-            <span className="breadcrumb">{t("Your safety workspace")}</span>
-            <label className="app-language">
-              <span>{t("Language")}</span>
-              <select
-                aria-label="English / हिन्दी"
-                value={appLanguage}
-                onChange={(event) => {
-                  setLanguage(event.target.value as "en" | "hi");
-                  stopLocalReading();
-                }}
-              >
-                <option value="en" lang="en">
-                  English
-                </option>
-                <option value="hi" lang="hi">
-                  हिन्दी
-                </option>
-              </select>
-            </label>
-            <Account />
+          <div className="topbar-left">
+            <button
+              className="topbar-hamburger"
+              onClick={() => setDrawerOpen(true)}
+              aria-label={t("Open menu")}
+            >
+              <Menu size={20} />
+            </button>
+            <span className="topbar-page-title">
+              {tab === "diary" && t("Private Diary")}
+              {tab === "check" && t("Safety Check")}
+              {tab === "docs" && t("Document Scanner")}
+              {tab === "family" && t("Family Circle")}
+              {tab === "privacy" && t("Privacy & Data")}
+            </span>
           </div>
-          <div className="topbar-secondary">
-            <NetworkProof />
-            <span className="top-status ai-capability" role="status">
-              {t(capabilityLabel(capability))}
+          <div className="topbar-right">
+            <span className={`topbar-ai-pill${!online ? " offline" : ""}`} role="status">
+              <span className="topbar-ai-dot" />
+              {!online
+                ? t("Offline")
+                : t(capabilityLabel(capability)).includes("on-device") || t(capabilityLabel(capability)).includes("On-device")
+                  ? t("On-device AI")
+                  : t("AI Ready")}
             </span>
-            <span className="top-status">
-              {online ? <LockKeyhole size={14} /> : <WifiOff size={14} />}{" "}
-              {online ? t("Private session ready") : t("Offline mode")}
-            </span>
+            <select
+              className="topbar-lang"
+              aria-label="English / हिन्दी"
+              value={appLanguage}
+              onChange={(event) => {
+                setLanguage(event.target.value as "en" | "hi");
+                stopLocalReading();
+              }}
+            >
+              <option value="en" lang="en">EN</option>
+              <option value="hi" lang="hi">हि</option>
+            </select>
+            <Account />
           </div>
         </header>
         <main>
