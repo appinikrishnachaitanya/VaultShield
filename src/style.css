@@ -431,6 +431,8 @@ textarea::placeholder {
   background: #f8fafc;
 }
 .check-button {
+  display: flex;
+  justify-content: center;
   width: 100%;
   margin-top: 24px;
   position: relative;
@@ -1078,6 +1080,26 @@ blockquote {
   margin-left: auto;
   background: none;
   border: 0;
+  color: #64748b;
+}
+.pdf-preview {
+  flex-shrink: 0;
+  color: #6366f1;
+}
+.pdf-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.pdf-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.pdf-pages {
+  font-size: 0.72rem;
   color: #64748b;
 }
 .sr-only {
