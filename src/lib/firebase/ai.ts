@@ -1425,3 +1425,38 @@ export async function startLocalDictation(
     },
   };
 }
+
+/** Chat about a scanned document — question is tokenized before cloud, answer is rehydrated. */
+export async function chatWithDocument(
+  question: string,
+  tokenizedDocText: string,
+  vault: TokenVaultSession,
+): Promise<{ answer: string; masked: number }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const tokenized = vault.tokenize(question);
+  assertNoKnownLeak(tokenized.text, vault);
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName },
+  });
+  const prompt = `You are a document assistant. Personal identifiers have been replaced with privacy tokens ([PERSON_1], [PHONE_1], etc.) to protect identity. Answer based only on the document content below.
+
+Document:
+${tokenizedDocText}
+
+Question: ${tokenized.text}
+
+Answer concisely and helpfully. If the document does not contain enough information to answer the question, say so clearly.`;
+  const raw = await boundedWait(
+    model.generateContent(prompt),
+    30_000,
+    "Chat timed out.",
+  );
+  recordAIResult(raw.response.text(), "IN_CLOUD");
+  const answer = raw.response.text().replace(
+    /\[\s*[a-z_]+\s*_\s*\d+\s*(?::\s*[a-z0-9 -]+\s*)?\]/gi,
+    (token) => vault.resolve(token) ?? token,
+  );
+  return { answer, masked: vault.entries().length };
+}

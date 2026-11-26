@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+﻿import { useRef, useState } from "react";
 import {
   ScanLine,
   Upload,
@@ -12,6 +12,9 @@ import {
   Cpu,
   Cloud,
   ShieldCheck,
+  MessageSquare,
+  Send,
+  Bot,
 } from "lucide-react";
 import { TokenVaultSession, countTokens } from "../lib/tokenVault";
 import { routeInput } from "../lib/router";
@@ -20,6 +23,7 @@ import {
   extractTextFromDocument,
   analyzeDocumentText,
   type DocumentAnalysisResult,
+  chatWithDocument,
 } from "../lib/firebase/ai";
 import PrivacyReceipt from "./PrivacyReceipt";
 import {
@@ -74,6 +78,11 @@ export default function DocumentScanner() {
   const [receipt, setReceipt] = useState<PrivacyReceiptData | null>(null);
   const [ocrText, setOcrText] = useState("");
   const [error, setError] = useState("");
+  type ChatMessage = { role: "user" | "ai"; text: string };
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const [tokenizedDocText, setTokenizedDocText] = useState("");
 
   function buildSteps(hasImage: boolean, hasPdfText: boolean): PipelineStep[] {
     return [
@@ -126,6 +135,22 @@ export default function DocumentScanner() {
         ? { ...s, status: s.status === "pending" && s.id !== "cloud" ? "skipped" : "done" }
         : s,
     );
+  }
+
+  async function handleChat() {
+    if (!chatInput.trim() || chatBusy || !result) return;
+    const q = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", text: q }]);
+    setChatBusy(true);
+    try {
+      const { answer } = await chatWithDocument(q, tokenizedDocText || "(no document scanned)", vault.current);
+      setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
+    } catch {
+      setChatMessages((prev) => [...prev, { role: "ai", text: "Sorry, couldn't get an answer. Please try again." }]);
+    } finally {
+      setChatBusy(false);
+    }
   }
 
   function clearFile() {
@@ -230,6 +255,7 @@ export default function DocumentScanner() {
 
       // Step 2: token vault
       const tokenized = vault.current.tokenize(textToAnalyze);
+      setTokenizedDocText(tokenized.text);
       const counts = countTokens(tokenized.text);
       const totalMasked = Object.values(counts).reduce(
         (sum, v) => sum + (v ?? 0),
@@ -606,6 +632,70 @@ export default function DocumentScanner() {
 
             {/* Full privacy receipt */}
             {receipt && <PrivacyReceipt receipt={receipt} original="" entries={[]} />}
+            {/* Doc chat */}
+            {result && (
+              <div className="card doc-chat">
+                <div className="card-title">
+                  <div className="icon-tile">
+                    <MessageSquare size={20} />
+                  </div>
+                  <div>
+                    <h2>Ask about this document</h2>
+                    <p>Questions are tokenized — your PII stays on this device.</p>
+                  </div>
+                </div>
+                <div className="doc-chat-messages" aria-live="polite">
+                  {chatMessages.length === 0 && (
+                    <div className="doc-chat-empty">
+                      <Bot size={20} />
+                      <span>Ask anything about the scanned document.</span>
+                    </div>
+                  )}
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} className={`doc-chat-bubble ${msg.role}`}>
+                      {msg.role === "ai" && (
+                        <span className="doc-chat-ai-label">
+                          <Lock size={10} /> AI · PII masked
+                        </span>
+                      )}
+                      <p>{msg.text}</p>
+                    </div>
+                  ))}
+                  {chatBusy && (
+                    <div className="doc-chat-bubble ai loading">
+                      <span className="step-spinner" aria-hidden="true" />
+                      <span>Thinking…</span>
+                    </div>
+                  )}
+                </div>
+                <div className="doc-chat-input-row">
+                  <textarea
+                    className="doc-chat-textarea"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void handleChat();
+                      }
+                    }}
+                    placeholder="Ask a question about the document…"
+                    rows={2}
+                    disabled={chatBusy}
+                    maxLength={1000}
+                  />
+                  <button
+                    type="button"
+                    className="primary doc-chat-send"
+                    disabled={!chatInput.trim() || chatBusy}
+                    onClick={() => void handleChat()}
+                    aria-label="Send"
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         )}
       </div>
