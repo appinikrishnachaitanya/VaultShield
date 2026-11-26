@@ -449,26 +449,32 @@ export default function DocumentScanner() {
               </button>
             )}
 
-            <div className="divider">
-              <span>{t("or paste document text")}</span>
-            </div>
+            {!pdfMeta && !image && (
+              <div className="divider">
+                <span>{t("or paste document text")}</span>
+              </div>
+            )}
 
-            <label htmlFor="doc-text" className="input-label">
-                {t("Paste extracted text")}
-            </label>
-            <textarea
-              id="doc-text"
-              value={rawText}
-              maxLength={32000}
-              disabled={busy || Boolean(image)}
-              onChange={(e) => {
-                setRawText(e.target.value);
-                setResult(null);
-                setReceipt(null);
-              }}
-              placeholder={t("Paste lab report, deed, notice or any document text here...")}
-              rows={6}
-            />
+            {!image && (
+              <>
+                <label htmlFor="doc-text" className="input-label" style={{ marginTop: pdfMeta ? 14 : 0 }}>
+                  {pdfMeta ? t("Extracted text") : t("Paste extracted text")}
+                </label>
+                <textarea
+                  id="doc-text"
+                  value={rawText}
+                  maxLength={32000}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setRawText(e.target.value);
+                    setResult(null);
+                    setReceipt(null);
+                  }}
+                  placeholder={t("Paste lab report, deed, notice or any document text here...")}
+                  rows={6}
+                />
+              </>
+            )}
             {ocrText && (
               <details className="ocr-preview">
                 <summary><Cpu size={14} /> {t("On-device OCR extracted text")}</summary>

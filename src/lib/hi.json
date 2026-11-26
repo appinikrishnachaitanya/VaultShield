@@ -743,4 +743,6 @@
   "Analyzing privately...": "निजी तौर पर विश्लेषण हो रहा है...",
   "Questions are tokenized - your PII stays on this device.": "प्रश्न टोकन किए जाते हैं - आपकी PII इस डिवाइस पर रहती है।",
   "Ask a question about the document...": "दस्तावेज़ के बारे में प्रश्न पूछें..."
+,
+  "Extracted text": "निकाला गया पाठ"
 }
