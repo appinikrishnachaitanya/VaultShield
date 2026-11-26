@@ -420,7 +420,7 @@ function NewEntry({
         learnings: result.learnings,
         createdAt: existing?.createdAt ?? Date.now(),
       };
-      saveEntry(entry);
+      await saveEntry(entry);
 
       // mark last step done
       setSteps((prev) => prev.map((s) => (s.status === "running" ? { ...s, status: "done" } : s)));
@@ -539,8 +539,7 @@ function EntryDetail({
 
   function handleDelete() {
     if (confirm("Delete this diary entry? This cannot be undone.")) {
-      deleteEntry(entry.id);
-      onDeleted();
+      void deleteEntry(entry.id).then(onDeleted);
     }
   }
 
@@ -645,13 +644,13 @@ export default function PrivateDiary() {
   const [currentEntry, setCurrentEntry] = useState<DiaryEntry | null>(null);
 
   useEffect(() => {
-    setEntries(getAllEntries());
-    void syncFromFirestore().then(() => setEntries(getAllEntries()));
+    void getAllEntries().then(setEntries);
+    void syncFromFirestore().then(() => getAllEntries().then(setEntries));
   }, []);
 
   function openNewEntry(date: string) {
     setSelectedDate(date);
-    setCurrentEntry(getEntryForDate(date) ?? null);
+    void getEntryForDate(date).then((e) => setCurrentEntry(e ?? null));
     setView("new-entry");
   }
 
@@ -661,13 +660,13 @@ export default function PrivateDiary() {
   }
 
   function handleSaved(entry: DiaryEntry) {
-    setEntries(getAllEntries());
+    void getAllEntries().then(setEntries);
     setCurrentEntry(entry);
     setView("detail");
   }
 
   function handleDeleted() {
-    setEntries(getAllEntries());
+    void getAllEntries().then(setEntries);
     setView("calendar");
   }
 
