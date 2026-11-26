@@ -146,7 +146,7 @@ function DiaryCalendar({
         <div className="diary-title-row">
           <BookHeart size={28} className="diary-logo" />
           <div>
-            <h1>Private Diary</h1>
+            <h1>Personal Diary</h1>
             <p>Your thoughts, locked on this device</p>
           </div>
         </div>
