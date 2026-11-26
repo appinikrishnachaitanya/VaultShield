@@ -266,7 +266,7 @@ export default function DocumentScanner() {
       setSteps((s) => advanceStep(s, "route"));
       const route = routeInput(textToAnalyze);
 
-      // Step 4: cloud analysis
+      // Step 4: local or cloud analysis
       setSteps((s) => advanceStep(s, "cloud"));
       const analysisResult = await analyzeDocumentText(
         tokenized.text as SanitizedText,
@@ -277,7 +277,7 @@ export default function DocumentScanner() {
       // Build privacy receipt
       const rcpt = buildReceipt({
         route,
-        source: "IN_CLOUD",
+        source: analysisResult.source ?? "IN_CLOUD",
         elapsedMs: analysisResult.durationMs,
         counts,
         payload: tokenized.text as SanitizedText,
@@ -286,16 +286,29 @@ export default function DocumentScanner() {
         model: analysisResult.model,
       });
 
-      setSteps((s) => completeSteps(s));
+      setSteps((s) => {
+        const done = completeSteps(s);
+        if (analysisResult.source === "ON_DEVICE") {
+          return done.map((step) =>
+            step.id === "cloud"
+              ? { ...step, label: "On-device analysis", detail: "Gemma4 / Nano — your data never left this device", icon: Cpu }
+              : step,
+          );
+        }
+        return done;
+      });
       setResult({ ...analysisResult, masked: totalMasked });
       setReceipt(rcpt);
     } catch (e) {
       setSteps((s) => completeSteps(s));
       const msg = e instanceof Error ? e.message : "Analysis failed. Please try again.";
+      const isBilling = msg.includes("429") || msg.toLowerCase().includes("credit") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("billing");
       setError(
-        msg.includes("private value remains")
-          ? "Some identifiers in the text could not be fully masked (possible tabular/column format). Try pasting just the relevant section without table formatting."
-          : msg,
+        isBilling
+          ? "AI quota exhausted. Enable billing at aistudio.google.com then retry."
+          : msg.includes("private value remains")
+            ? "Some identifiers could not be fully masked (possible table format). Paste just the relevant section without table formatting."
+            : msg,
       );
     } finally {
       setBusy(false);

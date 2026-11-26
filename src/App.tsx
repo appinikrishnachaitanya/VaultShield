@@ -19,7 +19,7 @@ import {
   Shield,
   FileText,
   Menu,
-  PhoneIncoming,
+  PhoneIncoming,`n  BookHeart,`n  IndianRupee,`n  ShieldAlert,`n  Film,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
 import {
@@ -48,6 +48,7 @@ import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
 import CallVault from "./components/CallVault";
 import ExplainForFamily from "./components/ExplainForFamily";
+import UPIVerify from "./components/UPIVerify";`nimport MediaVault from "./components/MediaVault";`nimport ScaredPanel from "./components/ScaredPanel";`nimport KnowYourRights from "./components/KnowYourRights";
 import TokenVaultPreview from "./components/TokenVaultPreview";
 import PrivacyStatsBar from "./components/PrivacyStatsBar";
 import { recordCheck } from "./lib/privacyStats";
@@ -128,7 +129,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "call">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "call" | "diary" | "upi" | "media">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -577,7 +578,7 @@ export default function App() {
   const navItems = [
     { id: "check", icon: ScanLine, label: t("Check something") },
     { id: "docs", icon: FileText, label: t("Document Vault") },
-    { id: "call", icon: PhoneIncoming, label: t("Call Vault") },
+    { id: "call", icon: PhoneIncoming, label: t("Call Vault") },`n    { id: "media", icon: Film, label: t("Media Vault") },
     { id: "family", icon: Users, label: t("Family circle") },
   ] as const;
   return (
@@ -702,9 +703,7 @@ export default function App() {
               <Menu size={20} />
             </button>
             <span className="topbar-page-title">
-              {tab === "call" && t("Call Vault")}
-              {tab === "check" && t("Safety Check")}
-              {tab === "docs" && t("Document Vault")}
+              {tab === "call" && t("Call Vault")}`n              {tab === "check" && t("Safety Check")}`n              {tab === "docs" && t("Document Vault")}`n              {tab === "media" && t("Media Vault")}
               {tab === "family" && t("Family Circle")}
               {tab === "privacy" && t("Privacy & Data")}
             </span>
@@ -1356,8 +1355,7 @@ export default function App() {
               setNotificationsReady={setNotificationsReady}
             />
           )}
-          {tab === "docs" && <DocumentScanner />}
-          {tab === "call" && <CallVault />}
+          <div style={{ display: tab === "docs" ? "block" : "none" }}>`n            <DocumentScanner />`n          </div>`n          <div style={{ display: tab === "call" ? "block" : "none" }}>`n            <CallVault />`n          </div>`n          <div style={{ display: tab === "media" ? "block" : "none" }}>`n            <MediaVault />`n          </div>
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">
@@ -1514,4 +1512,6 @@ export default function App() {
     </div>
   );
 }
+
+
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { ChevronRight, Phone, Shield, ShieldAlert, Users, X } from "lucide-react";
 import { sendAlert } from "../lib/firebase/family";
 
@@ -6,7 +6,7 @@ const SCAM_TYPES = [
   {
     id: "digital_arrest",
     label: "Digital Arrest / CBI Call",
-    icon: "🚨",
+    icon: "ðŸš¨",
     immediate: "End the call right now. You have broken no law.",
     guidance: [
       "The CBI, police, and courts NEVER conduct arrests over video call.",
@@ -18,7 +18,7 @@ const SCAM_TYPES = [
   {
     id: "kyc",
     label: "Fake KYC / Bank Freeze",
-    icon: "🏦",
+    icon: "ðŸ¦",
     immediate: "Hang up. Call your bank on the number printed on your card.",
     guidance: [
       "No bank freezes an account without sending a formal written notice first.",
@@ -30,37 +30,37 @@ const SCAM_TYPES = [
   {
     id: "fedex",
     label: "FedEx / Courier Drug Scam",
-    icon: "📦",
+    icon: "ðŸ“¦",
     immediate: "End the call. No package linked to you exists.",
     guidance: [
       "No courier company calls to report illegal items in your name.",
       "Real police investigations never happen over WhatsApp video calls.",
       "No courier firm asks for a 'security deposit' or 'clearing fee'.",
-      "This exact scam has defrauded thousands of Indians — you are not alone in receiving it.",
+      "This exact scam has defrauded thousands of Indians â€” you are not alone in receiving it.",
     ],
   },
   {
     id: "lottery",
     label: "Lottery / Prize / Reward",
-    icon: "🎰",
+    icon: "ðŸŽ°",
     immediate: "Block the number. The prize does not exist.",
     guidance: [
       "You cannot win a lottery you did not enter.",
       "Real prizes never require upfront payment of any kind.",
       "No government lottery operates through WhatsApp or Telegram.",
-      "Scammers count on excitement — pause before you act.",
+      "Scammers count on excitement â€” pause before you act.",
     ],
   },
   {
     id: "family",
     label: "Fake Family Emergency",
-    icon: "👨‍👩‍👧",
+    icon: "ðŸ‘¨â€ðŸ‘©â€ðŸ‘§",
     immediate: "Call that family member directly on their saved number now.",
     guidance: [
-      "Call the person the scammer is impersonating — on their real number.",
+      "Call the person the scammer is impersonating â€” on their real number.",
       "Use your agreed family safe-word if you have one.",
       "Real emergencies can be confirmed with one phone call.",
-      "Scammers depend on you acting before you verify — take 30 seconds.",
+      "Scammers depend on you acting before you verify â€” take 30 seconds.",
     ],
   },
 ];
@@ -78,7 +78,7 @@ export default function ScaredPanel({ members, onClose }: Props) {
 
   async function alertFamily() {
     try {
-        await sendAlert(1);
+      for (const m of members) {`n        await sendAlert(1);`n      }
       setAlertSent(true);
     } catch {
       // best-effort silent fail
@@ -101,7 +101,7 @@ export default function ScaredPanel({ members, onClose }: Props) {
           <ShieldAlert size={30} className="scared-icon" />
           <h2>You are safe.</h2>
           <p>
-            Whatever they told you — you have not broken any law. Take a breath.
+            Whatever they told you â€” you have not broken any law. Take a breath.
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export default function ScaredPanel({ members, onClose }: Props) {
         ) : (
           <div className="scared-guidance-view">
             <button className="scared-back" onClick={() => setSelected(null)}>
-              ← Back
+              â† Back
             </button>
             <div className="scared-guidance-title">
               <span>{scam?.icon}</span> {scam?.label}
@@ -154,7 +154,7 @@ export default function ScaredPanel({ members, onClose }: Props) {
               disabled={alertSent}
             >
               <Users size={18} />
-              {alertSent ? "Family alerted ✓" : "Alert my family"}
+              {alertSent ? "Family alerted âœ“" : "Alert my family"}
             </button>
           )}
         </div>
@@ -162,3 +162,4 @@ export default function ScaredPanel({ members, onClose }: Props) {
     </div>
   );
 }
+

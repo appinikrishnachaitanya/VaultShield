@@ -3912,6 +3912,25 @@ html[lang="hi"] h3 {
 /* â”€â”€ Document Scanner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .doc-scanner .page-heading { margin-bottom: 32px; }
 
+.doc-scanner .workspace {
+  grid-template-columns: 1fr;
+  max-width: 760px;
+}
+.doc-scanner .check-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.doc-scanner .input-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+.doc-scanner .input-card .primary {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .doc-categories { margin: 20px 0 0; }
 .doc-categories > .input-label { display: block; margin-bottom: 10px; }
 .doc-cat-pills {
@@ -5194,4 +5213,5 @@ html[lang="hi"] h3 {
   flex-shrink: 0;
   margin-top: 2px;
 }
+
 
