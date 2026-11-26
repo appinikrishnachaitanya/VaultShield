@@ -3666,6 +3666,58 @@ html[lang="hi"] h3 {
 .tok-ref     { background: #f5f3ff; color: #5b21b6; }
 .tok-private { background: #fef9c3; color: #854d0e; }
 
+/* ── Vault scanning state ──────────────────────────────────── */
+.vault-scanning-box {
+  animation: fadeSlideIn 0.15s ease;
+}
+.vault-scanning-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+.vault-scan-icon {
+  color: #0f766e;
+  animation: vaultPulse 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes vaultPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.vault-scan-dots::after {
+  content: '';
+  animation: scanDots 1.2s steps(4, end) infinite;
+}
+@keyframes scanDots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+  100% { content: ''; }
+}
+
+/* ── Detected category chips ───────────────────────────────── */
+.vault-detected-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 12px 0;
+}
+.vault-det-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  animation: tokenPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+.chip-count { opacity: 0.75; }
+
 /* ── Explain For Family ───────────────────────────────────── */
 .explain-family {
   border: 1px solid #e2e8f0;
