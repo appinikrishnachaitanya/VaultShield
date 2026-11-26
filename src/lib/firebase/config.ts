@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+﻿import { initializeApp } from "firebase/app";
 import {
   initializeAppCheck,
   CustomProvider,
@@ -67,6 +67,7 @@ const defaults = {
   cloud_model_name: "gemini-3.5-flash-lite",
   enable_search_grounding: true,
   strict_privacy_mode: true,
+  ai_inference_mode: "only_in_cloud",
 };
 export const remoteConfig = app ? getRemoteConfig(app) : null;
 if (remoteConfig) {
@@ -74,18 +75,29 @@ if (remoteConfig) {
   remoteConfig.settings.minimumFetchIntervalMillis = 3600000;
   remoteConfig.settings.fetchTimeoutMillis = 5000;
 }
-export const settings = () => ({
-  model: remoteConfig
-    ? getValue(remoteConfig, "cloud_model_name").asString() ||
-      defaults.cloud_model_name
-    : defaults.cloud_model_name,
+// Remap shut-down or non-existent model IDs to working equivalents
+const MODEL_FIX: Record<string, string> = {
+  "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+};
+export const settings = () => {
+  const raw = remoteConfig
+    ? getValue(remoteConfig, "cloud_model_name").asString() || defaults.cloud_model_name
+    : defaults.cloud_model_name;
+  const model = MODEL_FIX[raw] ?? (raw || "gemini-3.5-flash-lite");
+  return {
+  model,
   grounding: remoteConfig
     ? getValue(remoteConfig, "enable_search_grounding").asBoolean()
     : true,
   strict: remoteConfig
     ? getValue(remoteConfig, "strict_privacy_mode").asBoolean()
     : true,
-});
+  inferenceMode: remoteConfig
+    ? getValue(remoteConfig, "ai_inference_mode").asString() ||
+      defaults.ai_inference_mode
+    : defaults.ai_inference_mode,
+  };
+};
 export async function initializeServices() {
   if (!auth)
     throw new Error(
@@ -97,3 +109,4 @@ export async function initializeServices() {
   if (!auth.currentUser) await signInAnonymously(auth);
   if (remoteConfig) void fetchAndActivate(remoteConfig).catch(() => {});
 }
+

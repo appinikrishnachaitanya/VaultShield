@@ -21,6 +21,7 @@ export type DocumentAnalysisResult = {
   payloadBytes: number;
   durationMs: number;
   model?: string;
+  source?: "ON_DEVICE" | "IN_CLOUD";
 };
 
 export const DOCUMENT_CATEGORIES: {

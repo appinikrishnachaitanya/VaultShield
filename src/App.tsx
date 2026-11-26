@@ -18,6 +18,11 @@ import {
   CircleCheck,
   Shield,
   FileText,
+  Menu,
+  BookHeart,
+  IndianRupee,
+  ShieldAlert,
+  Film,
 } from "lucide-react";
 import { initializeServices } from "./lib/firebase/config";
 import {
@@ -32,6 +37,7 @@ import {
   useAICapability,
   localAIDiagnostics,
 } from "./services/aiCapability";
+import { useLastAISource } from "./lib/aiSource";
 import { maskIdentifiers, hasAssessableText } from "./lib/privacy";
 import {
   sendAlert,
@@ -43,7 +49,12 @@ import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
+import PrivateDiary from "./components/PrivateDiary";
 import ExplainForFamily from "./components/ExplainForFamily";
+import UPIVerify from "./components/UPIVerify";
+import MediaVault from "./components/MediaVault";
+import ScaredPanel from "./components/ScaredPanel";
+import KnowYourRights from "./components/KnowYourRights";
 import TokenVaultPreview from "./components/TokenVaultPreview";
 import PrivacyStatsBar from "./components/PrivacyStatsBar";
 import { recordCheck } from "./lib/privacyStats";
@@ -123,11 +134,13 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs">(() =>
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary" | "upi" | "media">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
   );
+  const [scaredOpen, setScaredOpen] = useState(false);
   const [input, setInput] = useState("");
   const [image, setImage] = useState<{
     data: string;
@@ -161,10 +174,12 @@ export default function App() {
   const taskRunning = useRef(false);
   const [localProgress, setLocalProgress] = useState("");
   const capability = useAICapability();
+  const lastAISource = useLastAISource();
   const [localDiagnostics, setLocalDiagnostics] =
     useState<Awaited<ReturnType<typeof localAIDiagnostics>>>();
   const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
   const messageEditor = useRef<HTMLTextAreaElement>(null);
+  const [piiCount, setPiiCount] = useState(0);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting securely…");
   const [online, setOnline] = useState(navigator.onLine);
@@ -567,9 +582,61 @@ export default function App() {
   const count = result?.stages.filter((s) => s.found).length ?? 0;
   const awaitingAndroidHybrid =
     usesAndroidModel && result?.source === "LOCAL_RULES" && !localOnly;
+  const navItems = [
+    { id: "check", icon: ScanLine, label: t("Check something") },
+    { id: "docs", icon: FileText, label: t("Document Vault") },
+    { id: "media", icon: Film, label: t("Media Vault") },
+    { id: "family", icon: Users, label: t("Family circle") },
+  ] as const;
   return (
     <div className="app">
       <Welcome />
+      {/* Mobile drawer overlay */}
+      <div
+        className={`drawer-overlay${drawerOpen ? " open" : ""}`}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+      />
+      {/* Mobile slide-out drawer */}
+      <div className={`drawer${drawerOpen ? " open" : ""}`} role="navigation" aria-label={t("Main menu")}>
+        <div className="drawer-header">
+          <a className="brand" href="/" aria-label="VaultShield home">
+            <span className="brand-icon"><ShieldCheck size={25} /></span>
+            VaultShield
+          </a>
+          <button className="drawer-close" onClick={() => setDrawerOpen(false)} aria-label={t("Close menu")}>
+            <X size={20} />
+          </button>
+        </div>
+        <nav className="drawer-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              className={tab === item.id ? "nav-item active" : "nav-item"}
+              onClick={() => { setTab(item.id); setDrawerOpen(false); }}
+            >
+              <item.icon size={21} />
+              {t(item.label)}
+              {item.id === "family" && alerts.length > 0 && (
+                <span className="nav-count">{alerts.length}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="drawer-bottom">
+          <div className="session">
+            <span className="dot" />
+            {online ? t("Private by design") : t("You are offline")}
+          </div>
+          <button
+            className={`nav-privacy-link${tab === "privacy" ? " active" : ""}`}
+            onClick={() => { setTab("privacy"); setDrawerOpen(false); }}
+          >
+            <LockKeyhole size={13} />
+            {t("Privacy & Data")}
+          </button>
+        </div>
+      </div>
       <aside className="sidebar" inert={review}>
         <a className="brand" href="/" aria-label="VaultShield home">
           <span className="brand-icon">
@@ -581,14 +648,7 @@ export default function App() {
           {t("YOUR PEACE OF MIND, PROTECTED")}
         </div>
         <nav>
-          {(
-            [
-              { id: "check", icon: ScanLine, label: t("Check something") },
-              { id: "family", icon: Users, label: t("Family circle") },
-              { id: "docs", icon: FileText, label: t("Scan document") },
-              { id: "privacy", icon: LockKeyhole, label: t("Your privacy") },
-            ] as const
-          ).map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               className={tab === item.id ? "nav-item active" : "nav-item"}
@@ -621,44 +681,84 @@ export default function App() {
             <span className="dot" />
             {online ? t("Private by design") : t("You are offline")}
           </div>
+          <button
+            className={`nav-privacy-link${tab === "privacy" ? " active" : ""}`}
+            onClick={() => setTab("privacy")}
+          >
+            <LockKeyhole size={13} />
+            {t("Privacy & Data")}
+          </button>
         </div>
+        {/* Mobile: hamburger button shown via CSS */}
+        <button
+          className="menu-toggle"
+          onClick={() => setDrawerOpen(true)}
+          aria-label={t("Open menu")}
+          aria-expanded={drawerOpen}
+        >
+          <Menu size={22} />
+        </button>
       </aside>
       <div className="main-shell" inert={review}>
         <header className="topbar">
-          <div className="topbar-primary">
-            <span className="breadcrumb">{t("Your safety workspace")}</span>
-            <label className="app-language">
-              <span>{t("Language")}</span>
-              <select
-                aria-label="English / हिन्दी"
-                value={appLanguage}
-                onChange={(event) => {
-                  setLanguage(event.target.value as "en" | "hi");
-                  stopLocalReading();
-                }}
-              >
-                <option value="en" lang="en">
-                  English
-                </option>
-                <option value="hi" lang="hi">
-                  हिन्दी
-                </option>
-              </select>
-            </label>
-            <Account />
+          <div className="topbar-left">
+            <button
+              className="topbar-hamburger"
+              onClick={() => setDrawerOpen(true)}
+              aria-label={t("Open menu")}
+            >
+              <Menu size={20} />
+            </button>
+            <span className="topbar-page-title">
+              {tab === "check" && t("Safety Check")}
+              {tab === "docs" && t("Document Vault")}
+              {tab === "media" && t("Media Vault")}
+              {tab === "family" && t("Family Circle")}
+              {tab === "privacy" && t("Privacy & Data")}
+            </span>
           </div>
-          <div className="topbar-secondary">
-            <NetworkProof />
-            <span className="top-status ai-capability" role="status">
-              {t(capabilityLabel(capability))}
+          <div className="topbar-right">
+            <span
+              className={`topbar-ai-pill${!online ? " offline" : lastAISource === "IN_CLOUD" ? " cloud" : ""}`}
+              role="status"
+              title={lastAISource === "ON_DEVICE" ? "Last inference: on-device (private)" : lastAISource === "IN_CLOUD" ? "Last inference: cloud (tokenized text only)" : ""}
+            >
+              <span className="topbar-ai-dot" />
+              {!online
+                ? t("Offline")
+                : lastAISource === "ON_DEVICE"
+                  ? t("On-device AI")
+                  : lastAISource === "IN_CLOUD"
+                    ? t("Cloud AI")
+                    : capabilityLabel(capability).toLowerCase().includes("on-device")
+                      ? t("On-device AI")
+                      : t("AI Ready")}
             </span>
-            <span className="top-status">
-              {online ? <LockKeyhole size={14} /> : <WifiOff size={14} />}{" "}
-              {online ? t("Private session ready") : t("Offline mode")}
-            </span>
+            <select
+              className="topbar-lang"
+              aria-label="English / हिन्दी"
+              value={appLanguage}
+              onChange={(event) => {
+                setLanguage(event.target.value as "en" | "hi");
+                stopLocalReading();
+              }}
+            >
+              <option value="en" lang="en">EN</option>
+              <option value="hi" lang="hi">हि</option>
+            </select>
+            <Account />
           </div>
         </header>
         <main>
+          {!online && (
+            <div className="offline-mode-banner" role="status">
+              <WifiOff size={18} />
+              <div>
+                <strong>{t("Works offline")}</strong>
+                <span>{t(" — on-device AI active. No internet needed.")}</span>
+              </div>
+            </div>
+          )}
           <section
             className="privacy-router-intro"
             aria-label={t("Privacy Router for AI")}
@@ -711,6 +811,14 @@ export default function App() {
                   {t(" Let’s check it together. ")}
                 </h1>
                 <p>{t("Check it before you pay for it. Privately.")}</p>
+                <button
+                  className="scared-trigger-btn"
+                  onClick={() => setScaredOpen(true)}
+                  aria-label="I’m scared — get immediate guidance"
+                >
+                  <ShieldAlert size={18} />
+                  {t("I’m Scared — help me now")}
+                </button>
               </div>
               <div className="workspace">
                 <section className="check-column">
@@ -778,7 +886,7 @@ export default function App() {
                       <span>{t("English, हिंदी & Hinglish welcome")}</span>
                       <span>{input.length.toLocaleString()}/16,000</span>
                     </div>
-                    <TokenVaultPreview input={input} />
+                    <TokenVaultPreview input={input} onCountChange={setPiiCount} />
                     <div className="divider">
                       <span>{t("or add a screenshot")}</span>
                     </div>
@@ -820,20 +928,22 @@ export default function App() {
                         <Upload size={22} />
                         <span>
                           <strong>{t("Upload a screenshot")}</strong>
-                          <small>{t("One JPG or PNG · up to 8 MB")}</small>
+                          <small>{t("WhatsApp, SMS, any app · JPG or PNG")}</small>
                         </span>
                         <span className="upload-plus">+</span>
                       </button>
                     )}
                     <button
-                      className="primary check-button"
+                      className={`primary check-button${piiCount > 0 && !busy ? " has-pii" : ""}`}
                       disabled={!!busy || (!input.trim() && !image)}
                       onClick={() => void analyze()}
                     >
                       <ShieldCheck size={21} />
                       {busy === "Checking on your device"
                         ? t("Checking on your device…")
-                        : t("Check privately")}
+                        : piiCount > 0
+                          ? t(`Check privately — ${piiCount} identifier${piiCount !== 1 ? "s" : ""} masked`)
+                          : t("Check privately")}
                       {!busy && <span className="button-key">↵</span>}
                     </button>
                     {busy === "Checking on your device" && (
@@ -1262,7 +1372,12 @@ export default function App() {
               setNotificationsReady={setNotificationsReady}
             />
           )}
-          {tab === "docs" && <DocumentScanner />}
+          <div style={{ display: tab === "docs" ? "block" : "none" }}>
+            <DocumentScanner />
+          </div>
+          <div style={{ display: tab === "media" ? "block" : "none" }}>
+            <MediaVault />
+          </div>
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">
@@ -1327,6 +1442,7 @@ export default function App() {
                   </div>
                 </section>
               </div>
+              <KnowYourRights />
               <div className="privacy-footer">
                 <button
                   type="button"
@@ -1387,6 +1503,12 @@ export default function App() {
           )}
         </main>
       </div>
+      {scaredOpen && (
+        <ScaredPanel
+          members={members}
+          onClose={() => setScaredOpen(false)}
+        />
+      )}
       {review && result && (
         <ReviewDialog
           dialogRef={dialogRef}

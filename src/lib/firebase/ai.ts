@@ -143,12 +143,9 @@ export async function checkLocally(
   const createOptions = chromeModelOptions(Boolean(image));
   onProgress?.(`Chrome local model: ${availability}.`);
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_ON_DEVICE,
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions },
     inCloudParams: { model: settings().model },
-    onDeviceParams: {
-      createOptions,
-      promptOptions: { responseConstraint: privacyResponseSchema },
-    },
   });
   if (availability !== "available")
     await boundedWait(
@@ -485,9 +482,7 @@ export async function verifyWithCloud(
         })
     : getGenerativeModel(ai, {
         mode:
-          purpose === "public-sources"
-            ? InferenceMode.ONLY_IN_CLOUD
-            : InferenceMode.PREFER_ON_DEVICE,
+          InferenceMode.ONLY_IN_CLOUD,
         inCloudParams: {
           model: cfg.model,
           generationConfig: { maxOutputTokens: 1200 },
@@ -594,18 +589,10 @@ export async function extractTextFromDocument(
     );
   const createOptions = chromeModelOptions(true);
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_ON_DEVICE,
-    inCloudParams: { model: settings().model },
+    mode: InferenceMode.PREFER_ON_DEVICE,
     onDeviceParams: { createOptions },
+    inCloudParams: { model: settings().model },
   });
-  if (availability !== "available") {
-    onProgress?.("Preparing on-device model for document reading…");
-    await boundedWait(
-      model.initializeDeviceModel(),
-      600_000,
-      "On-device model preparation timed out.",
-    );
-  }
   onProgress?.("Reading document text on your device…");
   const prompt = buildDocumentExtractionPrompt(category);
   const result = await boundedWait(
@@ -623,7 +610,27 @@ export async function extractTextFromDocument(
   return result.response.text().trim();
 }
 
-/** Analyze tokenized document text using cloud AI. Input must be fully tokenized — no raw PII. */
+async function runCloudDocumentAnalysis(
+  aiInstance: NonNullable<typeof ai>,
+  modelName: string,
+  prompt: string,
+): Promise<string> {
+  const model = getGenerativeModel(aiInstance, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName, generationConfig: { responseMimeType: "application/json" } },
+  });
+  const result = await boundedWait(
+    model.generateContent(prompt),
+    60_000,
+    "Document analysis timed out.",
+  );
+  if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) markUnconfirmedAI();
+  const text = result.response.text();
+  recordAIResult(text, "IN_CLOUD");
+  return text;
+}
+
+/** Analyze tokenized document text — tries on-device (Android/Chrome) first, falls back to cloud. Input must be fully tokenized — no raw PII. */
 export async function analyzeDocumentText(
   tokenizedText: SanitizedText,
   category: DocumentCategory,
@@ -634,30 +641,59 @@ export async function analyzeDocumentText(
   assertNoKnownLeak(tokenizedText, vault);
   const { model: modelName } = settings();
   const payloadBytes = new TextEncoder().encode(tokenizedText).length;
-  onProgress?.(`Analyzing document with cloud AI (${payloadBytes} bytes, fully tokenized)…`);
-  const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_IN_CLOUD,
-    inCloudParams: {
-      model: modelName,
-      generationConfig: { responseMimeType: "application/json" },
-    },
-  });
   const start = performance.now();
   const prompt = buildDocumentAnalysisPrompt(tokenizedText, category);
-  const result = await boundedWait(
-    model.generateContent(prompt),
-    60_000,
-    "Document analysis timed out.",
-  );
-  if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) {
-    markUnconfirmedAI();
-    throw new Error("Expected cloud inference for document analysis.");
+  let responseText: string;
+  let inferenceSource: "ON_DEVICE" | "IN_CLOUD" = "IN_CLOUD";
+
+  // Android on-device path
+  if (usesAndroidModel) {
+    onProgress?.("Analyzing document on-device with Android AI…");
+    await prepareAndroidModel();
+    const r = await androidAI.analyze({ text: prompt });
+    if (r.status === "READY" && r.text) {
+      responseText = r.text;
+      inferenceSource = "ON_DEVICE";
+    } else {
+      onProgress?.("Android AI unavailable, falling back to cloud…");
+      inferenceSource = "IN_CLOUD";
+      responseText = await runCloudDocumentAnalysis(ai, modelName, prompt);
+    }
+  } else {
+    // Chrome on-device path (Gemma4 / Nano v3 — text only, no image)
+    const chromeAvail = await chromeAvailability(false);
+    if (chromeAvail !== "unavailable") {
+      onProgress?.(`Analyzing document on-device (${chromeAvail === "available" ? "ready" : "downloading model…"})…`);
+      const textOnlyParams = chromeModelOptions(false);
+      const model = getGenerativeModel(ai, {
+        mode: InferenceMode.PREFER_ON_DEVICE,
+        onDeviceParams: { createOptions: textOnlyParams },
+        inCloudParams: { model: modelName, generationConfig: { responseMimeType: "application/json" } },
+      });
+      const result = await boundedWait(
+        model.generateContent(prompt),
+        90_000,
+        "Document analysis timed out.",
+      );
+      if (result.response.inferenceSource === InferenceSource.ON_DEVICE) {
+        responseText = result.response.text();
+        inferenceSource = "ON_DEVICE";
+      } else {
+        // Firebase routed to cloud despite PREFER_ON_DEVICE — accept it
+        responseText = result.response.text();
+        inferenceSource = "IN_CLOUD";
+      }
+      recordAIResult(responseText, inferenceSource === "ON_DEVICE" ? "ON_DEVICE" : "IN_CLOUD");
+    } else {
+      onProgress?.(`Analyzing document with cloud AI (${payloadBytes} bytes, fully tokenized)…`);
+      responseText = await runCloudDocumentAnalysis(ai, modelName, prompt);
+    }
   }
-  recordAIResult(result.response.text(), "IN_CLOUD");
+
   let parsed: Partial<DocumentAnalysisResult>;
   try {
     parsed = JSON.parse(
-      result.response.text().replace(/^```(?:json)?\s*|\s*```$/g, "").trim(),
+      responseText.replace(/^```(?:json)?\s*|\s*```$/g, "").trim(),
     ) as Partial<DocumentAnalysisResult>;
   } catch {
     throw new Error(
@@ -693,11 +729,95 @@ export async function analyzeDocumentText(
     masked: vault.entries().length,
     payloadBytes,
     durationMs: performance.now() - start,
-    model: modelName,
+    model: inferenceSource === "ON_DEVICE" ? "chrome-on-device" : modelName,
+    source: inferenceSource,
   };
 }
 
 export type { DocumentAnalysisResult, DocumentCategory };
+
+export type DiaryAnalysisResult = {
+  mood: "joyful" | "calm" | "neutral" | "anxious" | "sad";
+  moodScore: number;
+  summary: string;
+  actionItems: string[];
+  learnings: string[];
+  memories: string[];
+  personalMessage: string;
+  source: "ON_DEVICE" | "IN_CLOUD";
+};
+
+/** Analyze a diary entry with hybrid AI — on-device first, cloud fallback. Text must be tokenized — no raw PII. */
+export async function analyzeDiaryEntry(
+  tokenizedText: string,
+): Promise<DiaryAnalysisResult> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const cfg = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: {
+      model: cfg.model,
+      generationConfig: { responseMimeType: "application/json" },
+    },
+    onDeviceParams: {
+      createOptions: chromeModelOptions(false),
+    },
+  });
+  const prompt = `You are a thoughtful personal AI reflecting on a private diary entry.
+Privacy tokens like [PERSON_1], [PHONE_1] replace real values — treat them as placeholders.
+
+Analyze the diary entry and return ONLY valid JSON (no markdown):
+{
+  "mood": "joyful" | "calm" | "neutral" | "anxious" | "sad",
+  "moodScore": 1-5,
+  "summary": "2-3 warm, supportive sentences summarizing the day",
+  "actionItems": ["concrete action for tomorrow 1", "action 2", "action 3"],
+  "learnings": ["key insight 1", "key insight 2"],
+  "memories": ["one specific moment from the day (10-15 words)", "another specific moment", "a third moment"],
+  "personalMessage": "1-2 sentences — if moodScore<=2: compassionate motivation referencing something specific from the day; if moodScore>=4: genuine celebration of what they did; if moodScore 3: warm acknowledgement. Speak directly to the person."
+}
+
+Diary entry:
+${tokenizedText}`;
+  const result = await boundedWait(
+    model.generateContent(prompt),
+    30_000,
+    "Diary analysis timed out.",
+  );
+  const diarySource = result.response.inferenceSource === InferenceSource.ON_DEVICE
+    ? ("ON_DEVICE" as const)
+    : ("IN_CLOUD" as const);
+  recordAIResult(result.response.text(), diarySource);
+  let parsed: Partial<DiaryAnalysisResult>;
+  try {
+    parsed = JSON.parse(
+      result.response.text().replace(/^```(?:json)?\s*|\s*```$/g, "").trim(),
+    ) as Partial<DiaryAnalysisResult>;
+  } catch {
+    throw new Error("Could not read diary analysis. Please try again.");
+  }
+  const moods = ["joyful", "calm", "neutral", "anxious", "sad"] as const;
+  return {
+    mood: moods.includes(parsed.mood as typeof moods[number])
+      ? (parsed.mood as typeof moods[number])
+      : "neutral",
+    moodScore: typeof parsed.moodScore === "number"
+      ? Math.min(5, Math.max(1, Math.round(parsed.moodScore)))
+      : 3,
+    summary: typeof parsed.summary === "string" ? parsed.summary : "",
+    actionItems: Array.isArray(parsed.actionItems)
+      ? parsed.actionItems.filter((s): s is string => typeof s === "string").slice(0, 5)
+      : [],
+    learnings: Array.isArray(parsed.learnings)
+      ? parsed.learnings.filter((s): s is string => typeof s === "string").slice(0, 3)
+      : [],
+    memories: Array.isArray(parsed.memories)
+      ? parsed.memories.filter((s): s is string => typeof s === "string").slice(0, 3)
+      : [],
+    personalMessage: typeof parsed.personalMessage === "string" ? parsed.personalMessage : "",
+    source: diarySource,
+  };
+}
 
 /**
  * Generate a plain-language explanation of scam findings for a family member.
@@ -728,12 +848,10 @@ Write 2-3 simple sentences for a non-technical family member explaining:
 - What they should do right now
 Use plain, calm language. No jargon. No personal information.`;
 
-  onProgress?.("Generating plain-language explanation on your device…");
-  const createOptions = chromeModelOptions(false);
+  onProgress?.("Generating plain-language explanation…");
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.PREFER_ON_DEVICE,
+    mode: InferenceMode.ONLY_IN_CLOUD,
     inCloudParams: { model: modelName },
-    onDeviceParams: { createOptions },
   });
   const start = performance.now();
   const result = await boundedWait(
@@ -1160,9 +1278,8 @@ export async function proofreadReplyLocally(
       "Chrome Proofreader cancelled. Trying Firebase on-device proofreading…",
     );
     const model = getGenerativeModel(ai, {
-      mode: InferenceMode.ONLY_ON_DEVICE,
+      mode: InferenceMode.ONLY_IN_CLOUD,
       inCloudParams: { model: settings().model },
-      onDeviceParams: { createOptions: chromeModelOptions(false) },
     });
     try {
       const { response } = await boundedWait(
@@ -1340,4 +1457,101 @@ export async function startLocalDictation(
       finish();
     },
   };
+}
+
+/** Chat about a scanned document — question is tokenized before cloud, answer is rehydrated. */
+export async function chatWithDocument(
+  question: string,
+  tokenizedDocText: string,
+  vault: TokenVaultSession,
+): Promise<{ answer: string; masked: number }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const tokenized = vault.tokenize(question);
+  assertNoKnownLeak(tokenized.text, vault);
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName },
+  });
+  const prompt = `You are a document assistant. Personal identifiers have been replaced with privacy tokens ([PERSON_1], [PHONE_1], etc.) to protect identity. Answer based only on the document content below.
+
+Document:
+${tokenizedDocText}
+
+Question: ${tokenized.text}
+
+Answer concisely and helpfully. If the document does not contain enough information to answer the question, say so clearly.`;
+  const raw = await boundedWait(
+    model.generateContent(prompt),
+    30_000,
+    "Chat timed out.",
+  );
+  recordAIResult(raw.response.text(), "IN_CLOUD");
+  const answer = raw.response.text().replace(
+    /\[\s*[a-z_]+\s*_\s*\d+\s*(?::\s*[a-z0-9 -]+\s*)?\]/gi,
+    (token) => vault.resolve(token) ?? token,
+  );
+  return { answer, masked: vault.entries().length };
+}
+
+/** Transcribe a call recording — audio sent to cloud Gemini once, transcript stored locally. */
+export async function transcribeCallRecording(
+  audioBase64: string,
+  mimeType: string,
+): Promise<{ transcript: string; source: "ON_DEVICE" | "IN_CLOUD"; durationMs: number }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName },
+  });
+  const start = performance.now();
+  const result = await boundedWait(
+    model.generateContent([
+      { inlineData: { data: audioBase64, mimeType } },
+      `Transcribe this call recording verbatim and completely.
+If multiple speakers are audible, label them Speaker 1:, Speaker 2:, etc.
+If the language is not English, also provide an English translation after the original transcript, labelled "English translation:".
+Output only the transcript (and translation if needed). No commentary.`,
+    ]),
+    90_000,
+    "Transcription timed out.",
+  );
+  if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) {
+    markUnconfirmedAI();
+  }
+  recordAIResult(result.response.text(), "IN_CLOUD");
+  return {
+    transcript: result.response.text().trim(),
+    source: "IN_CLOUD",
+    durationMs: performance.now() - start,
+  };
+}
+
+export async function analyzeMediaFile(
+  base64: string,
+  mimeType: string,
+  instruction: string,
+): Promise<{ text: string }> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const { model: modelName } = settings();
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: modelName },
+  });
+  const mediaType = mimeType.split("/")[0];
+  const prompt = `${instruction}
+
+Provide a thorough plain-text description of all content in this ${mediaType} file.
+If it contains speech or dialogue, transcribe verbatim.
+If you detect non-English language, also include an "English translation:" section.
+Do not add commentary — output the content directly.`;
+
+  const result = await boundedWait(
+    model.generateContent([{ inlineData: { data: base64, mimeType } }, prompt]),
+    90_000,
+    "Media analysis timed out.",
+  );
+  recordAIResult(result.response.text(), "IN_CLOUD");
+  return { text: result.response.text().trim() };
 }

@@ -28,6 +28,7 @@ import {
 } from "../lib/ai/documentPrompts";
 import type { PrivacyReceiptData } from "../lib/receipt";
 import type { SanitizedText } from "../types/privacy";
+import { extractPdfContent } from "../lib/pdfExtractor";
 
 const SAFETY_CONFIG = {
   safe: {
@@ -65,6 +66,7 @@ export default function DocumentScanner() {
     name: string;
     url: string;
   } | null>(null);
+  const [pdfMeta, setPdfMeta] = useState<{ name: string; pageCount: number } | null>(null);
   const [category, setCategory] = useState<DocumentCategory>("general");
   const [busy, setBusy] = useState(false);
   const [steps, setSteps] = useState<PipelineStep[]>([]);
@@ -73,14 +75,16 @@ export default function DocumentScanner() {
   const [ocrText, setOcrText] = useState("");
   const [error, setError] = useState("");
 
-  function buildSteps(hasImage: boolean): PipelineStep[] {
+  function buildSteps(hasImage: boolean, hasPdfText: boolean): PipelineStep[] {
     return [
       {
         id: "ocr",
-        label: "On-device OCR",
-        detail: "Extract text from image — nothing sent to cloud",
+        label: hasPdfText ? "PDF text extracted" : "On-device OCR",
+        detail: hasPdfText
+          ? "Text layer parsed on-device — nothing sent to cloud"
+          : "Extract text from image — nothing sent to cloud",
         icon: Cpu,
-        status: hasImage ? "pending" : "skipped",
+        status: hasImage || hasPdfText ? "pending" : "skipped",
       },
       {
         id: "vault",
@@ -124,12 +128,51 @@ export default function DocumentScanner() {
     );
   }
 
+  function clearFile() {
+    if (image) URL.revokeObjectURL(image.url);
+    setImage(null);
+    setPdfMeta(null);
+    setOcrText("");
+    setResult(null);
+    setReceipt(null);
+  }
+
   function uploadFile(f: File | undefined) {
     if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      setError("Select a JPEG or PNG image of your document.");
+    const isPdf = f.type === "application/pdf";
+    const isImage = f.type.startsWith("image/");
+    if (!isPdf && !isImage) {
+      setError("Select a JPEG, PNG or PDF file.");
       return;
     }
+    if (f.size > 20 * 1024 * 1024) {
+      setError("File must be under 20 MB.");
+      return;
+    }
+    setError("");
+    setResult(null);
+    setReceipt(null);
+
+    if (isPdf) {
+      clearFile();
+      setBusy(true);
+      extractPdfContent(f)
+        .then((extracted) => {
+          setPdfMeta({ name: f.name, pageCount: extracted.pageCount });
+          if (extracted.method === "text-layer" && extracted.text.length > 30) {
+            setRawText(extracted.text);
+          } else if (extracted.images.length > 0) {
+            // Use first rendered page image for OCR
+            setImage(extracted.images[0]);
+          } else {
+            setError("Could not extract text from this PDF. Try pasting the text manually.");
+          }
+        })
+        .catch(() => setError("Failed to read PDF. Try a different file or paste the text."))
+        .finally(() => setBusy(false));
+      return;
+    }
+
     if (f.size > 8 * 1024 * 1024) {
       setError("Image must be under 8 MB.");
       return;
@@ -139,17 +182,8 @@ export default function DocumentScanner() {
       const dataUrl = evt.target?.result as string;
       const mimeType = f.type;
       const data = dataUrl.split(",")[1];
-      if (image) URL.revokeObjectURL(image.url);
-      setImage({
-        data,
-        mimeType,
-        name: f.name,
-        url: URL.createObjectURL(f),
-      });
-      setRawText("");
-      setResult(null);
-      setReceipt(null);
-      setError("");
+      clearFile();
+      setImage({ data, mimeType, name: f.name, url: URL.createObjectURL(f) });
     };
     reader.readAsDataURL(f);
   }
@@ -163,14 +197,18 @@ export default function DocumentScanner() {
     setOcrText("");
     vault.current.clear();
 
-    const pipeline = buildSteps(Boolean(image));
+    const hasPdfText = Boolean(pdfMeta && rawText && !image);
+    const pipeline = buildSteps(Boolean(image), hasPdfText);
     setSteps(pipeline);
 
     try {
       let textToAnalyze = rawText;
 
-      // Step 1: on-device OCR (images only)
-      if (image) {
+      // Step 1: on-device OCR (images only) or PDF text-layer mark-done
+      if (hasPdfText) {
+        setSteps((s) => advanceStep(s, "ocr"));  // ocr: running
+        setSteps((s) => advanceStep(s, "vault")); // ocr: done, vault: running
+      } else if (image) {
         setSteps((s) => advanceStep(s, "ocr"));
         const extracted = await extractTextFromDocument(
           image,
@@ -202,7 +240,7 @@ export default function DocumentScanner() {
       setSteps((s) => advanceStep(s, "route"));
       const route = routeInput(textToAnalyze);
 
-      // Step 4: cloud analysis
+      // Step 4: local or cloud analysis
       setSteps((s) => advanceStep(s, "cloud"));
       const analysisResult = await analyzeDocumentText(
         tokenized.text as SanitizedText,
@@ -213,7 +251,7 @@ export default function DocumentScanner() {
       // Build privacy receipt
       const rcpt = buildReceipt({
         route,
-        source: "IN_CLOUD",
+        source: analysisResult.source ?? "IN_CLOUD",
         elapsedMs: analysisResult.durationMs,
         counts,
         payload: tokenized.text as SanitizedText,
@@ -222,16 +260,29 @@ export default function DocumentScanner() {
         model: analysisResult.model,
       });
 
-      setSteps((s) => completeSteps(s));
+      setSteps((s) => {
+        const done = completeSteps(s);
+        if (analysisResult.source === "ON_DEVICE") {
+          return done.map((step) =>
+            step.id === "cloud"
+              ? { ...step, label: "On-device analysis", detail: "Gemma4 / Nano — your data never left this device", icon: Cpu }
+              : step,
+          );
+        }
+        return done;
+      });
       setResult({ ...analysisResult, masked: totalMasked });
       setReceipt(rcpt);
     } catch (e) {
       setSteps((s) => completeSteps(s));
       const msg = e instanceof Error ? e.message : "Analysis failed. Please try again.";
+      const isBilling = msg.includes("429") || msg.toLowerCase().includes("credit") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("billing");
       setError(
-        msg.includes("private value remains")
-          ? "Some identifiers in the text could not be fully masked (possible tabular/column format). Try pasting just the relevant section without table formatting."
-          : msg,
+        isBilling
+          ? "AI quota exhausted. Enable billing at aistudio.google.com then retry."
+          : msg.includes("private value remains")
+            ? "Some identifiers could not be fully masked (possible table format). Paste just the relevant section without table formatting."
+            : msg,
       );
     } finally {
       setBusy(false);
@@ -290,11 +341,11 @@ export default function DocumentScanner() {
               </div>
             </div>
 
-            {/* Image upload zone */}
+            {/* File upload zone */}
             <input
               ref={fileRef}
               type="file"
-              accept="image/png,image/jpeg"
+              accept="image/png,image/jpeg,application/pdf"
               className="sr-only"
               disabled={busy}
               onChange={(e) => {
@@ -303,24 +354,22 @@ export default function DocumentScanner() {
               }}
             />
 
-            {image ? (
+            {pdfMeta ? (
+              <div className="image-preview pdf-preview">
+                <FileText size={28} />
+                <div className="pdf-preview-info">
+                  <span className="pdf-name">{pdfMeta.name}</span>
+                  <span className="pdf-pages">{pdfMeta.pageCount} page{pdfMeta.pageCount !== 1 ? "s" : ""} · text extracted on-device</span>
+                </div>
+                <button aria-label="Remove PDF" disabled={busy} onClick={clearFile}>
+                  <X size={20} />
+                </button>
+              </div>
+            ) : image && !pdfMeta ? (
               <div className="image-preview">
-                <img
-                  src={image.url}
-                  alt="Document image, kept on this device"
-                />
+                <img src={image.url} alt="Document image, kept on this device" />
                 <span>{image.name}</span>
-                <button
-                  aria-label="Remove image"
-                  disabled={busy}
-                  onClick={() => {
-                    URL.revokeObjectURL(image.url);
-                    setImage(null);
-                    setOcrText("");
-                    setResult(null);
-                    setReceipt(null);
-                  }}
-                >
+                <button aria-label="Remove image" disabled={busy} onClick={clearFile}>
                   <X size={20} />
                 </button>
               </div>
@@ -337,9 +386,9 @@ export default function DocumentScanner() {
                 }}
               >
                 <Upload size={24} />
-                <span>Upload document image</span>
+                <span>Upload document</span>
                 <span className="doc-upload-hint">
-                  JPEG or PNG · OCR runs on-device · nothing uploaded to cloud
+                  PDF · JPEG · PNG · processed on-device · nothing uploaded to cloud
                 </span>
               </button>
             )}
@@ -375,7 +424,7 @@ export default function DocumentScanner() {
 
             <button
               type="button"
-              className="primary"
+              className="primary check-button"
               disabled={!canAnalyze}
               onClick={() => void analyze()}
             >
