@@ -730,4 +730,17 @@
   "Audio · Image · Video — max 25 MB": "ऑडियो · इमेज · वीडियो — अधिकतम 25 MB",
   "Privacy X-Ray — what cloud sees when you chat": "प्राइवेसी X-Ray — चैट करते समय क्लाउड क्या देखता है",
   "Questions PII-masked · Cloud sees tokens only": "प्रश्न PII-मास्क · क्लाउड केवल टोकन देखता है"
+,
+  "MEDIA VAULT / PRIVATE MEDIA ANALYSIS": "मीडिया वॉल्ट - निजी मीडिया विश्लेषण",
+  "All media analyzed by cloud Gemini - file sent once, not stored. Follow-up chat always masks PII before any cloud request.": "सभी मीडिया क्लाउड Gemini द्वारा विश्लेषित - फ़ाइल एक बार भेजी जाती है, संग्रहीत नहीं। फ़ॉलो-अप चैट हमेशा PII मास्क करती है।",
+  "Gemini - sent once": "Gemini - एक बार भेजा",
+  "Audio / Image / Video - max 25 MB": "ऑडियो / इमेज / वीडियो - अधिकतम 25 MB",
+  "Privacy X-Ray - what cloud sees when you chat": "प्राइवेसी X-Ray - चैट करते समय क्लाउड क्या देखता है",
+  "Questions PII-masked - Cloud sees tokens only": "प्रश्न PII-मास्क - क्लाउड केवल टोकन देखता है",
+  "Medical report, land deed, loan notice, court summons...": "मेडिकल रिपोर्ट, जमीन के कागज, लोन नोटिस, कोर्ट समन...",
+  "PDF / JPEG / PNG / processed on-device - nothing uploaded to cloud": "PDF / JPEG / PNG / डिवाइस पर प्रोसेस - क्लाउड पर अपलोड नहीं",
+  "Paste lab report, deed, notice or any document text here...": "लैब रिपोर्ट, डीड, नोटिस या कोई भी दस्तावेज़ टेक्स्ट यहाँ पेस्ट करें...",
+  "Analyzing privately...": "निजी तौर पर विश्लेषण हो रहा है...",
+  "Questions are tokenized - your PII stays on this device.": "प्रश्न टोकन किए जाते हैं - आपकी PII इस डिवाइस पर रहती है।",
+  "Ask a question about the document...": "दस्तावेज़ के बारे में प्रश्न पूछें..."
 }

@@ -5084,7 +5084,7 @@ html[lang="hi"] h3 {
   font-size: 0.75rem;
   color: #64748b;
 }
-.call-vault-step svg { color: var(--accent, #0f4c75); margin-bottom: 2px; }
+.call-vault-step svg { color: #0f766e; margin-bottom: 2px; }
 .call-vault-step strong { font-size: 0.8rem; color: #1e293b; }
 @media (max-width: 540px) {
   .call-vault-flow { grid-template-columns: repeat(2, 1fr); }

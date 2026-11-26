@@ -89,22 +89,22 @@ export default function DocumentScanner() {
 
   function buildSteps(hasImage: boolean, hasPdfText: boolean, pdfImageCount = 0): PipelineStep[] {
     const ocrLabel = pdfImageCount > 1
-      ? `On-device OCR — ${pdfImageCount} pages`
+      ? `On-device OCR - ${pdfImageCount} pages`
       : hasPdfText ? "PDF text extracted" : "On-device OCR";
     return [
       {
         id: "ocr",
         label: ocrLabel,
         detail: hasPdfText
-          ? "Text layer parsed on-device — nothing sent to cloud"
-          : "Extract text from image — nothing sent to cloud",
+          ? "Text layer parsed on-device - nothing sent to cloud"
+          : "Extract text from image - nothing sent to cloud",
         icon: Cpu,
         status: hasImage || hasPdfText || pdfImageCount > 0 ? "pending" : "skipped",
       },
       {
         id: "vault",
         label: "Token vault",
-        detail: "Mask all identifiers — stays on this device",
+        detail: "Mask all identifiers - stays on this device",
         icon: Lock,
         status: "pending",
       },
@@ -118,7 +118,7 @@ export default function DocumentScanner() {
       {
         id: "cloud",
         label: "Cloud analysis",
-        detail: "AI sees tokens only — never original values",
+        detail: "AI sees tokens only - never original values",
         icon: Cloud,
         status: "pending",
       },
@@ -312,7 +312,7 @@ export default function DocumentScanner() {
         if (analysisResult.source === "ON_DEVICE") {
           return done.map((step) =>
             step.id === "cloud"
-              ? { ...step, label: "On-device analysis", detail: "Gemma4 / Nano — your data never left this device", icon: Cpu }
+              ? { ...step, label: "On-device analysis", detail: "Gemma4 / Nano - your data never left this device", icon: Cpu }
               : step,
           );
         }
@@ -358,7 +358,7 @@ export default function DocumentScanner() {
       {/* Re-analyze in Hindi when language switched */}
       {language === "hi" && result && !/[\u0900-\u097f]/.test(result.summary) && (
         <div className="banner info" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <span style={{ flex: 1 }}>भाषा हिंदी में बदली — हिंदी में परिणाम पाने के लिए फिर से Analyze करें।</span>
+          <span style={{ flex: 1 }}>भाषा हिंदी में बदली - हिंदी में परिणाम पाने के लिए फिर से Analyze करें।</span>
           <button type="button" className="primary" style={{ whiteSpace: "nowrap" }} onClick={() => void analyze()} disabled={busy}>
             हिंदी में विश्लेषण करें
           </button>
@@ -374,7 +374,7 @@ export default function DocumentScanner() {
               </div>
               <div>
                 <h2>{t("Upload or paste your document")}</h2>
-                <p>{t("Medical report, land deed, loan notice, court summons…")}</p>
+                <p>{t("Medical report, land deed, loan notice, court summons...")}</p>
               </div>
             </div>
 
@@ -415,7 +415,7 @@ export default function DocumentScanner() {
                 <FileText size={28} />
                 <div className="pdf-preview-info">
                   <span className="pdf-name">{pdfMeta.name}</span>
-                  <span className="pdf-pages">{pdfMeta.pageCount} page{pdfMeta.pageCount !== 1 ? "s" : ""} · text extracted on-device</span>
+                  <span className="pdf-pages">{pdfMeta.pageCount} page{pdfMeta.pageCount !== 1 ? "s" : ""}  - text extracted on-device</span>
                 </div>
                 <button aria-label="Remove PDF" disabled={busy} onClick={clearFile}>
                   <X size={20} />
@@ -444,7 +444,7 @@ export default function DocumentScanner() {
                 <Upload size={24} />
                 <span>{t("Upload document")}</span>
                 <span className="doc-upload-hint">
-                  {t("PDF · JPEG · PNG · processed on-device · nothing uploaded to cloud")}
+                  {t("PDF / JPEG / PNG / processed on-device - nothing uploaded to cloud")}
                 </span>
               </button>
             )}
@@ -466,7 +466,7 @@ export default function DocumentScanner() {
                 setResult(null);
                 setReceipt(null);
               }}
-              placeholder={t("Paste lab report, deed, notice or any document text here…")}
+              placeholder={t("Paste lab report, deed, notice or any document text here...")}
               rows={6}
             />
             {ocrText && (
@@ -483,7 +483,7 @@ export default function DocumentScanner() {
               onClick={() => void analyze()}
             >
               {busy ? (
-                <>{t("Analyzing privately…")}</>
+                <>{t("Analyzing privately...")}</>
               ) : (
                 <>
                   <ShieldCheck size={16} />
@@ -684,7 +684,7 @@ export default function DocumentScanner() {
                 </div>
                 <div>
                   <h2>{t("Ask about this document")}</h2>
-                  <p>{t("Questions are tokenized — your PII stays on this device.")}</p>
+                  <p>{t("Questions are tokenized - your PII stays on this device.")}</p>
                 </div>
               </div>
               <div className="doc-chat-messages" aria-live="polite">
@@ -698,7 +698,7 @@ export default function DocumentScanner() {
                   <div key={i} className={`doc-chat-bubble ${msg.role}`}>
                     {msg.role === "ai" && (
                       <span className="doc-chat-ai-label">
-                        <Lock size={10} /> AI · {t("PII masked")}
+                        <Lock size={10} /> AI - {t("PII masked")}
                       </span>
                     )}
                     <p>{msg.text}</p>
@@ -707,7 +707,7 @@ export default function DocumentScanner() {
                 {chatBusy && (
                   <div className="doc-chat-bubble ai loading">
                     <span className="step-spinner" aria-hidden="true" />
-                    <span>{t("Thinking…")}</span>
+                    <span>{t("Thinking...")}</span>
                   </div>
                 )}
               </div>
@@ -722,7 +722,7 @@ export default function DocumentScanner() {
                       void handleChat();
                     }
                   }}
-                  placeholder={t("Ask a question about the document…")}
+                  placeholder={t("Ask a question about the document...")}
                   rows={2}
                   disabled={chatBusy}
                   maxLength={1000}
