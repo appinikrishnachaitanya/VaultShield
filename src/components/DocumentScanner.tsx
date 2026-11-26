@@ -1,4 +1,4 @@
-﻿import { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { t, useAppLanguage } from "../lib/i18n";
 import {
   ScanLine,
@@ -38,17 +38,17 @@ import { extractPdfContent } from "../lib/pdfExtractor";
 const SAFETY_CONFIG = {
   safe: {
     icon: CheckCircle,
-    label: "No concerns",
+    label: t("No concerns"),
     className: "doc-safety safe",
   },
   review: {
     icon: AlertCircle,
-    label: "Review carefully",
+    label: t("Review carefully"),
     className: "doc-safety review",
   },
   concern: {
     icon: AlertTriangle,
-    label: "Concerns found",
+    label: t("Concerns found"),
     className: "doc-safety concern",
   },
 };
@@ -343,18 +343,27 @@ export default function DocumentScanner() {
       <div className="page-heading">
         <span className="eyebrow">
           <span className="tiny-line" />
-          DOCUMENT VAULT
+          {t("DOCUMENT VAULT")}
         </span>
         <h1>
-          AI reads the doc.{" "}
-          <span>Not your identity.</span>
+          {t("AI reads the doc.")}{" "}
+          <span>{t("Not your identity.")}</span>
         </h1>
         <p>
-          Every identifier is masked on this device before any AI sees the
-          document.
+          {t("Every identifier is masked on this device before any AI sees the document.")}
         </p>
       </div>
 
+
+      {/* Re-analyze in Hindi when language switched */}
+      {language === "hi" && result && !/[\u0900-\u097f]/.test(result.summary) && (
+        <div className="banner info" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <span style={{ flex: 1 }}>भाषा हिंदी में बदली — हिंदी में परिणाम पाने के लिए फिर से Analyze करें।</span>
+          <button type="button" className="primary" style={{ whiteSpace: "nowrap" }} onClick={() => void analyze()} disabled={busy}>
+            हिंदी में विश्लेषण करें
+          </button>
+        </div>
+      )}
       <div className={result ? "workspace has-result" : "workspace"}>
         <section className="check-column">
           {/* Input card */}
@@ -364,14 +373,14 @@ export default function DocumentScanner() {
                 <ScanLine size={23} />
               </div>
               <div>
-                <h2>Upload or paste your document</h2>
-                <p>Medical report, land deed, loan notice, court summons…</p>
+                <h2>{t("Upload or paste your document")}</h2>
+                <p>{t("Medical report, land deed, loan notice, court summons…")}</p>
               </div>
             </div>
 
             {/* Category selector */}
             <div className="doc-categories">
-              <span className="input-label">Document type</span>
+              <span className="input-label">{t("Document type")}</span>
               <div className="doc-cat-pills">
                 {DOCUMENT_CATEGORIES.map((cat) => (
                   <button
@@ -382,7 +391,7 @@ export default function DocumentScanner() {
                     title={cat.hint}
                     disabled={busy}
                   >
-                    {cat.label}
+                    {t(cat.label)}
                   </button>
                 ))}
               </div>
@@ -433,19 +442,19 @@ export default function DocumentScanner() {
                 }}
               >
                 <Upload size={24} />
-                <span>Upload document</span>
+                <span>{t("Upload document")}</span>
                 <span className="doc-upload-hint">
-                  PDF · JPEG · PNG · processed on-device · nothing uploaded to cloud
+                  {t("PDF · JPEG · PNG · processed on-device · nothing uploaded to cloud")}
                 </span>
               </button>
             )}
 
             <div className="divider">
-              <span>or paste document text</span>
+              <span>{t("or paste document text")}</span>
             </div>
 
             <label htmlFor="doc-text" className="input-label">
-              Paste extracted text
+                {t("Paste extracted text")}
             </label>
             <textarea
               id="doc-text"
@@ -457,14 +466,12 @@ export default function DocumentScanner() {
                 setResult(null);
                 setReceipt(null);
               }}
-              placeholder="Paste lab report, deed, notice or any document text here…"
+              placeholder={t("Paste lab report, deed, notice or any document text here…")}
               rows={6}
             />
             {ocrText && (
               <details className="ocr-preview">
-                <summary>
-                  <Cpu size={14} /> On-device OCR extracted text
-                </summary>
+                <summary><Cpu size={14} /> {t("On-device OCR extracted text")}</summary>
                 <pre>{ocrText}</pre>
               </details>
             )}
@@ -476,11 +483,11 @@ export default function DocumentScanner() {
               onClick={() => void analyze()}
             >
               {busy ? (
-                <>Analyzing privately…</>
+                <>{t("Analyzing privately…")}</>
               ) : (
                 <>
                   <ShieldCheck size={16} />
-                  Analyze privately
+                  {t("Analyze privately")}
                 </>
               )}
             </button>
@@ -489,7 +496,7 @@ export default function DocumentScanner() {
           {/* Pipeline progress */}
           {steps.length > 0 && (
             <div className="card doc-pipeline">
-              <h3>Privacy pipeline</h3>
+              <h3>{t("Privacy pipeline")}</h3>
               <ol className="pipeline-steps">
                 {steps
                   .filter((s) => s.status !== "skipped")
@@ -556,7 +563,7 @@ export default function DocumentScanner() {
                   <FileText size={20} />
                 </div>
                 <div>
-                  <h2>Summary</h2>
+                  <h2>{t("Summary")}</h2>
                 </div>
               </div>
               <p className="doc-summary">{result.summary}</p>
@@ -570,7 +577,7 @@ export default function DocumentScanner() {
                     <AlertTriangle size={20} />
                   </div>
                   <div>
-                    <h2>Red flags</h2>
+                    <h2>{t("Red flags")}</h2>
                   </div>
                 </div>
                 <ul className="doc-list">
@@ -592,7 +599,7 @@ export default function DocumentScanner() {
                     <CheckCircle size={20} />
                   </div>
                   <div>
-                    <h2>Key facts</h2>
+                    <h2>{t("Key facts")}</h2>
                   </div>
                 </div>
                 <ul className="doc-list">
@@ -614,7 +621,7 @@ export default function DocumentScanner() {
                     <AlertCircle size={20} />
                   </div>
                   <div>
-                    <h2>What's missing</h2>
+                    <h2>{t("What's missing")}</h2>
                   </div>
                 </div>
                 <ul className="doc-list">
@@ -636,7 +643,7 @@ export default function DocumentScanner() {
                     <ChevronRight size={20} />
                   </div>
                   <div>
-                    <h2>What to do</h2>
+                    <h2>{t("What to do")}</h2>
                   </div>
                 </div>
                 <ol className="doc-steps-list">

@@ -111,7 +111,7 @@ export default function MediaVault() {
         audio: "Transcribe this audio recording verbatim. Note any suspicious patterns.",
         video: "Transcribe all speech from this video verbatim. Note any suspicious visual or audio patterns.",
       };
-      setProcessStatus(`Sending ${mediaFile.kind} to cloud Gemini…`);
+      setProcessStatus(`Sending ${mediaFile.kind} to cloud Geminiâ€¦`);
       const b64 = await fileToBase64(mediaFile.file);
       const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, instructions[mediaFile.kind]);
       const raw = text;
@@ -161,7 +161,7 @@ export default function MediaVault() {
 
   const flowSteps = [
     { icon: Upload, label: t("Upload file"), sub: t("Stays local until sent") },
-    { icon: Cloud, label: t("Cloud AI reads"), sub: t("Gemini · sent once") },
+    { icon: Cloud, label: t("Cloud AI reads"), sub: t("Gemini Â· sent once") },
     { icon: Lock, label: t("PII masked"), sub: t("TokenVault on-device") },
     { icon: MessageSquare, label: t("Chat privately"), sub: t("Tokens only to cloud") },
   ];
@@ -175,13 +175,13 @@ export default function MediaVault() {
       <div className="page-heading">
         <span className="eyebrow">
           <span className="tiny-line" />
-          {t("MEDIA VAULT — PRIVATE MEDIA ANALYSIS")}
+          {t("MEDIA VAULT â€” PRIVATE MEDIA ANALYSIS")}
         </span>
         <h1>
           {t("Your file.")} <span>{t("Your analysis.")}</span>
         </h1>
         <p>
-          {t("All media analyzed by cloud Gemini — file sent once, not stored. Follow-up chat always masks PII before any cloud request.")}
+          {t("All media analyzed by cloud Gemini â€” file sent once, not stored. Follow-up chat always masks PII before any cloud request.")}
         </p>
       </div>
 
@@ -202,7 +202,7 @@ export default function MediaVault() {
               <div className="icon-tile"><Film size={23} /></div>
               <div>
                 <h2>{t("Upload media file")}</h2>
-                <p>{t("Audio · Image · Video — max 25 MB")}</p>
+                <p>{t("Audio Â· Image Â· Video â€” max 25 MB")}</p>
               </div>
             </div>
 
@@ -220,7 +220,7 @@ export default function MediaVault() {
                 <div className="call-vault-file-info">
                   <span className="call-vault-fname">{mediaFile.name}</span>
                   <span className="call-vault-fsize">
-                    {(mediaFile.size / 1024 / 1024).toFixed(1)} MB · {mediaFile.kind}
+                    {(mediaFile.size / 1024 / 1024).toFixed(1)} MB Â· {mediaFile.kind}
                   </span>
                 </div>
                 {mediaFile.kind === "audio" && (
@@ -244,7 +244,7 @@ export default function MediaVault() {
               >
                 <Film size={24} />
                 <span>{t("Upload audio, image, or video")}</span>
-                <span className="doc-upload-hint">MP3 · WAV · MP4 · JPG · PNG · max {MAX_MB} MB</span>
+                <span className="doc-upload-hint">MP3 Â· WAV Â· MP4 Â· JPG Â· PNG Â· max {MAX_MB} MB</span>
               </button>
             )}
 
@@ -252,7 +252,7 @@ export default function MediaVault() {
               <>
                 <div className="call-vault-cloud-note" style={{ background: "#fefce8", border: "1px solid #fde68a", color: "#854d0e" }}>
                   <Cloud size={14} />
-                  <span>File sent once to cloud Gemini for analysis — not stored. All follow-up chat masks PII before leaving your device.</span>
+                  <span>File sent once to cloud Gemini for analysis â€” not stored. All follow-up chat masks PII before leaving your device.</span>
                 </div>
                 <button
                   type="button"
@@ -261,7 +261,7 @@ export default function MediaVault() {
                   onClick={() => void process()}
                 >
                   <Cloud size={18} />
-                  {processing ? t("Analyzing…") : t("Analyze with Gemini")}
+                  {processing ? "Analyzingâ€¦" : "Analyze with Gemini"}
                   {processing && <span className="step-spinner" aria-hidden="true" />}
                 </button>
                 {processing && processStatus && (
@@ -273,7 +273,7 @@ export default function MediaVault() {
             {processed && (
               <div className="call-vault-done-badge">
                 <CheckCircle size={16} />
-                {kind === "image" ? t("Image analyzed") : t("Transcribed")} · {t("PII masked")}
+                {kind === "image" ? t("Image analyzed") : t("Transcribed")} Â· {t("PII masked")}
                 {source === "IN_CLOUD" && (
                   <span className="call-vault-src-badge cloud"><Cloud size={10} /> Cloud AI</span>
                 )}
@@ -303,12 +303,12 @@ export default function MediaVault() {
               </div>
               <pre className="call-vault-transcript">{analysis}</pre>
               <details className="call-vault-xray" open>
-                <summary><Lock size={13} /> {t("Privacy X-Ray — what cloud sees when you chat")}</summary>
+                <summary><Lock size={13} /> {t("Privacy X-Ray â€” what cloud sees when you chat")}</summary>
                 <div className="call-vault-xray-body">
                   <TokenVaultPreview input={analysis} onCountChange={setPiiCount} />
                   {piiCount > 0 && (
                     <p className="call-vault-xray-note">
-                      {piiCount} identifier{piiCount !== 1 ? "s" : ""} masked — cloud only receives tokens like [PERSON_1].
+                      {piiCount} identifier{piiCount !== 1 ? "s" : ""} masked â€” cloud only receives tokens like [PERSON_1].
                     </p>
                   )}
                 </div>
@@ -316,7 +316,7 @@ export default function MediaVault() {
               {analysis.toLowerCase().includes("english translation:") && (
                 <div className="call-vault-translate-badge">
                   <Languages size={14} />
-                  Non-English content detected — English translation included.
+                  Non-English content detected â€” English translation included.
                 </div>
               )}
             </div>
@@ -330,7 +330,7 @@ export default function MediaVault() {
                 <div className="icon-tile"><MessageSquare size={20} /></div>
                 <div>
                   <h2>{t("Chat about this")} {kind}</h2>
-                  <p>{t("Questions PII-masked · Cloud sees tokens only")}</p>
+                  <p>{t("Questions PII-masked Â· Cloud sees tokens only")}</p>
                 </div>
               </div>
               <div className="doc-chat-messages" aria-live="polite">
@@ -343,7 +343,7 @@ export default function MediaVault() {
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`doc-chat-bubble ${msg.role}`}>
                     {msg.role === "ai" && (
-                      <span className="doc-chat-ai-label"><Lock size={10} /> AI · PII masked</span>
+                      <span className="doc-chat-ai-label"><Lock size={10} /> AI Â· PII masked</span>
                     )}
                     <p>{msg.text}</p>
                   </div>
@@ -351,7 +351,7 @@ export default function MediaVault() {
                 {chatBusy && (
                   <div className="doc-chat-bubble ai loading">
                     <span className="step-spinner" aria-hidden="true" />
-                    <span>Thinking…</span>
+                    <span>Thinkingâ€¦</span>
                   </div>
                 )}
               </div>
@@ -368,7 +368,7 @@ export default function MediaVault() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendChat(); } }}
-                  placeholder={`${t("Ask about this")} ${kind}…`}
+                  placeholder={`Ask about this ${kind}â€¦`}
                   rows={2}
                   disabled={chatBusy}
                   maxLength={1000}

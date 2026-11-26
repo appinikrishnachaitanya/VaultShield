@@ -5013,6 +5013,10 @@ html[lang="hi"] h3 {
   color: #1e293b;
   border-bottom-left-radius: 4px;
 }
+.doc-chat-bubble.ai p {
+  color: #1e293b;
+  margin: 0;
+}
 .doc-chat-bubble.loading {
   display: flex;
   align-items: center;
