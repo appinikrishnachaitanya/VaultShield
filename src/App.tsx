@@ -19,8 +19,6 @@ import {
   Shield,
   FileText,
   Menu,
-  BookHeart,
-  IndianRupee,
   ShieldAlert,
   Film,
 } from "lucide-react";
@@ -49,9 +47,7 @@ import { takeSharedInput } from "./lib/share";
 import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
-import PrivateDiary from "./components/PrivateDiary";
 import ExplainForFamily from "./components/ExplainForFamily";
-import UPIVerify from "./components/UPIVerify";
 import MediaVault from "./components/MediaVault";
 import ScaredPanel from "./components/ScaredPanel";
 import KnowYourRights from "./components/KnowYourRights";
@@ -135,7 +131,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary" | "upi" | "media">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
