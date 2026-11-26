@@ -1241,60 +1241,13 @@ blockquote {
 .drawer-overlay {
   display: none;
 }
-@media (max-width: 640px) {
-  /* ── Mobile top bar: brand + hamburger only ── */
+@media (max-width: 768px) {
+  /* ── Mobile: hide sidebar entirely; topbar + drawer take over ── */
   .sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    width: auto;
-    height: auto;
-    padding: max(16px, env(safe-area-inset-top)) 16px 12px;
-    background: #ffffffed;
-    backdrop-filter: blur(15px);
-    border-right: 0;
-    border-bottom: 1px solid #e2e8f0;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .brand {
-    font-size: 1.15rem;
-    gap: 8px;
-  }
-  .brand-icon {
-    padding: 6px;
-    border-radius: 10px;
-  }
-  .brand-icon svg {
-    width: 20px;
-    height: 20px;
-  }
-  .workspace-label,
-  .sidebar-bottom,
-  .privacy-stats-bar {
     display: none;
   }
-  /* hide desktop nav from sidebar on mobile */
-  .sidebar > nav {
-    display: none;
-  }
-  /* show hamburger */
-  .menu-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border: 0;
-    background: none;
-    color: #334155;
-    border-radius: 10px;
-    padding: 0;
-    flex-shrink: 0;
-  }
-  .menu-toggle:hover {
-    background: #f1f5f9;
+  .main-shell {
+    margin-left: 0 !important;
   }
 
   /* ── Slide-out drawer ── */
