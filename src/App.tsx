@@ -1372,8 +1372,12 @@ export default function App() {
               setNotificationsReady={setNotificationsReady}
             />
           )}
-          {tab === "docs" && <DocumentScanner />}
-          {tab === "media" && <MediaVault />}
+          <div style={{ display: tab === "docs" ? "block" : "none" }}>
+            <DocumentScanner />
+          </div>
+          <div style={{ display: tab === "media" ? "block" : "none" }}>
+            <MediaVault />
+          </div>
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">

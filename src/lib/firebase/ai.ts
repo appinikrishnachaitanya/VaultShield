@@ -143,12 +143,8 @@ export async function checkLocally(
   const createOptions = chromeModelOptions(Boolean(image));
   onProgress?.(`Chrome local model: ${availability}.`);
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_ON_DEVICE,
+    mode: InferenceMode.ONLY_IN_CLOUD,
     inCloudParams: { model: settings().model },
-    onDeviceParams: {
-      createOptions,
-      promptOptions: { responseConstraint: privacyResponseSchema },
-    },
   });
   if (availability !== "available")
     await boundedWait(
@@ -485,9 +481,7 @@ export async function verifyWithCloud(
         })
     : getGenerativeModel(ai, {
         mode:
-          purpose === "public-sources"
-            ? InferenceMode.ONLY_IN_CLOUD
-            : InferenceMode.PREFER_ON_DEVICE,
+          InferenceMode.ONLY_IN_CLOUD,
         inCloudParams: {
           model: cfg.model,
           generationConfig: { maxOutputTokens: 1200 },
@@ -594,18 +588,9 @@ export async function extractTextFromDocument(
     );
   const createOptions = chromeModelOptions(true);
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.ONLY_ON_DEVICE,
+    mode: InferenceMode.ONLY_IN_CLOUD,
     inCloudParams: { model: settings().model },
-    onDeviceParams: { createOptions },
   });
-  if (availability !== "available") {
-    onProgress?.("Preparing on-device model for document reading…");
-    await boundedWait(
-      model.initializeDeviceModel(),
-      600_000,
-      "On-device model preparation timed out.",
-    );
-  }
   onProgress?.("Reading document text on your device…");
   const prompt = buildDocumentExtractionPrompt(category);
   const result = await boundedWait(
@@ -716,9 +701,8 @@ export async function analyzeDiaryEntry(
 ): Promise<DiaryAnalysisResult> {
   if (!ai) throw new Error("Firebase AI not configured.");
   const cfg = settings();
-  const cloudOnly = cfg.inferenceMode === "only_in_cloud";
   const model = getGenerativeModel(ai, {
-    mode: cloudOnly ? InferenceMode.ONLY_IN_CLOUD : InferenceMode.PREFER_ON_DEVICE,
+    mode: InferenceMode.ONLY_IN_CLOUD,
     inCloudParams: {
       model: cfg.model,
       generationConfig: { responseMimeType: "application/json" },
@@ -812,12 +796,10 @@ Write 2-3 simple sentences for a non-technical family member explaining:
 - What they should do right now
 Use plain, calm language. No jargon. No personal information.`;
 
-  onProgress?.("Generating plain-language explanation on your device…");
-  const createOptions = chromeModelOptions(false);
+  onProgress?.("Generating plain-language explanation…");
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.PREFER_ON_DEVICE,
+    mode: InferenceMode.ONLY_IN_CLOUD,
     inCloudParams: { model: modelName },
-    onDeviceParams: { createOptions },
   });
   const start = performance.now();
   const result = await boundedWait(
@@ -1244,9 +1226,8 @@ export async function proofreadReplyLocally(
       "Chrome Proofreader cancelled. Trying Firebase on-device proofreading…",
     );
     const model = getGenerativeModel(ai, {
-      mode: InferenceMode.ONLY_ON_DEVICE,
+      mode: InferenceMode.ONLY_IN_CLOUD,
       inCloudParams: { model: settings().model },
-      onDeviceParams: { createOptions: chromeModelOptions(false) },
     });
     try {
       const { response } = await boundedWait(
