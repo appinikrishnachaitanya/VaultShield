@@ -661,7 +661,7 @@ export default function App() {
           VaultShield
         </a>
         <div className="workspace-label">
-          {t("YOUR PEACE OF MIND, PROTECTED")}
+          {t("YOUR HYBRID AI AGENT")}
         </div>
         <nav>
           {navItems.map((item) => (

@@ -1,18 +1,19 @@
-# VaultShield
+# VaultShield — Your Hybrid AI Agent
 
-**A private second opinion for Indian families facing payment pressure — with an inspectable record of what was ever sent to AI.**
+**A hybrid AI personal agent that keeps every task on-device first — with an inspectable record of what, if anything, was ever sent to the cloud.**
 
-VaultShield is a **Privacy Router for AI**. Every identifier in a message, document, photo, or recording is replaced with a typed token — `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]`, `[AMOUNT_1:10k-50k]` — entirely on-device, before any AI ever sees the content. Cloud models reason over placeholders, never originals. A receipt proves exactly what left the device and what didn't.
+VaultShield is one agent with several privacy-preserving skills, not five separate tools bolted together. Every skill routes through the same **Privacy Router**: identifiers in a message, document, photo, recording, or diary entry are replaced with a typed token — `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]`, `[AMOUNT_1:10k-50k]` — entirely on-device, before any AI ever sees the content. The agent reasons on-device first; cloud is only the fallback, and it only ever reasons over placeholders, never originals. A receipt proves exactly what left the device and what didn't.
 
 Built for the moment a scam message, a predatory loan notice, or a one-sided contract lands in someone's hands — and for the family members who want to help without ever reading the private details.
 
-## What it does
+## The agent's skills
 
 - **Check Something** — paste a suspicious message, screenshot, or payment request. On-device AI breaks down the four classic pressure tactics (Authority, Fear, Urgency, Secrecy) with quoted evidence, in English, Hindi, or Hinglish — entirely offline, with a cloud "second opinion" available only on explicit approval.
 - **Document Vault** — scan a medical report, loan notice, land deed, or legal summons. Every identifier is masked on-device before the document is analyzed for red flags, key facts, and missing information. Follow-up chat answers questions about the document using only privacy tokens.
 - **Media Vault** — upload an audio recording, image, or video. Identifiers are masked before any follow-up chat leaves the device; the first pass transcribes and flags concerns in the content's own language.
+- **Private Diary** — a standout: entries are encrypted client-side with AES-GCM, keyed by a PIN the agent never stores — not even VaultShield can read a diary without it. The agent reflects on each entry (mood, action items, learnings) through the same on-device-first pipeline, seeing only tokenized text.
 - **Family Circle** — pair with up to nine trusted relatives using a short-lived invitation code. A help request reaches their phone with the pressure-tactic count and nothing else — no message text, no screenshot, no phone number.
-- **Privacy receipt** — every check produces a record of exactly what was tokenized, what (if anything) reached the cloud, and how long it took. Nothing is more convincing than being able to inspect the evidence yourself.
+- **Privacy receipt** — every skill produces a record of exactly what was tokenized, what (if anything) reached the cloud, and how long it took. Nothing is more convincing than being able to inspect the evidence yourself.
 
 ## How the privacy router works
 
@@ -47,7 +48,7 @@ Guests can link a Google account at any time to carry their family circle and sa
 3. Enable Firebase AI Logic with the Vertex AI Gemini backend and Blaze billing.
 4. Enable App Check — reCAPTCHA Enterprise (web) and Play Integrity (Android).
 5. Enable Cloud Messaging and generate a Web Push VAPID key.
-6. Enable Remote Config (`cloud_model_name`, `enable_search_grounding`, `strict_privacy_mode`).
+6. Enable Remote Config (`cloud_model_name`, `enable_search_grounding`).
 
 Copy `.env.example` to `.env.local` and fill in the web config, reCAPTCHA Enterprise site key, and VAPID key. Register a local App Check debug token in the Firebase console for development.
 
