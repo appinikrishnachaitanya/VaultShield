@@ -2,7 +2,7 @@
 
 **A hybrid AI personal agent that keeps every task on-device first — with an inspectable record of what, if anything, was ever sent to the cloud.**
 
-VaultShield is one agent with several privacy-preserving skills, not five separate tools bolted together. Every skill routes through the same **Privacy Router**: identifiers in a message, document, photo, recording, or diary entry are replaced with a typed token — `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]`, `[AMOUNT_1:10k-50k]` — entirely on-device, before any AI ever sees the content. The agent reasons on-device first; cloud is only the fallback, and it only ever reasons over placeholders, never originals. A receipt proves exactly what left the device and what didn't.
+VaultShield is one agent with several privacy-preserving skills, not five separate tools bolted together. Every skill routes through the same **Privacy Router**: identifiers in a message, document, or diary entry are replaced with a typed token — `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]`, `[AMOUNT_1:10k-50k]` — entirely on-device, before any AI ever sees the content. The agent reasons on-device first; cloud is only the fallback, and for text it only ever reasons over placeholders, never originals. The one exception is Media Vault's first pass: an uploaded photo, recording, or video can't be tokenized on-device the way text can, so that first transcription or description is sent to cloud Gemini as-is — every follow-up question about it is tokenized like everything else. A receipt proves exactly what left the device and what didn't.
 
 Built for the moment a scam message, a predatory loan notice, or a one-sided contract lands in someone's hands — and for the family members who want to help without ever reading the private details.
 

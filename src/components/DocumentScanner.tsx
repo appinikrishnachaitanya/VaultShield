@@ -29,6 +29,7 @@ import {
 import PrivacyReceipt from "./PrivacyReceipt";
 import {
   DOCUMENT_CATEGORIES,
+  buildDocumentAnalysisPrompt,
   type DocumentCategory,
 } from "../lib/ai/documentPrompts";
 import type { PrivacyReceiptData } from "../lib/receipt";
@@ -293,15 +294,19 @@ export default function DocumentScanner() {
         vault.current,
         undefined,
         language,
+        route.tier,
       );
 
-      // Build privacy receipt
+      // Build privacy receipt — payload is the full prompt actually transmitted
+      // (instructions + tokenized text), not just the document text, so the
+      // receipt's byte count and "what left the device" match reality.
+      const fullPrompt = buildDocumentAnalysisPrompt(tokenized.text, category, language);
       const rcpt = buildReceipt({
         route,
         source: analysisResult.source ?? "IN_CLOUD",
         elapsedMs: analysisResult.durationMs,
         counts,
-        payload: tokenized.text as SanitizedText,
+        payload: fullPrompt as SanitizedText,
         approvedText: tokenized.text as SanitizedText,
         groundingUsed: false,
         model: analysisResult.model,
