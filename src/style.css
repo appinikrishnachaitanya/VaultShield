@@ -766,9 +766,11 @@ textarea::placeholder {
 .doc-translate-banner {
   background: #f0fdf9;
   border: 1px solid #99f6e4;
+  flex-wrap: wrap;
 }
 .doc-translate-banner span {
   flex: 1;
+  min-width: 180px;
   color: #0f172a;
 }
 .doc-translate-banner .primary {
