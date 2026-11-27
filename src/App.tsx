@@ -137,7 +137,7 @@ export default function App() {
   const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media" | "diary" | "settings">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
-      : "diary",
+      : "check",
   );
   const [input, setInput] = useState("");
   const [image, setImage] = useState<{
