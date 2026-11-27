@@ -3986,17 +3986,19 @@ html[lang="hi"] h3 {
   grid-template-columns: 1fr;
   max-width: 760px;
 }
-.doc-scanner .workspace.has-result {
-  grid-template-columns: 1fr 360px;
-  max-width: 1200px;
-  align-items: start;
-}
-.doc-scanner .doc-chat-column {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  position: sticky;
-  top: 20px;
-  align-self: start;
+@media (min-width: 900px) {
+  .doc-scanner .workspace.has-result {
+    grid-template-columns: 1fr 360px;
+    max-width: 1200px;
+    align-items: start;
+  }
+  .doc-scanner .doc-chat-column {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    position: sticky;
+    top: 20px;
+    align-self: start;
+  }
 }
 .doc-scanner .check-column {
   display: flex;
