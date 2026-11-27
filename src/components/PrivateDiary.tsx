@@ -19,6 +19,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase/config";
+import { t, useAppLanguage, type AppLanguage } from "../lib/i18n";
 import { analyzeDiaryEntry, type DiaryAnalysisResult } from "../lib/firebase/ai";
 import DayMemoryCard from "./DayMemoryCard";
 import {
@@ -53,14 +54,16 @@ const MOOD_META: Record<
   sad: { label: "Sad", emoji: "😢", color: "#2563eb", bg: "#dbeafe", score: 1 },
 };
 
+const LOCALE_MAP: Record<AppLanguage, string> = { en: "en-IN", hi: "hi-IN", fr: "fr-FR" };
+
 function todayStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, locale: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+  return new Date(y, m - 1, d).toLocaleDateString(locale, {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -68,9 +71,18 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function formatShort(dateStr: string): string {
+function formatShort(dateStr: string, locale: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+  return new Date(y, m - 1, d).toLocaleDateString(locale, { month: "short", day: "numeric" });
+}
+
+function dowLabels(locale: string): string[] {
+  const base = new Date(2024, 0, 7); // a Sunday
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d);
+  });
 }
 
 // ─── PIN lock screens ───────────────────────────────────────────────────────
@@ -83,14 +95,14 @@ function PinSetupScreen({ onDone }: { onDone: () => void }) {
 
   async function submit() {
     setError("");
-    if (pin.length < 6) { setError("Use at least 6 characters."); return; }
-    if (pin !== confirm) { setError("PINs don't match."); return; }
+    if (pin.length < 6) { setError(t("Use at least 6 characters.")); return; }
+    if (pin !== confirm) { setError(t("PINs don't match.")); return; }
     setBusy(true);
     try {
       await setupPin(pin);
       onDone();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not set up the PIN.");
+      setError(e instanceof Error ? e.message : t("Could not set up the PIN."));
     } finally {
       setBusy(false);
     }
@@ -100,12 +112,12 @@ function PinSetupScreen({ onDone }: { onDone: () => void }) {
     <div className="diary-lock-view">
       <div className="diary-lock-card">
         <Lock size={32} className="diary-lock-icon" />
-        <h1>Lock your diary</h1>
-        <p>Choose a PIN or passphrase. It encrypts every entry — we never store it, so nobody, not even VaultShield, can read your diary without it.</p>
+        <h1>{t("Lock your diary")}</h1>
+        <p>{t("Choose a PIN or passphrase. It encrypts every entry — we never store it, so nobody, not even VaultShield, can read your diary without it.")}</p>
         <input
           type="password"
           className="diary-lock-input"
-          placeholder="New PIN (min 6 characters)"
+          placeholder={t("New PIN (min 6 characters)")}
           value={pin}
           onChange={(e) => setPin(e.target.value)}
           disabled={busy}
@@ -114,7 +126,7 @@ function PinSetupScreen({ onDone }: { onDone: () => void }) {
         <input
           type="password"
           className="diary-lock-input"
-          placeholder="Confirm PIN"
+          placeholder={t("Confirm PIN")}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           disabled={busy}
@@ -122,11 +134,11 @@ function PinSetupScreen({ onDone }: { onDone: () => void }) {
         />
         {error && <div className="diary-lock-error">{error}</div>}
         <button className="diary-lock-btn" onClick={() => void submit()} disabled={busy}>
-          {busy ? "Setting up…" : "Lock my diary"}
+          {busy ? t("Setting up…") : t("Lock my diary")}
         </button>
         <div className="diary-lock-warning">
           <ShieldAlert size={13} />
-          There is no "forgot PIN" recovery — that's what makes this real encryption. Losing the PIN means losing the entries.
+          {t("There is no \"forgot PIN\" recovery — that's what makes this real encryption. Losing the PIN means losing the entries.")}
         </div>
       </div>
     </div>
@@ -146,9 +158,9 @@ function PinUnlockScreen({ onDone, onNoPinFound }: { onDone: () => void; onNoPin
       const outcome = await unlockWithPin(pin);
       if (outcome === "ok") onDone();
       else if (outcome === "not-set-up") onNoPinFound();
-      else setError("That PIN doesn't match. Try again.");
+      else setError(t("That PIN doesn't match. Try again."));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not unlock the diary.");
+      setError(e instanceof Error ? e.message : t("Could not unlock the diary."));
     } finally {
       setBusy(false);
     }
@@ -169,13 +181,13 @@ function PinUnlockScreen({ onDone, onNoPinFound }: { onDone: () => void; onNoPin
       <div className="diary-lock-view">
         <div className="diary-lock-card">
           <ShieldAlert size={32} className="diary-lock-icon danger" />
-          <h1>Erase this diary?</h1>
-          <p>Forgetting your PIN means the entries can't be decrypted — that's by design. The only way forward is to erase them and start a new, empty diary. This cannot be undone.</p>
+          <h1>{t("Erase this diary?")}</h1>
+          <p>{t("Forgetting your PIN means the entries can't be decrypted — that's by design. The only way forward is to erase them and start a new, empty diary. This cannot be undone.")}</p>
           <button className="diary-lock-btn danger" onClick={() => void doReset()} disabled={busy}>
-            {busy ? "Erasing…" : "Erase diary and start over"}
+            {busy ? t("Erasing…") : t("Erase diary and start over")}
           </button>
           <button className="diary-lock-cancel" onClick={() => setConfirmingReset(false)} disabled={busy}>
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </div>
@@ -186,12 +198,12 @@ function PinUnlockScreen({ onDone, onNoPinFound }: { onDone: () => void; onNoPin
     <div className="diary-lock-view">
       <div className="diary-lock-card">
         <Lock size={32} className="diary-lock-icon" />
-        <h1>Diary is locked</h1>
-        <p>Enter your PIN to continue.</p>
+        <h1>{t("Diary is locked")}</h1>
+        <p>{t("Enter your PIN to continue.")}</p>
         <input
           type="password"
           className="diary-lock-input"
-          placeholder="PIN"
+          placeholder={t("PIN")}
           value={pin}
           onChange={(e) => setPin(e.target.value)}
           disabled={busy}
@@ -200,10 +212,10 @@ function PinUnlockScreen({ onDone, onNoPinFound }: { onDone: () => void; onNoPin
         />
         {error && <div className="diary-lock-error">{error}</div>}
         <button className="diary-lock-btn" onClick={() => void submit()} disabled={busy || !pin}>
-          {busy ? "Unlocking…" : "Unlock"}
+          {busy ? t("Unlocking…") : t("Unlock")}
         </button>
         <button className="diary-lock-forgot" onClick={() => setConfirmingReset(true)} disabled={busy}>
-          Forgot PIN?
+          {t("Forgot PIN?")}
         </button>
       </div>
     </div>
@@ -220,14 +232,14 @@ export function ChangePinDialog({ onClose }: { onClose: () => void }) {
 
   async function submit() {
     setError("");
-    if (newPin.length < 6) { setError("Use at least 6 characters."); return; }
-    if (newPin !== confirm) { setError("New PINs don't match."); return; }
+    if (newPin.length < 6) { setError(t("Use at least 6 characters.")); return; }
+    if (newPin !== confirm) { setError(t("New PINs don't match.")); return; }
     setBusy(true);
     try {
       await changePin(oldPin, newPin);
       setDone(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not change the PIN.");
+      setError(e instanceof Error ? e.message : t("Could not change the PIN."));
     } finally {
       setBusy(false);
     }
@@ -238,21 +250,21 @@ export function ChangePinDialog({ onClose }: { onClose: () => void }) {
       <div className="diary-modal" onClick={(e) => e.stopPropagation()}>
         {done ? (
           <>
-            <h2>PIN changed</h2>
-            <p>Your diary is now protected by the new PIN.</p>
-            <button className="diary-lock-btn" onClick={onClose}>Done</button>
+            <h2>{t("PIN changed")}</h2>
+            <p>{t("Your diary is now protected by the new PIN.")}</p>
+            <button className="diary-lock-btn" onClick={onClose}>{t("Done")}</button>
           </>
         ) : (
           <>
-            <h2>Change PIN</h2>
-            <input type="password" className="diary-lock-input" placeholder="Current PIN" value={oldPin} onChange={(e) => setOldPin(e.target.value)} disabled={busy} />
-            <input type="password" className="diary-lock-input" placeholder="New PIN (min 6 characters)" value={newPin} onChange={(e) => setNewPin(e.target.value)} disabled={busy} />
-            <input type="password" className="diary-lock-input" placeholder="Confirm new PIN" value={confirm} onChange={(e) => setConfirm(e.target.value)} disabled={busy} />
+            <h2>{t("Change PIN")}</h2>
+            <input type="password" className="diary-lock-input" placeholder={t("Current PIN")} value={oldPin} onChange={(e) => setOldPin(e.target.value)} disabled={busy} />
+            <input type="password" className="diary-lock-input" placeholder={t("New PIN (min 6 characters)")} value={newPin} onChange={(e) => setNewPin(e.target.value)} disabled={busy} />
+            <input type="password" className="diary-lock-input" placeholder={t("Confirm new PIN")} value={confirm} onChange={(e) => setConfirm(e.target.value)} disabled={busy} />
             {error && <div className="diary-lock-error">{error}</div>}
             <div className="diary-modal-actions">
-              <button className="diary-lock-cancel" onClick={onClose} disabled={busy}>Cancel</button>
+              <button className="diary-lock-cancel" onClick={onClose} disabled={busy}>{t("Cancel")}</button>
               <button className="diary-lock-btn" onClick={() => void submit()} disabled={busy}>
-                {busy ? "Saving…" : "Save new PIN"}
+                {busy ? t("Saving…") : t("Save new PIN")}
               </button>
             </div>
           </>
@@ -270,12 +282,14 @@ function DiaryCalendar({
   onOpenEntry,
   onLock,
   onChangePin,
+  locale,
 }: {
   entries: DiaryEntry[];
   onNewEntry: (date: string) => void;
   onOpenEntry: (entry: DiaryEntry) => void;
   onLock: () => void;
   onChangePin: () => void;
+  locale: string;
 }) {
   const today = todayStr();
   const [year, setYear] = useState(new Date().getFullYear());
@@ -285,7 +299,7 @@ function DiaryCalendar({
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDow = new Date(year, month, 1).getDay();
-  const monthName = new Date(year, month).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const monthName = new Date(year, month).toLocaleDateString(locale, { month: "long", year: "numeric" });
 
   const cells: (number | null)[] = [
     ...Array(firstDow).fill(null),
@@ -293,7 +307,7 @@ function DiaryCalendar({
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const DOW = dowLabels(locale);
 
   const recentEntries = [...entries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
@@ -311,20 +325,20 @@ function DiaryCalendar({
         <div className="diary-title-row">
           <BookHeart size={28} className="diary-logo" />
           <div>
-            <h1>Private Diary</h1>
-            <p>Your thoughts, locked behind your PIN</p>
+            <h1>{t("Private Diary")}</h1>
+            <p>{t("Your thoughts, locked behind your PIN")}</p>
           </div>
         </div>
         <div className="diary-header-actions">
-          <button className="diary-icon-btn" onClick={onChangePin} aria-label="Change PIN" title="Change PIN">
+          <button className="diary-icon-btn" onClick={onChangePin} aria-label={t("Change PIN")} title={t("Change PIN")}>
             <Settings size={18} />
           </button>
-          <button className="diary-icon-btn" onClick={onLock} aria-label="Lock diary" title="Lock diary">
+          <button className="diary-icon-btn" onClick={onLock} aria-label={t("Lock diary")} title={t("Lock diary")}>
             <Lock size={18} />
           </button>
-          <button className="diary-new-btn" onClick={() => onNewEntry(today)} aria-label="New entry for today">
+          <button className="diary-new-btn" onClick={() => onNewEntry(today)} aria-label={t("New entry for today")}>
             <Plus size={18} />
-            Today's Entry
+            {t("Today's Entry")}
           </button>
         </div>
       </div>
@@ -333,17 +347,17 @@ function DiaryCalendar({
         <div className="diary-stats-row">
           <div className="diary-stat">
             <span className="diary-stat-num">{entries.length}</span>
-            <span className="diary-stat-label">entries</span>
+            <span className="diary-stat-label">{t("entries")}</span>
           </div>
           {dominantMood && (
             <div className="diary-stat">
               <span className="diary-stat-num">{MOOD_META[dominantMood].emoji}</span>
-              <span className="diary-stat-label">mostly {dominantMood}</span>
+              <span className="diary-stat-label">{t("mostly")} {t(MOOD_META[dominantMood].label)}</span>
             </div>
           )}
           <div className="diary-stat">
             <span className="diary-stat-num">{new Set(entries.map((e) => e.date.slice(0, 7))).size}</span>
-            <span className="diary-stat-label">months</span>
+            <span className="diary-stat-label">{t("months")}</span>
           </div>
         </div>
       )}
@@ -356,7 +370,7 @@ function DiaryCalendar({
               if (month === 0) { setMonth(11); setYear((y) => y - 1); }
               else setMonth((m) => m - 1);
             }}
-            aria-label="Previous month"
+            aria-label={t("Previous month")}
           >
             <ChevronLeft size={18} />
           </button>
@@ -367,15 +381,15 @@ function DiaryCalendar({
               if (month === 11) { setMonth(0); setYear((y) => y + 1); }
               else setMonth((m) => m + 1);
             }}
-            aria-label="Next month"
+            aria-label={t("Next month")}
           >
             <ChevronRight size={18} />
           </button>
         </div>
 
         <div className="diary-cal-grid">
-          {DOW.map((d) => (
-            <div key={d} className="diary-cal-dow">{d}</div>
+          {DOW.map((d, i) => (
+            <div key={i} className="diary-cal-dow">{d}</div>
           ))}
           {cells.map((day, idx) => {
             if (!day) return <div key={`e-${idx}`} className="diary-cal-empty" />;
@@ -387,14 +401,14 @@ function DiaryCalendar({
                 key={dateStr}
                 className={`diary-cal-day${isToday ? " today" : ""}${entry ? " has-entry" : ""}`}
                 onClick={() => (entry ? onOpenEntry(entry) : onNewEntry(dateStr))}
-                aria-label={entry ? `${dateStr}: ${entry.mood}` : `New entry for ${dateStr}`}
+                aria-label={entry ? `${dateStr}: ${t(MOOD_META[entry.mood].label)}` : `${t("New entry for")} ${dateStr}`}
               >
                 <span className="diary-cal-num">{day}</span>
                 {entry && (
                   <span
                     className="diary-mood-dot"
                     style={{ background: MOOD_META[entry.mood].color }}
-                    title={MOOD_META[entry.mood].label}
+                    title={t(MOOD_META[entry.mood].label)}
                   />
                 )}
               </button>
@@ -406,7 +420,7 @@ function DiaryCalendar({
           {(Object.keys(MOOD_META) as DiaryMood[]).map((m) => (
             <span key={m} className="diary-legend-item">
               <span className="diary-legend-dot" style={{ background: MOOD_META[m].color }} />
-              {MOOD_META[m].label}
+              {t(MOOD_META[m].label)}
             </span>
           ))}
         </div>
@@ -414,7 +428,7 @@ function DiaryCalendar({
 
       {recentEntries.length > 0 && (
         <div className="diary-recent">
-          <div className="diary-section-label">Recent entries</div>
+          <div className="diary-section-label">{t("Recent entries")}</div>
           <div className="diary-recent-list">
             {recentEntries.map((e) => (
               <button
@@ -424,9 +438,9 @@ function DiaryCalendar({
                 onClick={() => onOpenEntry(e)}
               >
                 <div className="diary-recent-top">
-                  <span className="diary-recent-date">{formatShort(e.date)}</span>
+                  <span className="diary-recent-date">{formatShort(e.date, locale)}</span>
                   <span className="diary-recent-mood">
-                    {MOOD_META[e.mood].emoji} {MOOD_META[e.mood].label}
+                    {MOOD_META[e.mood].emoji} {t(MOOD_META[e.mood].label)}
                   </span>
                 </div>
                 <p className="diary-recent-summary">{e.summary}</p>
@@ -439,10 +453,10 @@ function DiaryCalendar({
       {entries.length === 0 && (
         <div className="diary-empty">
           <BookHeart size={40} />
-          <strong>Your diary is waiting</strong>
-          <p>Tap "Today's Entry" to write your first reflection. Everything stays encrypted on this device.</p>
+          <strong>{t("Your diary is waiting")}</strong>
+          <p>{t("Tap \"Today's Entry\" to write your first reflection. Everything stays encrypted on this device.")}</p>
           <button className="diary-empty-btn" onClick={() => onNewEntry(today)}>
-            <Plus size={18} /> Start writing
+            <Plus size={18} /> {t("Start writing")}
           </button>
         </div>
       )}
@@ -459,11 +473,15 @@ function NewEntry({
   existing,
   onBack,
   onSaved,
+  locale,
+  language,
 }: {
   date: string;
   existing?: DiaryEntry;
   onBack: () => void;
   onSaved: (entry: DiaryEntry) => void;
+  locale: string;
+  language: AppLanguage;
 }) {
   const [text, setText] = useState(existing?.content ?? "");
   const [recording, setRecording] = useState(false);
@@ -496,7 +514,7 @@ function NewEntry({
     const rec = new SpeechRec();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = "en-IN";
+    rec.lang = locale;
     let finalBuffer = "";
     rec.onresult = (ev) => {
       let fin = "";
@@ -537,14 +555,14 @@ function NewEntry({
   }
 
   async function analyze() {
-    if (!text.trim()) { setError("Write something first!"); return; }
+    if (!text.trim()) { setError(t("Write something first!")); return; }
     setBusy(true);
     setError("");
     vault.current.clear();
     const pipeline: AnalysisStep[] = [
-      { id: "vault", label: "Token vault — mask private details", status: "pending" },
-      { id: "ai", label: "Hybrid AI — analyze mood & insights", status: "pending" },
-      { id: "save", label: "Save encrypted to your account", status: "pending" },
+      { id: "vault", label: t("Token vault — mask private details"), status: "pending" },
+      { id: "ai", label: t("Hybrid AI — analyze mood & insights"), status: "pending" },
+      { id: "save", label: t("Save encrypted to your account"), status: "pending" },
     ];
     setSteps(pipeline);
 
@@ -554,7 +572,7 @@ function NewEntry({
       await new Promise((r) => setTimeout(r, 400));
       advanceSteps("ai");
 
-      const result = await analyzeDiaryEntry(tokenized.text);
+      const result = await analyzeDiaryEntry(tokenized.text, language);
       advanceSteps("save");
 
       const entry: DiaryEntry = {
@@ -579,11 +597,11 @@ function NewEntry({
         onSaved(entry);
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Analysis failed.";
+      const msg = e instanceof Error ? e.message : t("Analysis failed.");
       const isAppCheckErr = msg.includes("App Check") || msg.includes("fetch-error") || msg.includes("401");
       setError(
         isAppCheckErr
-          ? "Firebase AI not reachable. Register the App Check debug token in Firebase Console and try again."
+          ? t("Firebase AI not reachable. Register the App Check debug token in Firebase Console and try again.")
           : msg,
       );
       setSteps([]);
@@ -598,6 +616,7 @@ function NewEntry({
         date={date}
         result={memoryResult.result}
         onContinue={() => onSaved(memoryResult.entry)}
+        locale={locale}
       />
     );
   }
@@ -606,17 +625,17 @@ function NewEntry({
     <div className="diary-entry-view">
       <div className="diary-entry-top">
         <button className="diary-back-btn" onClick={onBack} disabled={busy}>
-          <ArrowLeft size={18} /> Back
+          <ArrowLeft size={18} /> {t("Back")}
         </button>
         <div className="diary-entry-date">
-          <span>{formatDate(date)}</span>
+          <span>{formatDate(date, locale)}</span>
         </div>
       </div>
 
       <div className="diary-entry-card">
         <div className="diary-entry-prompt">
           <BookHeart size={22} />
-          <span>How was your day?</span>
+          <span>{t("How was your day?")}</span>
         </div>
 
         {hasVoice && (
@@ -625,18 +644,18 @@ function NewEntry({
               className={`diary-voice-btn${recording ? " recording" : ""}`}
               onClick={recording ? stopRecording : startRecording}
               disabled={busy}
-              aria-label={recording ? "Stop recording" : "Start voice entry"}
+              aria-label={recording ? t("Stop recording") : t("Start voice entry")}
             >
               {recording ? (
                 <>
                   <span className="diary-voice-pulse" />
                   <MicOff size={20} />
-                  <span>Tap to stop</span>
+                  <span>{t("Tap to stop")}</span>
                 </>
               ) : (
                 <>
                   <Mic size={20} />
-                  <span>Speak your mind</span>
+                  <span>{t("Speak your mind")}</span>
                 </>
               )}
             </button>
@@ -649,14 +668,14 @@ function NewEntry({
           className="diary-textarea"
           value={text + (interim ? " " + interim : "")}
           onChange={(e) => { setText(e.target.value); setInterim(""); }}
-          placeholder="Write anything — your thoughts, what happened today, how you're feeling…"
+          placeholder={t("Write anything — your thoughts, what happened today, how you're feeling…")}
           disabled={busy}
           rows={10}
         />
 
         <div className="diary-privacy-note">
           <LockKeyhole size={13} />
-          <span>Names, numbers & identifiers are masked before AI sees your entry</span>
+          <span>{t("Names, numbers & identifiers are masked before AI sees your entry")}</span>
         </div>
 
         {error && <div className="diary-error">{error}</div>}
@@ -676,7 +695,7 @@ function NewEntry({
 
         <button className="diary-analyze-btn" onClick={() => void analyze()} disabled={busy || !text.trim()}>
           <Sparkles size={19} />
-          {busy ? "Analyzing privately…" : "Analyze & Save Privately"}
+          {busy ? t("Analyzing privately…") : t("Analyze & Save Privately")}
         </button>
       </div>
     </div>
@@ -690,17 +709,19 @@ function EntryDetail({
   onBack,
   onEdit,
   onDeleted,
+  locale,
 }: {
   entry: DiaryEntry;
   onBack: () => void;
   onEdit: () => void;
   onDeleted: () => void;
+  locale: string;
 }) {
   const meta = MOOD_META[entry.mood];
   const stars = Array.from({ length: 5 }, (_, i) => i < entry.moodScore);
 
   function handleDelete() {
-    if (confirm("Delete this diary entry? This cannot be undone.")) {
+    if (confirm(t("Delete this diary entry? This cannot be undone."))) {
       void deleteEntry(entry.id).then(onDeleted);
     }
   }
@@ -709,10 +730,10 @@ function EntryDetail({
     <div className="diary-detail-view">
       <div className="diary-entry-top">
         <button className="diary-back-btn" onClick={onBack}>
-          <ArrowLeft size={18} /> Back
+          <ArrowLeft size={18} /> {t("Back")}
         </button>
         <div className="diary-detail-actions">
-          <button className="diary-edit-btn" onClick={onEdit}>Edit</button>
+          <button className="diary-edit-btn" onClick={onEdit}>{t("Edit")}</button>
           <button className="diary-delete-btn" onClick={handleDelete}>
             <Trash2 size={16} />
           </button>
@@ -722,9 +743,9 @@ function EntryDetail({
       <div className="diary-detail-mood-banner" style={{ background: meta.bg, borderColor: meta.color }}>
         <span className="diary-detail-emoji">{meta.emoji}</span>
         <div>
-          <div className="diary-detail-date">{formatDate(entry.date)}</div>
+          <div className="diary-detail-date">{formatDate(entry.date, locale)}</div>
           <div className="diary-detail-mood-label" style={{ color: meta.color }}>
-            {meta.label}
+            {t(meta.label)}
             <span className="diary-mood-stars">
               {stars.map((on, i) => (
                 <span key={i} style={{ color: on ? meta.color : "#cbd5e1" }}>★</span>
@@ -738,7 +759,7 @@ function EntryDetail({
         <div className="diary-detail-section">
           <div className="diary-detail-section-title">
             <Sparkles size={16} />
-            AI Summary
+            {t("AI Summary")}
           </div>
           <p className="diary-detail-summary">{entry.summary}</p>
         </div>
@@ -747,7 +768,7 @@ function EntryDetail({
       <div className="diary-detail-section">
         <div className="diary-detail-section-title">
           <BookHeart size={16} />
-          Today's Entry
+          {t("Today's Entry")}
         </div>
         <p className="diary-detail-content">{entry.content}</p>
       </div>
@@ -756,7 +777,7 @@ function EntryDetail({
         <div className="diary-detail-section">
           <div className="diary-detail-section-title">
             <Target size={16} />
-            Action Items for Tomorrow
+            {t("Action Items for Tomorrow")}
           </div>
           <ul className="diary-action-list">
             {entry.actionItems.map((item, i) => (
@@ -773,7 +794,7 @@ function EntryDetail({
         <div className="diary-detail-section">
           <div className="diary-detail-section-title">
             <Lightbulb size={16} />
-            Key Learnings
+            {t("Key Learnings")}
           </div>
           <ul className="diary-learning-list">
             {entry.learnings.map((item, i) => (
@@ -789,8 +810,8 @@ function EntryDetail({
       <div className={`diary-detail-privacy${entry.aiSource === "IN_CLOUD" ? " cloud" : ""}`}>
         <LockKeyhole size={13} />
         {entry.aiSource === "ON_DEVICE"
-          ? "Analyzed on-device — your diary never left this device"
-          : "AI saw only privacy tokens — your real details stayed on this device"}
+          ? t("Analyzed on-device — your diary never left this device")
+          : t("AI saw only privacy tokens — your real details stayed on this device")}
       </div>
     </div>
   );
@@ -799,6 +820,8 @@ function EntryDetail({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PrivateDiary() {
+  const appLanguage = useAppLanguage();
+  const locale = LOCALE_MAP[appLanguage];
   const [lockView, setLockView] = useState<LockView>("checking");
   const [view, setView] = useState<View>("calendar");
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
@@ -864,8 +887,8 @@ export default function PrivateDiary() {
       <div className="diary-lock-view">
         <div className="diary-lock-card">
           <Lock size={32} className="diary-lock-icon" />
-          <h1>Sign in required</h1>
-          <p>Your Private Diary is tied to your account so it can be encrypted and synced safely. Sign in from the account menu to set up your diary PIN.</p>
+          <h1>{t("Sign in required")}</h1>
+          <p>{t("Your Private Diary is tied to your account so it can be encrypted and synced safely. Sign in from the account menu to set up your diary PIN.")}</p>
         </div>
       </div>
     );
@@ -889,6 +912,7 @@ export default function PrivateDiary() {
           onOpenEntry={openDetail}
           onLock={handleLock}
           onChangePin={() => setShowChangePin(true)}
+          locale={locale}
         />
       )}
       {view === "new-entry" && (
@@ -897,6 +921,8 @@ export default function PrivateDiary() {
           existing={currentEntry ?? undefined}
           onBack={() => setView("calendar")}
           onSaved={handleSaved}
+          locale={locale}
+          language={appLanguage}
         />
       )}
       {view === "detail" && currentEntry && (
@@ -905,6 +931,7 @@ export default function PrivateDiary() {
           onBack={() => setView("calendar")}
           onEdit={() => setView("new-entry")}
           onDeleted={handleDeleted}
+          locale={locale}
         />
       )}
     </div>

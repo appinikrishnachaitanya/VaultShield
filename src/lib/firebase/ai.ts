@@ -902,9 +902,21 @@ const diaryResponseSchema = {
  * responseMimeType in inCloudParams — that would bias Firebase's routing
  * toward cloud. JSON is parsed from plain text via extractJsonObject.
  */
-export async function analyzeDiaryEntry(tokenizedText: string): Promise<DiaryAnalysisResult> {
+export async function analyzeDiaryEntry(
+  tokenizedText: string,
+  language: "en" | "hi" | "fr" = "en",
+): Promise<DiaryAnalysisResult> {
   if (!ai) throw new Error("Firebase AI not configured.");
   const { model: modelName } = settings();
+  const diaryLanguageNames: Record<"en" | "hi" | "fr", string> = {
+    en: "English",
+    hi: "Hindi",
+    fr: "French",
+  };
+  const languageInstruction =
+    language === "en"
+      ? ""
+      : `\n\nIMPORTANT: Write every string value (summary, actionItems, learnings, memories, personalMessage) in ${diaryLanguageNames[language]}. JSON keys and the "mood"/"source" enum values stay in English.`;
   const prompt = `You are a gentle, private journaling companion. The text below is a diary entry where personal identifiers have already been replaced with placeholders like [PERSON_1] or [PLACE_1] — treat those as the real names/places, do not mention that they are placeholders.
 
 Diary entry:
@@ -921,7 +933,7 @@ Respond with ONLY a JSON object (no markdown fences) with this exact shape:
   "learnings": array of up to 3 short insights or things to remember from today,
   "memories": array of up to 3 short, specific, positive moments worth remembering from the entry (can be empty if none stand out),
   "personalMessage": one short, warm, encouraging sentence written directly to the writer
-}`;
+}${languageInstruction}`;
 
   const model = getGenerativeModel(ai, {
     mode: InferenceMode.PREFER_ON_DEVICE,

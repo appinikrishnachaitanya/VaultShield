@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { LockKeyhole, Sparkles } from "lucide-react";
 import type { DiaryAnalysisResult } from "../lib/firebase/ai";
+import { t } from "../lib/i18n";
 
 interface Props {
   date: string;
   result: DiaryAnalysisResult;
   onContinue: () => void;
+  locale: string;
 }
 
 function sceneType(moodScore: number): "rain" | "cloud" | "sun" {
@@ -118,16 +120,16 @@ const MEMORY_ICONS: Record<string, string> = {
 const MEMORY_ICONS2: Record<string, string> = { rain: "🤝", cloud: "💡", sun: "☎️" };
 const MEMORY_ICONS3: Record<string, string> = { rain: "✍️", cloud: "🌙", sun: "🌅" };
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, locale: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+  return new Date(y, m - 1, d).toLocaleDateString(locale, {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
 }
 
-export default function DayMemoryCard({ date, result, onContinue }: Props) {
+export default function DayMemoryCard({ date, result, onContinue, locale }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scene = sceneType(result.moodScore);
 
@@ -151,7 +153,7 @@ export default function DayMemoryCard({ date, result, onContinue }: Props) {
         <canvas ref={canvasRef} className="day-memory-canvas" aria-hidden="true" />
 
         <div className="day-memory-body">
-          <div className="day-memory-date-label">{formatDate(date)}</div>
+          <div className="day-memory-date-label">{formatDate(date, locale)}</div>
 
           {memories.length > 0 && (
             <div className="day-memory-moments">
@@ -174,12 +176,12 @@ export default function DayMemoryCard({ date, result, onContinue }: Props) {
           <div className="day-memory-privacy">
             <LockKeyhole size={12} />
             {result.source === "ON_DEVICE"
-              ? "Reflected on-device — your words never left"
-              : "AI saw only privacy tokens — your words stayed here"}
+              ? t("Reflected on-device — your words never left")
+              : t("AI saw only privacy tokens — your words stayed here")}
           </div>
 
           <button className="day-memory-continue" onClick={onContinue}>
-            See my entry →
+            {t("See my entry →")}
           </button>
         </div>
       </div>

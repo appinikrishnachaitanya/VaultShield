@@ -76,19 +76,19 @@ export default function SettingsPage({ onNavigate }: { onNavigate: (tab: "diary"
           <p className="settings-section-sub">…</p>
         ) : !diaryPinSet ? (
           <>
-            <p className="settings-section-sub">No PIN set up yet — your entries aren't encrypted until you do.</p>
+            <p className="settings-section-sub">{t("No PIN set up yet — your entries aren't encrypted until you do.")}</p>
             <button className="settings-row-btn" onClick={() => onNavigate("diary")}>
-              <span>Set up a diary PIN</span>
+              <span>{t("Set up a diary PIN")}</span>
               <ChevronRight size={16} />
             </button>
           </>
         ) : (
           <>
             <p className="settings-section-sub">
-              {diaryUnlocked ? "Your diary is currently unlocked in this tab." : "Your diary is locked."}
+              {diaryUnlocked ? t("Your diary is currently unlocked in this tab.") : t("Your diary is locked.")}
             </p>
             <button className="settings-row-btn" onClick={() => setShowChangePin(true)}>
-              <span>Change PIN</span>
+              <span>{t("Change PIN")}</span>
               <ChevronRight size={16} />
             </button>
             {diaryUnlocked && (
@@ -96,7 +96,7 @@ export default function SettingsPage({ onNavigate }: { onNavigate: (tab: "diary"
                 className="settings-row-btn"
                 onClick={() => { lockDiary(); setDiaryUnlocked(false); }}
               >
-                <span><Lock size={14} /> Lock diary now</span>
+                <span><Lock size={14} /> {t("Lock diary now")}</span>
                 <ChevronRight size={16} />
               </button>
             )}

@@ -183,7 +183,7 @@ export default function Account() {
                 onClick={() => setSettingsMode(true)}
               >
                 <Settings size={15} />
-                {t("Account settings")}
+                {t("Edit name")}
               </button>
               <div className="acct-divider" />
               <button
@@ -212,7 +212,7 @@ export default function Account() {
                 >
                   ← {t("Back")}
                 </button>
-                <span>{t("Account settings")}</span>
+                <span>{t("Edit name")}</span>
               </div>
               <div className="acct-divider" />
               <div className="acct-field">
