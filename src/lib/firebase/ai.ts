@@ -864,6 +864,24 @@ export type DiaryAnalysisResult = {
 
 const DIARY_MOODS = ["joyful", "calm", "neutral", "anxious", "sad"] as const;
 
+// Keeps the small on-device model from rambling or dropping fields when
+// asked for a 7-field JSON object — without this it can run well past a
+// 30s budget instead of converging. Same fix as checkLocally's privacyResponseSchema.
+const diaryResponseSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    mood: { type: "string", enum: ["joyful", "calm", "neutral", "anxious", "sad"] },
+    moodScore: { type: "integer" },
+    summary: { type: "string" },
+    actionItems: { type: "array", items: { type: "string" } },
+    learnings: { type: "array", items: { type: "string" } },
+    memories: { type: "array", items: { type: "string" } },
+    personalMessage: { type: "string" },
+  },
+  required: ["mood", "moodScore", "summary", "actionItems", "learnings", "memories", "personalMessage"],
+};
+
 /**
  * Reflect on a diary entry: mood, a short summary, action items and learnings.
  * The caller must pass already-tokenized text (via TokenVaultSession) — this
@@ -896,12 +914,15 @@ Respond with ONLY a JSON object (no markdown fences) with this exact shape:
 
   const model = getGenerativeModel(ai, {
     mode: InferenceMode.PREFER_ON_DEVICE,
-    onDeviceParams: { createOptions: chromeModelOptions(false) },
+    onDeviceParams: {
+      createOptions: chromeModelOptions(false),
+      promptOptions: { responseConstraint: diaryResponseSchema },
+    },
     inCloudParams: { model: modelName },
   });
   const result = await boundedWait(
     model.generateContent(prompt),
-    30_000,
+    60_000,
     "Diary reflection timed out.",
   );
   const responseText = result.response.text();
