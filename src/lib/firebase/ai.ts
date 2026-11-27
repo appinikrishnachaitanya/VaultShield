@@ -25,7 +25,7 @@ import {
 } from "firebase/ai";
 import { ai, settings } from "./config";
 import { maskIdentifiers, hasAssessableText } from "../privacy";
-import { assertCloudRoute, routeInput } from "../router";
+import { assertCloudRoute, routeInput, type RouteTier } from "../router";
 import { assertNoKnownLeak } from "../leakTest";
 import type { TokenVaultSession } from "../tokenVault";
 import { recordAIResult, markUnconfirmedAI } from "../netProof";
@@ -687,25 +687,37 @@ async function runCloudDocumentAnalysis(
     "Document analysis timed out.",
   );
   if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) markUnconfirmedAI();
-  const text = result.response.text();
-  recordAIResult(text, "IN_CLOUD");
-  return text;
+  recordAIResult(prompt, "IN_CLOUD");
+  return result.response.text();
 }
 
-/** Analyze tokenized document text — tries on-device (Android/Chrome) first, falls back to cloud. Input must be fully tokenized — no raw PII. */
+/**
+ * Analyze tokenized document text — tries on-device (Android/Chrome) first, falls back to
+ * cloud. Input must be fully tokenized — no raw PII.
+ *
+ * `routeTier` is the Privacy Router's verdict on the ORIGINAL (pre-tokenization) text. When
+ * it's LOCAL_ONLY (Aadhaar/PAN, medical, bank, identity, or minor-related documents), cloud
+ * is never used, even as a fallback — this is the "local-only route that cloud approval
+ * cannot override" the privacy router guarantees. Analysis then either succeeds on-device or
+ * fails outright; it does not silently escalate.
+ */
 export async function analyzeDocumentText(
   tokenizedText: SanitizedText,
   category: DocumentCategory,
   vault: TokenVaultSession,
   onProgress?: (message: string) => void,
   language?: "en" | "hi" | "fr",
+  routeTier?: RouteTier,
 ): Promise<DocumentAnalysisResult> {
   if (!ai) throw new Error("Firebase AI not configured.");
   assertNoKnownLeak(tokenizedText, vault);
+  const localOnly = routeTier === "LOCAL_ONLY";
   const { model: modelName } = settings();
-  const payloadBytes = new TextEncoder().encode(tokenizedText).length;
   const start = performance.now();
   const prompt = buildDocumentAnalysisPrompt(tokenizedText, category, language);
+  // The full prompt actually transmitted (instructions + tokenized text), not just the
+  // document text, so this matches what the privacy receipt reports as sent.
+  const payloadBytes = new TextEncoder().encode(prompt).length;
   let responseText: string;
   let inferenceSource: "ON_DEVICE" | "IN_CLOUD" = "IN_CLOUD";
 
@@ -717,6 +729,10 @@ export async function analyzeDocumentText(
     if (r.status === "READY" && r.text) {
       responseText = r.text;
       inferenceSource = "ON_DEVICE";
+    } else if (localOnly) {
+      throw new Error(
+        "This document stays on this device. On-device AI isn't available right now, so analysis was not sent to the cloud.",
+      );
     } else {
       onProgress?.("Android AI unavailable, falling back to cloud…");
       inferenceSource = "IN_CLOUD";
@@ -726,12 +742,14 @@ export async function analyzeDocumentText(
     // Chrome on-device path (Gemma4 / Nano v3 — text only, no image).
     // Use PREFER_ON_DEVICE: routes to Chrome local model when available, cloud only as fallback.
     // No responseMimeType in inCloudParams — that flag biases Firebase routing toward cloud.
+    // For LOCAL_ONLY documents, use ONLY_ON_DEVICE instead so the SDK has no cloud path to
+    // fall back to at all.
     const chromeAvail = await chromeAvailability(false);
     if (chromeAvail !== "unavailable") {
       onProgress?.(`Analyzing document on-device (${chromeAvail === "available" ? "Gemma4/Nano ready" : "downloading model…"})…`);
       const textOnlyParams = chromeModelOptions(false);
       const model = getGenerativeModel(ai, {
-        mode: InferenceMode.PREFER_ON_DEVICE,
+        mode: localOnly ? InferenceMode.ONLY_ON_DEVICE : InferenceMode.PREFER_ON_DEVICE,
         onDeviceParams: { createOptions: textOnlyParams },
         inCloudParams: { model: modelName },
       });
@@ -744,7 +762,11 @@ export async function analyzeDocumentText(
       inferenceSource = result.response.inferenceSource === InferenceSource.ON_DEVICE
         ? "ON_DEVICE"
         : "IN_CLOUD";
-      recordAIResult(responseText, inferenceSource);
+      recordAIResult(prompt, inferenceSource);
+    } else if (localOnly) {
+      throw new Error(
+        "This document stays on this device. On-device AI isn't available right now, so analysis was not sent to the cloud.",
+      );
     } else {
       onProgress?.(`Analyzing document with cloud AI (${payloadBytes} bytes, fully tokenized)…`);
       responseText = await runCloudDocumentAnalysis(ai, modelName, prompt);
@@ -1593,7 +1615,7 @@ Answer concisely and helpfully. If the document does not contain enough informat
     30_000,
     "Chat timed out.",
   );
-  recordAIResult(raw.response.text(), raw.response.inferenceSource === InferenceSource.ON_DEVICE ? "ON_DEVICE" : "IN_CLOUD");
+  recordAIResult(prompt, raw.response.inferenceSource === InferenceSource.ON_DEVICE ? "ON_DEVICE" : "IN_CLOUD");
   const answer = raw.response.text().replace(
     /\[\s*[a-z_]+\s*_\s*\d+\s*(?::\s*[a-z0-9 -]+\s*)?\]/gi,
     (token) => vault.resolve(token) ?? token,
@@ -1612,14 +1634,15 @@ export async function transcribeCallRecording(
     mode: InferenceMode.ONLY_IN_CLOUD,
     inCloudParams: { model: modelName },
   });
+  const transcriptionPrompt = `Transcribe this call recording verbatim and completely.
+If multiple speakers are audible, label them Speaker 1:, Speaker 2:, etc.
+If the language is not English, also provide an English translation after the original transcript, labelled "English translation:".
+Output only the transcript (and translation if needed). No commentary.`;
   const start = performance.now();
   const result = await boundedWait(
     model.generateContent([
       { inlineData: { data: audioBase64, mimeType } },
-      `Transcribe this call recording verbatim and completely.
-If multiple speakers are audible, label them Speaker 1:, Speaker 2:, etc.
-If the language is not English, also provide an English translation after the original transcript, labelled "English translation:".
-Output only the transcript (and translation if needed). No commentary.`,
+      transcriptionPrompt,
     ]),
     90_000,
     "Transcription timed out.",
@@ -1627,7 +1650,8 @@ Output only the transcript (and translation if needed). No commentary.`,
   if (result.response.inferenceSource !== InferenceSource.IN_CLOUD) {
     markUnconfirmedAI();
   }
-  recordAIResult(result.response.text(), "IN_CLOUD");
+  // The outbound payload is the audio upload itself, not the much smaller transcript that comes back.
+  recordAIResult(audioBase64 + transcriptionPrompt, "IN_CLOUD");
   return {
     transcript: result.response.text().trim(),
     source: "IN_CLOUD",
@@ -1665,6 +1689,7 @@ Do not add commentary — output the content directly.`;
     90_000,
     "Media analysis timed out.",
   );
-  recordAIResult(result.response.text(), "IN_CLOUD");
+  // The outbound payload is the uploaded file itself, not the much smaller analysis that comes back.
+  recordAIResult(base64 + prompt, "IN_CLOUD");
   return { text: result.response.text().trim() };
 }

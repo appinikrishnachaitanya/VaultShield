@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import {
   Bell,
   ChevronRight,
+  Cloud,
   Globe,
+  HardDrive,
   Lock,
   LockKeyhole,
   Settings as SettingsIcon,
@@ -13,7 +15,14 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase/config";
 import { stopLocalReading } from "../lib/localVoice";
 import { APP_LANGUAGES, setLanguage, t, useAppLanguage, type AppLanguage } from "../lib/i18n";
-import { hasPinSet, isUnlocked, lock as lockDiary } from "../lib/diaryStore";
+import {
+  getStorageMode,
+  hasPinSet,
+  isUnlocked,
+  lock as lockDiary,
+  setStorageMode,
+  type DiaryStorageMode,
+} from "../lib/diaryStore";
 import { ChangePinDialog } from "./PrivateDiary";
 
 export default function SettingsPage({ onNavigate }: { onNavigate: (tab: "diary" | "family" | "privacy") => void }) {
@@ -22,17 +31,35 @@ export default function SettingsPage({ onNavigate }: { onNavigate: (tab: "diary"
   const [diaryPinSet, setDiaryPinSet] = useState<boolean | null>(null);
   const [diaryUnlocked, setDiaryUnlocked] = useState(false);
   const [showChangePin, setShowChangePin] = useState(false);
+  const [storageMode, setStorageModeState] = useState<DiaryStorageMode>("local");
+  const [confirmingLocalOnly, setConfirmingLocalOnly] = useState(false);
+  const [storageBusy, setStorageBusy] = useState(false);
 
   useEffect(() => {
     if (!auth) return;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setSignedIn(Boolean(user));
-      if (!user) { setDiaryPinSet(null); return; }
+      const realUser = Boolean(user) && !user!.isAnonymous;
+      setSignedIn(realUser);
+      if (!realUser) { setDiaryPinSet(null); return; }
       setDiaryUnlocked(isUnlocked());
-      void hasPinSet().then(setDiaryPinSet).catch(() => setDiaryPinSet(null));
+      void hasPinSet().then((set) => {
+        setDiaryPinSet(set);
+        if (set) setStorageModeState(getStorageMode());
+      }).catch(() => setDiaryPinSet(null));
     });
     return unsubscribe;
   }, []);
+
+  async function applyStorageMode(mode: DiaryStorageMode) {
+    setStorageBusy(true);
+    try {
+      await setStorageMode(mode);
+      setStorageModeState(mode);
+    } finally {
+      setStorageBusy(false);
+      setConfirmingLocalOnly(false);
+    }
+  }
 
   return (
     <div className="settings-page">
@@ -101,6 +128,45 @@ export default function SettingsPage({ onNavigate }: { onNavigate: (tab: "diary"
                 <ChevronRight size={16} />
               </button>
             )}
+
+            <p className="settings-section-sub settings-storage-label">{t("Where entries are kept")}</p>
+            {confirmingLocalOnly ? (
+              <div className="settings-storage-confirm">
+                <p>{t("Turning off cloud backup deletes the synced copy from the cloud. Entries already on this device are not touched.")}</p>
+                <div className="settings-storage-confirm-actions">
+                  <button className="diary-lock-cancel" onClick={() => setConfirmingLocalOnly(false)} disabled={storageBusy}>
+                    {t("Cancel")}
+                  </button>
+                  <button className="diary-lock-btn danger" onClick={() => void applyStorageMode("local")} disabled={storageBusy}>
+                    {storageBusy ? t("Working…") : t("Turn off cloud backup")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="settings-storage-row">
+                <button
+                  className={`settings-storage-btn${storageMode === "local" ? " active" : ""}`}
+                  onClick={() => setConfirmingLocalOnly(true)}
+                  disabled={storageBusy || storageMode === "local"}
+                >
+                  <HardDrive size={15} />
+                  <span>{t("This device only")}</span>
+                </button>
+                <button
+                  className={`settings-storage-btn${storageMode === "local+cloud" ? " active" : ""}`}
+                  onClick={() => void applyStorageMode("local+cloud")}
+                  disabled={storageBusy || storageMode === "local+cloud"}
+                >
+                  <Cloud size={15} />
+                  <span>{t("This device + cloud backup")}</span>
+                </button>
+              </div>
+            )}
+            <p className="settings-section-sub">
+              {storageMode === "local+cloud"
+                ? t("Entries are encrypted on this device, then backed up to the cloud so they survive an uninstall or a lost phone.")
+                : t("Entries never leave this device. If you uninstall the app or clear its data, they're gone for good.")}
+            </p>
           </>
         )}
       </section>

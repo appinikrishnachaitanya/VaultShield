@@ -838,7 +838,7 @@ export default function PrivateDiary() {
   useEffect(() => {
     if (!auth) { setLockView("no-auth"); return; }
     const unsubscribe = onAuthStateChanged(auth, (current) => {
-      if (!current) { setLockView("no-auth"); return; }
+      if (!current || current.isAnonymous) { setLockView("no-auth"); return; }
       void (async () => {
         try {
           if (isUnlocked()) { setLockView("unlocked"); return; }
@@ -895,6 +895,13 @@ export default function PrivateDiary() {
           <Lock size={32} className="diary-lock-icon" />
           <h1>{t("Sign in required")}</h1>
           <p>{t("Your Private Diary is tied to your account so it can be encrypted and synced safely. Sign in from the account menu to set up your diary PIN.")}</p>
+          <button
+            type="button"
+            className="diary-lock-btn"
+            onClick={() => window.dispatchEvent(new Event("vaultshield-open-account"))}
+          >
+            {t("Sign in")}
+          </button>
         </div>
       </div>
     );
