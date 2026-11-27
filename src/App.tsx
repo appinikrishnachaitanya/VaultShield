@@ -817,7 +817,7 @@ export default function App() {
                   <br />
                   {t(" Let’s check it together. ")}
                 </h1>
-                <p>{t("Check it before you pay for it. Privately.")}</p>
+                <p>{t("Checked on-device first. Privately.")}</p>
               </div>
               <div className="workspace">
                 <section className="check-column">
