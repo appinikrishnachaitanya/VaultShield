@@ -6,16 +6,11 @@ import {
   X,
   Chrome,
 } from "lucide-react";
-import {
-  onAuthStateChanged,
-  type User,
-  type AuthCredential,
-} from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase/config";
 import {
   continueWithGoogle,
-  handleGoogleRedirect,
   ExistingAccount,
   openExistingAccount,
   leaveAccount,
@@ -46,7 +41,6 @@ export default function Account() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [existing, setExisting] = useState<AuthCredential>();
   const [settingsMode, setSettingsMode] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -56,38 +50,6 @@ export default function Account() {
     window.addEventListener("vaultshield-open-account", show);
     return () => window.removeEventListener("vaultshield-open-account", show);
   }, []);
-
-  /* Google redirect result */
-  useEffect(() => {
-    void (async () => {
-      try {
-        const linked = await handleGoogleRedirect();
-        if (!linked) return;
-        const displayName =
-          localStorage.getItem("vaultshield-family-name") ||
-          auth?.currentUser?.displayName?.slice(0, 40) || "";
-        if (db && auth?.currentUser && displayName.trim().length >= 2) {
-          await setDoc(
-            doc(db, "users", auth.currentUser.uid, "settings", "profile"),
-            { displayName: displayName.trim(), language: "en" },
-          );
-        }
-        location.reload();
-      } catch (error) {
-        if (error instanceof ExistingAccount) setExisting(error.credential);
-        else {
-          const code = (error as { code?: string }).code;
-          setMessage(
-            t(
-              code === "auth/operation-not-allowed"
-                ? "Enable Google sign-in in Firebase Authentication first."
-                : "Could not complete this action. Please try again.",
-            ),
-          );
-        }
-      }
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* auth state */
   useEffect(() => {
@@ -133,15 +95,25 @@ export default function Account() {
     try {
       await action();
     } catch (error) {
-      if (error instanceof ExistingAccount) setExisting(error.credential);
-      else {
+      if (error instanceof ExistingAccount) {
+        // This Google account was already signed in before (any device/
+        // browser) - that's the normal, expected case for a returning user
+        // clicking "sign in", not an edge case worth an extra confirmation
+        // click. The current guest session has nothing destroyed either
+        // way: it simply stays an orphaned anonymous user in Firestore.
+        try {
+          await openExistingAccount(error.credential);
+          location.reload();
+        } catch {
+          setMessage(t("Could not complete this action. Please try again."));
+        }
+      } else {
         const code = (error as { code?: string }).code;
+        const nativeMessage = error instanceof Error ? error.message : "";
         setMessage(
-          t(
-            code === "auth/operation-not-allowed"
-              ? "Enable Google sign-in in Firebase Authentication first."
-              : "Could not complete this action. Please try again.",
-          ),
+          code === "auth/operation-not-allowed"
+            ? t("Enable Google sign-in in Firebase Authentication first.")
+            : nativeMessage || t("Could not complete this action. Please try again."),
         );
       }
     } finally {
@@ -179,7 +151,8 @@ export default function Account() {
           )
         ) : (
           <span className="avatar-guest">
-            <UserRound size={16} />
+            <span className="avatar-guest-head" />
+            <span className="avatar-guest-body" />
           </span>
         )}
       </button>
@@ -199,7 +172,7 @@ export default function Account() {
                     ? <img src={user.photoURL} alt="" />
                     : initials(name || user.email || "U")}
                 </span>
-                <div>
+                <div className="acct-identity-text">
                   <div className="acct-name">{name || t("My account")}</div>
                   <div className="acct-email">{emailLabel}</div>
                 </div>
@@ -210,7 +183,7 @@ export default function Account() {
                 onClick={() => setSettingsMode(true)}
               >
                 <Settings size={15} />
-                {t("Account settings")}
+                {t("Edit name")}
               </button>
               <div className="acct-divider" />
               <button
@@ -239,7 +212,7 @@ export default function Account() {
                 >
                   ← {t("Back")}
                 </button>
-                <span>{t("Account settings")}</span>
+                <span>{t("Edit name")}</span>
               </div>
               <div className="acct-divider" />
               <div className="acct-field">
@@ -279,7 +252,7 @@ export default function Account() {
                 <div className="acct-guest-icon"><UserRound size={28} /></div>
                 <div className="acct-signin-title">{t("Save your account")}</div>
                 <div className="acct-signin-sub">
-                  {t("Sign in to sync your family circle across devices.")}
+                  {t("Sign in to sync your private diary and family circle across devices.")}
                 </div>
               </div>
               <div className="acct-divider" />
@@ -308,32 +281,6 @@ export default function Account() {
             </>
           )}
 
-          {existing && (
-            <div className="acct-existing">
-              <p>{t("This Google account already has a family circle. Open that account?")}</p>
-              <div className="acct-existing-actions">
-                <button
-                  className="acct-save-btn"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      await openExistingAccount(existing);
-                      location.reload();
-                    })
-                  }
-                >
-                  {t("Open existing account")}
-                </button>
-                <button
-                  className="acct-menu-item"
-                  disabled={busy}
-                  onClick={() => setExisting(undefined)}
-                >
-                  {t("Cancel")}
-                </button>
-              </div>
-            </div>
-          )}
           {message && <p className="acct-message">{message}</p>}
         </div>
       )}

@@ -1,7 +1,6 @@
 import {
   GoogleAuthProvider,
-  linkWithRedirect,
-  getRedirectResult,
+  linkWithPopup,
   linkWithCredential,
   signInWithCredential,
   signOut,
@@ -21,7 +20,15 @@ export class ExistingAccount extends Error {
     );
   }
 }
-export async function continueWithGoogle() {
+// linkWithPopup (not linkWithRedirect): the authDomain
+// (vaultshield-2ace9.firebaseapp.com) differs from the hosting origin
+// (vaultshield-2ace9.web.app), and Chrome increasingly blocks the
+// cross-origin storage sync that redirect-based auth needs to carry the
+// pending sign-in back to the app. That failure is silent - the redirect
+// completes but getRedirectResult() returns null - which is exactly the
+// "loops back to Sign in" bug this replaces. Popups use postMessage
+// directly between windows, so they don't depend on that storage sync.
+export async function continueWithGoogle(): Promise<void> {
   if (!auth?.currentUser)
     throw new Error(
       "Your private session is still connecting. Please try again.",
@@ -33,8 +40,7 @@ export async function continueWithGoogle() {
       nativeCredential = GoogleAuthProvider.credential(idToken);
       await linkWithCredential(auth.currentUser, nativeCredential);
     } else {
-      await linkWithRedirect(auth.currentUser, new GoogleAuthProvider());
-      // Page navigates to Google — execution stops here
+      await linkWithPopup(auth.currentUser, new GoogleAuthProvider());
     }
   } catch (error) {
     const e = error as { code?: string };
@@ -44,24 +50,6 @@ export async function continueWithGoogle() {
         GoogleAuthProvider.credentialFromError(
           error as import("firebase/app").FirebaseError,
         );
-      if (credential) throw new ExistingAccount(credential);
-    }
-    throw error;
-  }
-}
-
-// Call on page load to process a returning Google redirect
-export async function handleGoogleRedirect(): Promise<boolean> {
-  if (!auth) return false;
-  try {
-    const result = await getRedirectResult(auth);
-    return result !== null;
-  } catch (error) {
-    const e = error as { code?: string };
-    if (e.code === "auth/credential-already-in-use") {
-      const credential = GoogleAuthProvider.credentialFromError(
-        error as import("firebase/app").FirebaseError,
-      );
       if (credential) throw new ExistingAccount(credential);
     }
     throw error;

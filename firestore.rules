@@ -10,7 +10,7 @@ service cloud.firestore {
     && request.resource.data.displayName is string
     && request.resource.data.displayName.size() >= 2
     && request.resource.data.displayName.size() <= 40
-    && request.resource.data.language in ['en', 'hi'];
+    && request.resource.data.language in ['en', 'hi', 'fr'];
   }
 
   // Family circle & alerts (read-only from client)
@@ -19,15 +19,26 @@ service cloud.firestore {
    allow write: if false;
   }
 
-  // Private diary — encrypted entries, owner only
+  // Private Diary — PIN lock config (salt + canary, never the PIN itself)
+  match /users/{uid}/settings/diaryLock {
+   allow read, delete: if request.auth != null && request.auth.uid == uid;
+   allow create, update: if request.auth != null && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(['salt', 'canaryIv', 'canaryData'])
+    && request.resource.data.salt is string
+    && request.resource.data.canaryIv is string
+    && request.resource.data.canaryData is string;
+  }
+
+  // Private Diary — encrypted entries (opaque ciphertext blobs only)
   match /diary/{uid}/entries/{entryId} {
    allow read, delete: if request.auth != null && request.auth.uid == uid;
    allow create, update: if request.auth != null && request.auth.uid == uid
-    && request.resource.data.keys().hasOnly(['id', 'date', 'iv', 'ciphertext', 'mood', 'moodScore', 'summary', 'createdAt', 'aiSource'])
+    && request.resource.data.keys().hasOnly(['id', 'date', 'createdAt', 'iv', 'data'])
     && request.resource.data.id is string
     && request.resource.data.date is string
-    && request.resource.data.ciphertext is string
-    && request.resource.data.mood in ['joyful', 'calm', 'neutral', 'anxious', 'sad'];
+    && request.resource.data.createdAt is number
+    && request.resource.data.iv is string
+    && request.resource.data.data is string;
   }
 
   // Deny everything else

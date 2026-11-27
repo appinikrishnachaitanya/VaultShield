@@ -66,8 +66,6 @@ export const ai = app ? getAI(app, { backend: new VertexAIBackend("global") }) :
 const defaults = {
   cloud_model_name: "gemini-3.5-flash-lite",
   enable_search_grounding: true,
-  strict_privacy_mode: true,
-  ai_inference_mode: "only_in_cloud",
 };
 export const remoteConfig = app ? getRemoteConfig(app) : null;
 if (remoteConfig) {
@@ -89,13 +87,6 @@ export const settings = () => {
   grounding: remoteConfig
     ? getValue(remoteConfig, "enable_search_grounding").asBoolean()
     : true,
-  strict: remoteConfig
-    ? getValue(remoteConfig, "strict_privacy_mode").asBoolean()
-    : true,
-  inferenceMode: remoteConfig
-    ? getValue(remoteConfig, "ai_inference_mode").asString() ||
-      defaults.ai_inference_mode
-    : defaults.ai_inference_mode,
   };
 };
 export async function initializeServices() {

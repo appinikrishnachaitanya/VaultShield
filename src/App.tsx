@@ -1,5 +1,4 @@
-﻿import { stopLocalReading } from "./lib/localVoice";
-import { t, useAppLanguage, setLanguage, tacticCount } from "./lib/i18n";
+import { t, useAppLanguage, tacticCount } from "./lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ShieldCheck,
@@ -21,8 +20,11 @@ import {
   Menu,
   ShieldAlert,
   Film,
+  BookHeart,
+  Settings as SettingsIcon,
 } from "lucide-react";
-import { initializeServices } from "./lib/firebase/config";
+import { initializeServices, auth } from "./lib/firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   checkAndroidReviewedText,
   checkWithLocalFallback,
@@ -49,6 +51,8 @@ import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
 import ExplainForFamily from "./components/ExplainForFamily";
 import MediaVault from "./components/MediaVault";
+import PrivateDiary from "./components/PrivateDiary";
+import SettingsPage from "./components/SettingsPage";
 import ScaredPanel from "./components/ScaredPanel";
 import KnowYourRights from "./components/KnowYourRights";
 import TokenVaultPreview from "./components/TokenVaultPreview";
@@ -130,7 +134,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media" | "diary" | "settings">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -195,16 +199,10 @@ export default function App() {
   const output = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let active = true;
-    let stop = () => {};
     initializeServices()
       .then(() => {
         if (active) {
           setStatus("Private session ready");
-          stop = watchFamily(setMembers, setAlerts, (e) =>
-            setError(
-              `Family inbox / Firestore: ${e.message} Check that the app rules are published to the (default) database in vaultshield-2ace9. If App Check enforcement is enabled, verify this browser’s debug token is registered.`,
-            ),
-          );
           if (
             !usesAndroidModel &&
             "Notification" in window &&
@@ -231,9 +229,32 @@ export default function App() {
     window.addEventListener("offline", update);
     return () => {
       active = false;
-      stop();
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
+    };
+  }, []);
+  // Re-subscribe to the family listener whenever the signed-in identity
+  // changes (e.g. guest -> Google-linked account). watchFamily queries
+  // /users/{uid}/family using whatever uid was current when it was called;
+  // without this, linking or switching accounts leaves a listener pinned to
+  // the old uid, which Firestore then rejects as a permission error once the
+  // auth token no longer matches that path.
+  useEffect(() => {
+    if (!auth) return;
+    let stop = () => {};
+    const unsubscribe = onAuthStateChanged(auth, (current) => {
+      stop();
+      stop = () => {};
+      if (!current) return;
+      stop = watchFamily(setMembers, setAlerts, (e) =>
+        setError(
+          `Family inbox / Firestore: ${e.message} Check that the app rules are published to the (default) database in vaultshield-2ace9. If App Check enforcement is enabled, verify this browser’s debug token is registered.`,
+        ),
+      );
+    });
+    return () => {
+      unsubscribe();
+      stop();
     };
   }, []);
   useEffect(
@@ -580,7 +601,9 @@ export default function App() {
     { id: "check", icon: ScanLine, label: t("Check something") },
     { id: "docs", icon: FileText, label: t("Document Vault") },
     { id: "media", icon: Film, label: t("Media Vault") },
+    { id: "diary", icon: BookHeart, label: t("Private Diary") },
     { id: "family", icon: Users, label: t("Family circle") },
+    { id: "settings", icon: SettingsIcon, label: t("Settings") },
   ] as const;
   return (
     <div className="app">
@@ -640,7 +663,7 @@ export default function App() {
           VaultShield
         </a>
         <div className="workspace-label">
-          {t("YOUR PEACE OF MIND, PROTECTED")}
+          {t("YOUR HYBRID AI AGENT")}
         </div>
         <nav>
           {navItems.map((item) => (
@@ -709,7 +732,9 @@ export default function App() {
               {tab === "check" && t("Safety Check")}
               {tab === "docs" && t("Document Vault")}
               {tab === "media" && t("Media Vault")}
+              {tab === "diary" && t("Private Diary")}
               {tab === "family" && t("Family Circle")}
+              {tab === "settings" && t("Settings")}
               {tab === "privacy" && t("Privacy & Data")}
             </span>
           </div>
@@ -730,18 +755,6 @@ export default function App() {
                       ? t("On-device AI")
                       : t("AI Ready")}
             </span>
-            <select
-              className="topbar-lang"
-              aria-label="English / हिन्दी"
-              value={appLanguage}
-              onChange={(event) => {
-                setLanguage(event.target.value as "en" | "hi");
-                stopLocalReading();
-              }}
-            >
-              <option value="en" lang="en">EN</option>
-              <option value="hi" lang="hi">हि</option>
-            </select>
             <Account />
           </div>
         </header>
@@ -795,7 +808,7 @@ export default function App() {
                   <br />
                   {t(" Let’s check it together. ")}
                 </h1>
-                <p>{t("Check it before you pay for it. Privately.")}</p>
+                <p>{t("Checked on-device first. Privately.")}</p>
               </div>
               <div className="workspace">
                 <section className="check-column">
@@ -1323,7 +1336,7 @@ export default function App() {
                   signal={patternSignal(
                     result.stages,
                     vault.current.entries(),
-                    appLanguage,
+                    appLanguage === "hi" ? "hi" : "en",
                   )}
                 />
               )}
@@ -1355,6 +1368,12 @@ export default function App() {
           <div style={{ display: tab === "media" ? "block" : "none" }}>
             <MediaVault />
           </div>
+          <div style={{ display: tab === "diary" ? "block" : "none" }}>
+            <PrivateDiary />
+          </div>
+          {tab === "settings" && (
+            <SettingsPage onNavigate={(next) => setTab(next)} />
+          )}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">

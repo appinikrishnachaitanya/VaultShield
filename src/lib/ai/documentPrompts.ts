@@ -92,11 +92,13 @@ Return only the raw extracted text, nothing else.`;
 export function buildDocumentAnalysisPrompt(
   tokenizedText: string,
   category: DocumentCategory,
-  language?: "en" | "hi",
+  language?: "en" | "hi" | "fr",
 ): string {
   const langInstruction = language === "hi"
     ? "\n\nIMPORTANT: Respond in Hindi (Devanagari script). JSON keys remain in English, but all string values (summary, redFlags, missingItems, keyFacts, nextSteps) must be in Hindi."
-    : "";
+    : language === "fr"
+      ? "\n\nIMPORTANT: Respond in French. JSON keys remain in English, but all string values (summary, redFlags, missingItems, keyFacts, nextSteps) must be in French."
+      : "";
   return `${categoryInstructions[category]}
 
 IMPORTANT PRIVACY CONTEXT: All personal identifiers in this text have been replaced with privacy tokens like [PERSON_1], [AADHAAR_1], [AMOUNT_1:50k-plus], [PHONE_1]. This is intentional — the actual values are protected on the user's device and are NOT available to you. Refer to people and entities by their tokens (e.g. "the borrower [PERSON_1]"). Never attempt to infer or reconstruct the original values.
