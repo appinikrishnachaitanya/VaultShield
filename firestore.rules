@@ -19,17 +19,6 @@ service cloud.firestore {
    allow write: if false;
   }
 
-  // Private diary — encrypted entries, owner only
-  match /diary/{uid}/entries/{entryId} {
-   allow read, delete: if request.auth != null && request.auth.uid == uid;
-   allow create, update: if request.auth != null && request.auth.uid == uid
-    && request.resource.data.keys().hasOnly(['id', 'date', 'iv', 'ciphertext', 'mood', 'moodScore', 'summary', 'createdAt', 'aiSource'])
-    && request.resource.data.id is string
-    && request.resource.data.date is string
-    && request.resource.data.ciphertext is string
-    && request.resource.data.mood in ['joyful', 'calm', 'neutral', 'anxious', 'sad'];
-  }
-
   // Deny everything else
   match /{document=**} { allow read, write: if false; }
  }
