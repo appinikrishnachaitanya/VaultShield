@@ -6,11 +6,7 @@ import {
   X,
   Chrome,
 } from "lucide-react";
-import {
-  onAuthStateChanged,
-  type User,
-  type AuthCredential,
-} from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase/config";
 import {
@@ -45,7 +41,6 @@ export default function Account() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [existing, setExisting] = useState<AuthCredential>();
   const [settingsMode, setSettingsMode] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -100,8 +95,19 @@ export default function Account() {
     try {
       await action();
     } catch (error) {
-      if (error instanceof ExistingAccount) setExisting(error.credential);
-      else {
+      if (error instanceof ExistingAccount) {
+        // This Google account was already signed in before (any device/
+        // browser) - that's the normal, expected case for a returning user
+        // clicking "sign in", not an edge case worth an extra confirmation
+        // click. The current guest session has nothing destroyed either
+        // way: it simply stays an orphaned anonymous user in Firestore.
+        try {
+          await openExistingAccount(error.credential);
+          location.reload();
+        } catch {
+          setMessage(t("Could not complete this action. Please try again."));
+        }
+      } else {
         const code = (error as { code?: string }).code;
         setMessage(
           t(
@@ -275,32 +281,6 @@ export default function Account() {
             </>
           )}
 
-          {existing && (
-            <div className="acct-existing">
-              <p>{t("This Google account already has a family circle. Open that account?")}</p>
-              <div className="acct-existing-actions">
-                <button
-                  className="acct-save-btn"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      await openExistingAccount(existing);
-                      location.reload();
-                    })
-                  }
-                >
-                  {t("Open existing account")}
-                </button>
-                <button
-                  className="acct-menu-item"
-                  disabled={busy}
-                  onClick={() => setExisting(undefined)}
-                >
-                  {t("Cancel")}
-                </button>
-              </div>
-            </div>
-          )}
           {message && <p className="acct-message">{message}</p>}
         </div>
       )}
