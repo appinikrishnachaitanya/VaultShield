@@ -2394,8 +2394,10 @@ html[lang="hi"] h3 {
   gap: 12px;
   min-height: 54px;
   /* On Android's edge-to-edge/transparent status bar, the WebView draws under
-     the OS status bar icons unless this row is pushed down to clear them. */
-  padding: env(safe-area-inset-top) var(--workspace-gutter) 0;
+     the OS status bar icons unless this row is pushed down to clear them.
+     The extra 10px is breathing room so the header doesn't sit flush against
+     a punch-hole camera cutout on real devices with one. */
+  padding: calc(env(safe-area-inset-top) + 10px) var(--workspace-gutter) 0;
   border-bottom: 1px solid #e9ecf0;
   background: #fff;
   position: sticky;
