@@ -142,9 +142,18 @@ export async function checkLocally(
     );
   const createOptions = chromeModelOptions(Boolean(image));
   onProgress?.(`Chrome local model: ${availability}.`);
+  // ONLY_ON_DEVICE: this prompt carries the raw, unmasked original text/image.
+  // PREFER_ON_DEVICE would let the SDK silently fall back to cloud with that
+  // raw content; checking inferenceSource on the response is too late to stop
+  // a request that already left the device. responseConstraint keeps the
+  // small on-device model from dropping categories or wrapping its answer in
+  // prose, which was causing intermittent parse failures.
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.PREFER_ON_DEVICE,
-    onDeviceParams: { createOptions },
+    mode: InferenceMode.ONLY_ON_DEVICE,
+    onDeviceParams: {
+      createOptions,
+      promptOptions: { responseConstraint: privacyResponseSchema },
+    },
     inCloudParams: { model: settings().model },
   });
   if (availability !== "available")
@@ -620,8 +629,10 @@ export async function extractTextFromDocument(
       "On-device AI is required to read document images privately. No image was sent to cloud. Enable Chrome's on-device AI or paste the document text instead.",
     );
   const createOptions = chromeModelOptions(true);
+  // ONLY_ON_DEVICE: the image is the raw original document, not tokenized.
+  // See checkLocally for why PREFER_ON_DEVICE is unsafe here.
   const model = getGenerativeModel(ai, {
-    mode: InferenceMode.PREFER_ON_DEVICE,
+    mode: InferenceMode.ONLY_ON_DEVICE,
     onDeviceParams: { createOptions },
     inCloudParams: { model: settings().model },
   });
@@ -1225,8 +1236,9 @@ export async function proofreadReplyLocally(
     onProgress?.(
       "Chrome Proofreader cancelled. Trying Firebase on-device proofreading…",
     );
+    // ONLY_ON_DEVICE: draft is raw user text, not tokenized. See checkLocally.
     const model = getGenerativeModel(ai, {
-      mode: InferenceMode.PREFER_ON_DEVICE,
+      mode: InferenceMode.ONLY_ON_DEVICE,
       onDeviceParams: { createOptions: chromeModelOptions(false) },
       inCloudParams: { model: settings().model },
     });
