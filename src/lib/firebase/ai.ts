@@ -215,6 +215,43 @@ export function checkTextWithLocalRules(input: string): LocalResult {
   };
 }
 
+/**
+ * Small on-device models occasionally wrap JSON in stray prose or truncate
+ * trailing text. Extract the first balanced {...} object (respecting
+ * strings/escapes) instead of requiring the whole response to parse cleanly.
+ */
+function extractJsonObject(responseText: string): unknown {
+  const stripped = responseText
+    .trim()
+    .replace(/^```(?:json)?\s*|\s*```$/g, "")
+    .trim();
+  try {
+    return JSON.parse(stripped);
+  } catch (firstError) {
+    const start = stripped.indexOf("{");
+    if (start === -1) throw firstError;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let i = start; i < stripped.length; i++) {
+      const ch = stripped[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (ch === "\\") escaped = true;
+        else if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') inString = true;
+      else if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) return JSON.parse(stripped.slice(start, i + 1));
+      }
+    }
+    throw firstError;
+  }
+}
+
 function parseLocalResult(
   responseText: string,
   start: number,
@@ -222,12 +259,7 @@ function parseLocalResult(
   originalText: string,
   inferenceSource: "ON_DEVICE" | "IN_CLOUD" = "ON_DEVICE",
 ): LocalResult {
-  const value: unknown = JSON.parse(
-    responseText
-      .trim()
-      .replace(/^```(?:json)?\s*|\s*```$/g, "")
-      .trim(),
-  );
+  const value: unknown = extractJsonObject(responseText);
   if (!value || typeof value !== "object")
     throw new Error("Invalid local response.");
   const v = value as Record<string, unknown>;
@@ -691,9 +723,7 @@ export async function analyzeDocumentText(
 
   let parsed: Partial<DocumentAnalysisResult>;
   try {
-    parsed = JSON.parse(
-      responseText.replace(/^```(?:json)?\s*|\s*```$/g, "").trim(),
-    ) as Partial<DocumentAnalysisResult>;
+    parsed = extractJsonObject(responseText) as Partial<DocumentAnalysisResult>;
   } catch {
     throw new Error(
       "Document analysis returned an unexpected format. Please try again.",

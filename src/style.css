@@ -1122,12 +1122,29 @@ blockquote {
     height: 36px;
   }
 }
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+}
 .consent input {
   width: 19px;
   height: 19px;
   flex-shrink: 0;
   margin-top: 3px;
   accent-color: #0f766e;
+}
+.community-signal {
+  display: flex;
+  flex-direction: column;
+}
+.community-signal .consent {
+  margin-bottom: 0;
+}
+.community-signal > button {
+  align-self: flex-start;
+  margin-top: 4px;
 }
 .image-preview {
   display: flex;
