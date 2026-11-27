@@ -172,9 +172,16 @@ export function lock(): void {
   _sessionUid = "";
 }
 
+const PIN_PATTERN = /^\d{6,}$/;
+
+/** A PIN is digits only, 6 or more — same shape everywhere it's checked. */
+export function isValidPinFormat(pin: string): boolean {
+  return PIN_PATTERN.test(pin);
+}
+
 /** First-time setup: choose a PIN and create the lock configuration. */
 export async function setupPin(pin: string): Promise<void> {
-  if (pin.length < 6) throw new Error("Use at least 6 characters for real protection.");
+  if (!isValidPinFormat(pin)) throw new Error("Use at least 6 digits, numbers only.");
   const uid = currentUid();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await deriveKey(pin, salt);
@@ -218,7 +225,7 @@ export async function unlockWithPin(pin: string): Promise<UnlockOutcome> {
 
 /** Change the PIN: re-encrypts every entry with a freshly derived key. */
 export async function changePin(oldPin: string, newPin: string): Promise<void> {
-  if (newPin.length < 6) throw new Error("Use at least 6 characters for real protection.");
+  if (!isValidPinFormat(newPin)) throw new Error("Use at least 6 digits, numbers only.");
   const outcome = await unlockWithPin(oldPin);
   if (outcome !== "ok") throw new Error("Current PIN is incorrect.");
   const uid = currentUid();

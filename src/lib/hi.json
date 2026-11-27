@@ -832,5 +832,8 @@
   "Calm": "शांत",
   "Neutral": "सामान्य",
   "Anxious": "चिंतित",
-  "Sad": "उदास"
+  "Sad": "उदास",
+  "Use at least 6 digits.": "कम से कम 6 अंक इस्तेमाल करें।",
+  "Choose a PIN. It encrypts every entry — we never store it, so nobody, not even VaultShield, can read your diary without it.": "एक PIN चुनें। यह हर एंट्री को एन्क्रिप्ट करता है — हम इसे कभी सेव नहीं करते, इसलिए PIN के बिना कोई भी, यहाँ तक कि VaultShield भी, आपकी डायरी नहीं पढ़ सकता।",
+  "New PIN (min 6 digits)": "नया PIN (कम से कम 6 अंक)"
 }

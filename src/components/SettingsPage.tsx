@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase/config";
+import { stopLocalReading } from "../lib/localVoice";
 import { APP_LANGUAGES, setLanguage, t, useAppLanguage, type AppLanguage } from "../lib/i18n";
 import { hasPinSet, isUnlocked, lock as lockDiary } from "../lib/diaryStore";
 import { ChangePinDialog } from "./PrivateDiary";
@@ -57,7 +58,7 @@ export default function SettingsPage({ onNavigate }: { onNavigate: (tab: "diary"
             <button
               key={entry.code}
               className={`settings-lang-btn${appLanguage === entry.code ? " active" : ""}`}
-              onClick={() => setLanguage(entry.code as AppLanguage)}
+              onClick={() => { setLanguage(entry.code as AppLanguage); stopLocalReading(); }}
             >
               {entry.nativeLabel}
             </button>

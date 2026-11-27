@@ -832,5 +832,8 @@
   "Calm": "Calme",
   "Neutral": "Neutre",
   "Anxious": "Anxieux",
-  "Sad": "Triste"
+  "Sad": "Triste",
+  "Use at least 6 digits.": "Utilisez au moins 6 chiffres.",
+  "Choose a PIN. It encrypts every entry — we never store it, so nobody, not even VaultShield, can read your diary without it.": "Choisissez un PIN. Il chiffre chaque entrée — nous ne le stockons jamais, donc personne, pas même VaultShield, ne peut lire votre journal sans lui.",
+  "New PIN (min 6 digits)": "Nouveau PIN (6 chiffres min.)"
 }

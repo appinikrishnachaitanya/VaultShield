@@ -95,7 +95,7 @@ function PinSetupScreen({ onDone }: { onDone: () => void }) {
 
   async function submit() {
     setError("");
-    if (pin.length < 6) { setError(t("Use at least 6 characters.")); return; }
+    if (pin.length < 6) { setError(t("Use at least 6 digits.")); return; }
     if (pin !== confirm) { setError(t("PINs don't match.")); return; }
     setBusy(true);
     try {
@@ -113,22 +113,26 @@ function PinSetupScreen({ onDone }: { onDone: () => void }) {
       <div className="diary-lock-card">
         <Lock size={32} className="diary-lock-icon" />
         <h1>{t("Lock your diary")}</h1>
-        <p>{t("Choose a PIN or passphrase. It encrypts every entry — we never store it, so nobody, not even VaultShield, can read your diary without it.")}</p>
+        <p>{t("Choose a PIN. It encrypts every entry — we never store it, so nobody, not even VaultShield, can read your diary without it.")}</p>
         <input
           type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
           className="diary-lock-input"
-          placeholder={t("New PIN (min 6 characters)")}
+          placeholder={t("New PIN (min 6 digits)")}
           value={pin}
-          onChange={(e) => setPin(e.target.value)}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
           disabled={busy}
           autoFocus
         />
         <input
           type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
           className="diary-lock-input"
           placeholder={t("Confirm PIN")}
           value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
+          onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))}
           disabled={busy}
           onKeyDown={(e) => e.key === "Enter" && void submit()}
         />
@@ -202,10 +206,12 @@ function PinUnlockScreen({ onDone, onNoPinFound }: { onDone: () => void; onNoPin
         <p>{t("Enter your PIN to continue.")}</p>
         <input
           type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
           className="diary-lock-input"
           placeholder={t("PIN")}
           value={pin}
-          onChange={(e) => setPin(e.target.value)}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
           disabled={busy}
           autoFocus
           onKeyDown={(e) => e.key === "Enter" && void submit()}
@@ -232,7 +238,7 @@ export function ChangePinDialog({ onClose }: { onClose: () => void }) {
 
   async function submit() {
     setError("");
-    if (newPin.length < 6) { setError(t("Use at least 6 characters.")); return; }
+    if (newPin.length < 6) { setError(t("Use at least 6 digits.")); return; }
     if (newPin !== confirm) { setError(t("New PINs don't match.")); return; }
     setBusy(true);
     try {
@@ -257,9 +263,9 @@ export function ChangePinDialog({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <h2>{t("Change PIN")}</h2>
-            <input type="password" className="diary-lock-input" placeholder={t("Current PIN")} value={oldPin} onChange={(e) => setOldPin(e.target.value)} disabled={busy} />
-            <input type="password" className="diary-lock-input" placeholder={t("New PIN (min 6 characters)")} value={newPin} onChange={(e) => setNewPin(e.target.value)} disabled={busy} />
-            <input type="password" className="diary-lock-input" placeholder={t("Confirm new PIN")} value={confirm} onChange={(e) => setConfirm(e.target.value)} disabled={busy} />
+            <input type="password" inputMode="numeric" pattern="[0-9]*" className="diary-lock-input" placeholder={t("Current PIN")} value={oldPin} onChange={(e) => setOldPin(e.target.value.replace(/\D/g, ""))} disabled={busy} />
+            <input type="password" inputMode="numeric" pattern="[0-9]*" className="diary-lock-input" placeholder={t("New PIN (min 6 digits)")} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} disabled={busy} />
+            <input type="password" inputMode="numeric" pattern="[0-9]*" className="diary-lock-input" placeholder={t("Confirm new PIN")} value={confirm} onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))} disabled={busy} />
             {error && <div className="diary-lock-error">{error}</div>}
             <div className="diary-modal-actions">
               <button className="diary-lock-cancel" onClick={onClose} disabled={busy}>{t("Cancel")}</button>
