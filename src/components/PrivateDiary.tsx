@@ -174,7 +174,7 @@ function PinUnlockScreen({ onDone, onNoPinFound }: { onDone: () => void; onNoPin
     setBusy(true);
     try {
       await resetDiary();
-      onDone();
+      onNoPinFound();
     } finally {
       setBusy(false);
     }
