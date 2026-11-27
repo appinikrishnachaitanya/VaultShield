@@ -1,10 +1,10 @@
 # VaultShield — Your Hybrid AI Agent
 
-**A hybrid AI personal agent that keeps every task on-device first — with an inspectable record of what, if anything, was ever sent to the cloud.**
+**The hybrid AI agent that protects the people most targeted by scams, without ever asking them to hand over their secrets to do it.**
 
-VaultShield is one agent with several privacy-preserving skills, not five separate tools bolted together. Every skill routes through the same **Privacy Router**: identifiers in a message, document, or diary entry are replaced with a typed token — `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]`, `[AMOUNT_1:10k-50k]` — entirely on-device, before any AI ever sees the content. The agent reasons on-device first; cloud is only the fallback, and for text it only ever reasons over placeholders, never originals. The one exception is Media Vault's first pass: an uploaded photo, recording, or video can't be tokenized on-device the way text can, so that first transcription or description is sent to cloud Gemini as-is — every follow-up question about it is tokenized like everything else. A receipt proves exactly what left the device and what didn't.
+Every year, millions of people — many of them elderly, many of them first-time smartphone users — lose money and peace of mind to digital-arrest calls, fake KYC messages, and predatory loan notices. The tools that could help them triage a suspicious message, a medical report, or a one-sided contract all demand the same trade: send your private details to someone else's cloud. VaultShield removes that trade-off entirely. It is one agent with five privacy-preserving skills, not five tools bolted together, and every one of them routes through the same **Privacy Router**: identifiers in a message, document, or diary entry are replaced with a typed token — `[PERSON_1]`, `[PHONE_1]`, `[UPI_1]`, `[AMOUNT_1:10k-50k]` — entirely on-device, before any AI ever sees the content. The agent reasons on-device first; cloud is only the fallback, and for text it only ever reasons over placeholders, never originals. The one deliberate exception is Media Vault's first pass: an uploaded photo, recording, or video can't be tokenized on-device the way text can, so that first transcription runs through cloud Gemini — every follow-up question about it is tokenized like everything else. A receipt proves exactly what left the device and what didn't, so the privacy claim is never just a promise.
 
-Built for the moment a scam message, a predatory loan notice, or a one-sided contract lands in someone's hands — and for the family members who want to help without ever reading the private details.
+This is what makes VaultShield different from a chatbot wrapper: it is architected, end to end, around the idea that the most vulnerable users deserve the most capable AI *and* the strongest privacy guarantees — not one traded for the other.
 
 ## The agent's skills
 
@@ -27,7 +27,13 @@ Highly sensitive content — Aadhaar numbers, medical reports, identity document
 
 ## Firebase AI Logic
 
-All AI inference runs through Firebase AI Logic (`src/lib/firebase/ai.ts`), using the Vertex AI Gemini backend for cloud inference and Chrome's built-in hybrid on-device model (Gemma) for local inference, with App Check (reCAPTCHA Enterprise on web, Play Integrity on Android) protecting every call. Android ships a native Kotlin bridge using the same SDK with on-device ML Kit for its first scan.
+Firebase AI Logic is not a backend plumbing detail here — it *is* the privacy architecture. Every inference call in the app goes through it (`src/lib/firebase/ai.ts`), and the choice of `InferenceMode` on each call is what turns the Privacy Router's decision into an enforceable guarantee rather than a UI suggestion:
+
+- **`InferenceMode.ONLY_ON_DEVICE`** for Check Something's first pass and for any document the router marks highly sensitive (Aadhaar, medical, bank, identity) — the SDK has no cloud path to fall back to, so there is no code path by which that content can leave the device, silently or otherwise.
+- **`InferenceMode.PREFER_ON_DEVICE`** for everything else — Document Vault, diary reflection, document follow-up chat — tries Chrome's built-in on-device Gemma model first and only falls back to the Vertex AI Gemini backend when it's unavailable, with `inferenceSource` on the response checked and surfaced in the UI every time.
+- **`InferenceMode.ONLY_IN_CLOUD`** reserved for the handful of calls that genuinely need the cloud — Media Vault's file analysis, call-recording transcription, and the explicit "second opinion" with Google Search grounding — each one gated behind the user's own approval first.
+
+App Check (reCAPTCHA Enterprise on web, Play Integrity on Android) protects every one of these calls, on web and native alike. Android ships a parallel native Kotlin bridge using the same Firebase AI Logic SDK with on-device ML Kit GenAI for its first pass, so the hybrid guarantee holds whether the agent is running in a browser tab or an installed app.
 
 ## Tech stack
 
