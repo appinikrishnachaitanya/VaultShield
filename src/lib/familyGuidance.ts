@@ -5,6 +5,7 @@ export const familyLanguages = {
   hi: "हिन्दी",
   ta: "தமிழ்",
   mr: "मराठी",
+  fr: "Français",
 } as const;
 export type FamilyLanguage = keyof typeof familyLanguages;
 
@@ -42,6 +43,14 @@ const guidance = {
       "कुटुंबातील व्यक्तीला जतन केलेल्या क्रमांकावर किंवा बँकेला कार्डवरील क्रमांकावर फोन करा.",
     reply: "कोणतीही कृती करण्यापूर्वी मी अधिकृत मार्गाने याची खात्री करेन.",
     call: "मला पैसे पाठवण्याचा संदेश आला. तो तुमच्या संस्थेने पाठवला आहे का? मी त्याची खात्री कशी करू?",
+  },
+  fr: {
+    pause: "Arrêtez-vous. N'envoyez pas d'argent et ne partagez aucun code.",
+    pressure: "Ce message exerce une pression sur vous. Vérifiez l'affirmation avant d'agir.",
+    check:
+      "Appelez un proche à un numéro déjà enregistré, ou la banque au numéro indiqué sur votre carte.",
+    reply: "Je vais vérifier cela par un canal officiel avant d'agir.",
+    call: "J'ai reçu un message me demandant de payer. Votre organisation a-t-elle vraiment envoyé cette demande ? Comment puis-je la vérifier de manière indépendante ?",
   },
 };
 

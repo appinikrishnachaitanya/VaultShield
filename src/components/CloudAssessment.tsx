@@ -14,7 +14,7 @@ import { groundingSources } from "../lib/groundingSources";
 type Assessment = Omit<
   Awaited<ReturnType<typeof verifyWithCloud>>,
   "language"
-> & { language?: "en" | "hi" };
+> & { language?: "en" | "hi" | "fr" };
 export default function CloudAssessment({
   cloud,
   localDisplay = (text: string) => text,
@@ -34,7 +34,7 @@ export default function CloudAssessment({
   }, [appLanguage]);
   const [translated, setTranslated] = useState<{
     text: string;
-    language: "en" | "hi";
+    language: "en" | "hi" | "fr";
   }>();
   const [translating, setTranslating] = useState(false);
   const [translationError, setTranslationError] = useState("");

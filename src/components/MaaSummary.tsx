@@ -25,7 +25,7 @@ export default function MaaSummary({
   language: FamilyLanguage;
   disabled?: boolean;
   contentKind?: "message" | "assessment";
-  sourceLanguage?: "en" | "hi";
+  sourceLanguage?: "en" | "hi" | "fr";
   cloudAllowed?: boolean;
 }) {
   const [summary, setSummary] = useState<FamilySummaryResult>();

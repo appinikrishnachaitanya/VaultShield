@@ -133,7 +133,7 @@ function PinSetupScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-function PinUnlockScreen({ onDone }: { onDone: () => void }) {
+function PinUnlockScreen({ onDone, onNoPinFound }: { onDone: () => void; onNoPinFound: () => void }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -143,8 +143,9 @@ function PinUnlockScreen({ onDone }: { onDone: () => void }) {
     setError("");
     setBusy(true);
     try {
-      const ok = await unlockWithPin(pin);
-      if (ok) onDone();
+      const outcome = await unlockWithPin(pin);
+      if (outcome === "ok") onDone();
+      else if (outcome === "not-set-up") onNoPinFound();
       else setError("That PIN doesn't match. Try again.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not unlock the diary.");
@@ -870,7 +871,13 @@ export default function PrivateDiary() {
     );
   }
   if (lockView === "setup") return <PinSetupScreen onDone={() => setLockView("unlocked")} />;
-  if (lockView === "unlock") return <PinUnlockScreen onDone={() => setLockView("unlocked")} />;
+  if (lockView === "unlock")
+    return (
+      <PinUnlockScreen
+        onDone={() => setLockView("unlocked")}
+        onNoPinFound={() => setLockView("setup")}
+      />
+    );
 
   return (
     <div className="diary-page">

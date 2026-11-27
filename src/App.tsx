@@ -1,5 +1,5 @@
 ﻿import { stopLocalReading } from "./lib/localVoice";
-import { t, useAppLanguage, setLanguage, tacticCount } from "./lib/i18n";
+import { t, useAppLanguage, setLanguage, tacticCount, type AppLanguage } from "./lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ShieldCheck,
@@ -754,15 +754,16 @@ export default function App() {
             </span>
             <select
               className="topbar-lang"
-              aria-label="English / हिन्दी"
+              aria-label="English / हिन्दी / Français"
               value={appLanguage}
               onChange={(event) => {
-                setLanguage(event.target.value as "en" | "hi");
+                setLanguage(event.target.value as AppLanguage);
                 stopLocalReading();
               }}
             >
               <option value="en" lang="en">EN</option>
               <option value="hi" lang="hi">हि</option>
+              <option value="fr" lang="fr">FR</option>
             </select>
             <Account />
           </div>
@@ -1345,7 +1346,7 @@ export default function App() {
                   signal={patternSignal(
                     result.stages,
                     vault.current.entries(),
-                    appLanguage,
+                    appLanguage === "hi" ? "hi" : "en",
                   )}
                 />
               )}

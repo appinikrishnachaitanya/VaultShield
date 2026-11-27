@@ -111,10 +111,24 @@ async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
 
 // ── Lock configuration (salt + canary) — local-first, synced to Firestore ───
 
+function isValidLockConfig(value: unknown): value is LockConfig {
+  if (!value || typeof value !== "object") return false;
+  const cfg = value as Partial<LockConfig>;
+  return (
+    typeof cfg.salt === "string" && cfg.salt.length > 0 &&
+    typeof cfg.canaryIv === "string" && cfg.canaryIv.length > 0 &&
+    typeof cfg.canaryData === "string" && cfg.canaryData.length > 0
+  );
+}
+
 async function readLockConfig(uid: string): Promise<LockConfig | null> {
   try {
     const raw = localStorage.getItem(localConfigKey(uid));
-    if (raw) return JSON.parse(raw) as LockConfig;
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (isValidLockConfig(parsed)) return parsed;
+      localStorage.removeItem(localConfigKey(uid));
+    }
   } catch {
     /* fall through to Firestore */
   }
@@ -122,7 +136,8 @@ async function readLockConfig(uid: string): Promise<LockConfig | null> {
   try {
     const snap = await getDoc(doc(db, "users", uid, "settings", "diaryLock"));
     if (!snap.exists()) return null;
-    const cfg = snap.data() as LockConfig;
+    const cfg: unknown = snap.data();
+    if (!isValidLockConfig(cfg)) return null;
     localStorage.setItem(localConfigKey(uid), JSON.stringify(cfg));
     return cfg;
   } catch {
@@ -179,10 +194,12 @@ export async function setupPin(pin: string): Promise<void> {
 }
 
 /** Attempt to unlock with a PIN. Returns false on a wrong PIN rather than throwing. */
-export async function unlockWithPin(pin: string): Promise<boolean> {
+export type UnlockOutcome = "ok" | "wrong-pin" | "not-set-up";
+
+export async function unlockWithPin(pin: string): Promise<UnlockOutcome> {
   const uid = currentUid();
   const cfg = await readLockConfig(uid);
-  if (!cfg) throw new Error("No diary PIN has been set up yet.");
+  if (!cfg) return "not-set-up";
   const key = await deriveKey(pin, unb64(cfg.salt));
   try {
     const plaintext = await crypto.subtle.decrypt(
@@ -190,20 +207,20 @@ export async function unlockWithPin(pin: string): Promise<boolean> {
       key,
       unb64(cfg.canaryData),
     );
-    if (new TextDecoder().decode(plaintext) !== CANARY_PLAINTEXT) return false;
+    if (new TextDecoder().decode(plaintext) !== CANARY_PLAINTEXT) return "wrong-pin";
   } catch {
-    return false; // AES-GCM auth tag rejected — wrong PIN
+    return "wrong-pin"; // AES-GCM auth tag rejected — wrong PIN
   }
   _sessionKey = key;
   _sessionUid = uid;
-  return true;
+  return "ok";
 }
 
 /** Change the PIN: re-encrypts every entry with a freshly derived key. */
 export async function changePin(oldPin: string, newPin: string): Promise<void> {
   if (newPin.length < 6) throw new Error("Use at least 6 characters for real protection.");
-  const ok = await unlockWithPin(oldPin);
-  if (!ok) throw new Error("Current PIN is incorrect.");
+  const outcome = await unlockWithPin(oldPin);
+  if (outcome !== "ok") throw new Error("Current PIN is incorrect.");
   const uid = currentUid();
   const entries = await getAllEntries();
   const salt = crypto.getRandomValues(new Uint8Array(16));

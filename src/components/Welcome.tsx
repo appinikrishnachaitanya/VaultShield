@@ -67,6 +67,13 @@ export default function Welcome() {
           >
             हिन्दी
           </button>
+          <button
+            lang="fr"
+            aria-pressed={language === "fr"}
+            onClick={() => setLanguage("fr")}
+          >
+            Français
+          </button>
         </div>
         <p className="welcome-eyebrow">
           {t("A little pause. A safer next step.")}

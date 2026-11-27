@@ -10,7 +10,7 @@ service cloud.firestore {
     && request.resource.data.displayName is string
     && request.resource.data.displayName.size() >= 2
     && request.resource.data.displayName.size() <= 40
-    && request.resource.data.language in ['en', 'hi'];
+    && request.resource.data.language in ['en', 'hi', 'fr'];
   }
 
   // Family circle & alerts (read-only from client)
