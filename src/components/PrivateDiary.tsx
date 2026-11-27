@@ -17,6 +17,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../lib/firebase/config";
 import { analyzeDiaryEntry, type DiaryAnalysisResult } from "../lib/firebase/ai";
 import DayMemoryCard from "./DayMemoryCard";
 import {
@@ -804,15 +806,20 @@ export default function PrivateDiary() {
   const [showChangePin, setShowChangePin] = useState(false);
 
   useEffect(() => {
-    void (async () => {
-      try {
-        if (isUnlocked()) { setLockView("unlocked"); return; }
-        const set = await hasPinSet();
-        setLockView(set ? "unlock" : "setup");
-      } catch {
-        setLockView("no-auth");
-      }
-    })();
+    if (!auth) { setLockView("no-auth"); return; }
+    const unsubscribe = onAuthStateChanged(auth, (current) => {
+      if (!current) { setLockView("no-auth"); return; }
+      void (async () => {
+        try {
+          if (isUnlocked()) { setLockView("unlocked"); return; }
+          const set = await hasPinSet();
+          setLockView(set ? "unlock" : "setup");
+        } catch {
+          setLockView("no-auth");
+        }
+      })();
+    });
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
