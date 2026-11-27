@@ -2392,8 +2392,10 @@ html[lang="hi"] h3 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  height: 54px;
-  padding: 0 var(--workspace-gutter);
+  min-height: 54px;
+  /* On Android's edge-to-edge/transparent status bar, the WebView draws under
+     the OS status bar icons unless this row is pushed down to clear them. */
+  padding: env(safe-area-inset-top) var(--workspace-gutter) 0;
   border-bottom: 1px solid #e9ecf0;
   background: #fff;
   position: sticky;
