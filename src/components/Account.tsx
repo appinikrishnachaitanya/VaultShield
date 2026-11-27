@@ -279,7 +279,7 @@ export default function Account() {
                 <div className="acct-guest-icon"><UserRound size={28} /></div>
                 <div className="acct-signin-title">{t("Save your account")}</div>
                 <div className="acct-signin-sub">
-                  {t("Sign in to sync your diary and family circle across devices.")}
+                  {t("Sign in to sync your family circle across devices.")}
                 </div>
               </div>
               <div className="acct-divider" />
