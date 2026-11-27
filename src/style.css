@@ -2555,6 +2555,11 @@ html[lang="hi"] h3 {
   background: #e2e8f0;
   color: #64748b;
 }
+.avatar-guest svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
 
 /* Dropdown panel */
 .account-dropdown {
