@@ -22,7 +22,8 @@ import {
   ShieldAlert,
   Film,
 } from "lucide-react";
-import { initializeServices } from "./lib/firebase/config";
+import { initializeServices, auth } from "./lib/firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   checkAndroidReviewedText,
   checkWithLocalFallback,
@@ -195,16 +196,10 @@ export default function App() {
   const output = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let active = true;
-    let stop = () => {};
     initializeServices()
       .then(() => {
         if (active) {
           setStatus("Private session ready");
-          stop = watchFamily(setMembers, setAlerts, (e) =>
-            setError(
-              `Family inbox / Firestore: ${e.message} Check that the app rules are published to the (default) database in vaultshield-2ace9. If App Check enforcement is enabled, verify this browser’s debug token is registered.`,
-            ),
-          );
           if (
             !usesAndroidModel &&
             "Notification" in window &&
@@ -231,9 +226,32 @@ export default function App() {
     window.addEventListener("offline", update);
     return () => {
       active = false;
-      stop();
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
+    };
+  }, []);
+  // Re-subscribe to the family listener whenever the signed-in identity
+  // changes (e.g. guest -> Google-linked account). watchFamily queries
+  // /users/{uid}/family using whatever uid was current when it was called;
+  // without this, linking or switching accounts leaves a listener pinned to
+  // the old uid, which Firestore then rejects as a permission error once the
+  // auth token no longer matches that path.
+  useEffect(() => {
+    if (!auth) return;
+    let stop = () => {};
+    const unsubscribe = onAuthStateChanged(auth, (current) => {
+      stop();
+      stop = () => {};
+      if (!current) return;
+      stop = watchFamily(setMembers, setAlerts, (e) =>
+        setError(
+          `Family inbox / Firestore: ${e.message} Check that the app rules are published to the (default) database in vaultshield-2ace9. If App Check enforcement is enabled, verify this browser’s debug token is registered.`,
+        ),
+      );
+    });
+    return () => {
+      unsubscribe();
+      stop();
     };
   }, []);
   useEffect(
