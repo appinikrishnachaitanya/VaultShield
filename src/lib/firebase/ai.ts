@@ -851,6 +851,98 @@ async function boundedWait<T>(
   }
 }
 
+export type DiaryAnalysisResult = {
+  mood: "joyful" | "calm" | "neutral" | "anxious" | "sad";
+  moodScore: number;
+  summary: string;
+  actionItems: string[];
+  learnings: string[];
+  memories: string[];
+  personalMessage: string;
+  source: "ON_DEVICE" | "IN_CLOUD";
+};
+
+const DIARY_MOODS = ["joyful", "calm", "neutral", "anxious", "sad"] as const;
+
+/**
+ * Reflect on a diary entry: mood, a short summary, action items and learnings.
+ * The caller must pass already-tokenized text (via TokenVaultSession) — this
+ * function never sees raw names, numbers or other identifiers. Uses
+ * PREFER_ON_DEVICE so reflection runs on-device when available; cloud is only
+ * the fallback, and it only ever receives the tokenized text. No
+ * responseMimeType in inCloudParams — that would bias Firebase's routing
+ * toward cloud. JSON is parsed from plain text via extractJsonObject.
+ */
+export async function analyzeDiaryEntry(tokenizedText: string): Promise<DiaryAnalysisResult> {
+  if (!ai) throw new Error("Firebase AI not configured.");
+  const { model: modelName } = settings();
+  const prompt = `You are a gentle, private journaling companion. The text below is a diary entry where personal identifiers have already been replaced with placeholders like [PERSON_1] or [PLACE_1] — treat those as the real names/places, do not mention that they are placeholders.
+
+Diary entry:
+"""
+${tokenizedText}
+"""
+
+Respond with ONLY a JSON object (no markdown fences) with this exact shape:
+{
+  "mood": one of "joyful" | "calm" | "neutral" | "anxious" | "sad",
+  "moodScore": integer 1-5 (1=hardest day, 5=best day),
+  "summary": a warm 1-2 sentence reflection of the entry,
+  "actionItems": array of up to 3 short, practical suggestions for tomorrow,
+  "learnings": array of up to 3 short insights or things to remember from today,
+  "memories": array of up to 3 short, specific, positive moments worth remembering from the entry (can be empty if none stand out),
+  "personalMessage": one short, warm, encouraging sentence written directly to the writer
+}`;
+
+  const model = getGenerativeModel(ai, {
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: chromeModelOptions(false) },
+    inCloudParams: { model: modelName },
+  });
+  const result = await boundedWait(
+    model.generateContent(prompt),
+    30_000,
+    "Diary reflection timed out.",
+  );
+  const responseText = result.response.text();
+  const source =
+    result.response.inferenceSource === InferenceSource.ON_DEVICE
+      ? ("ON_DEVICE" as const)
+      : ("IN_CLOUD" as const);
+
+  let parsed: Partial<DiaryAnalysisResult>;
+  try {
+    parsed = extractJsonObject(responseText) as Partial<DiaryAnalysisResult>;
+  } catch {
+    throw new Error("Diary reflection returned an unexpected format. Please try again.");
+  }
+
+  const mood = DIARY_MOODS.includes(parsed.mood as DiaryAnalysisResult["mood"])
+    ? (parsed.mood as DiaryAnalysisResult["mood"])
+    : "neutral";
+  const moodScore =
+    typeof parsed.moodScore === "number" && parsed.moodScore >= 1 && parsed.moodScore <= 5
+      ? Math.round(parsed.moodScore)
+      : 3;
+
+  return {
+    mood,
+    moodScore,
+    summary: typeof parsed.summary === "string" ? parsed.summary : "Entry saved.",
+    actionItems: Array.isArray(parsed.actionItems)
+      ? parsed.actionItems.filter((s): s is string => typeof s === "string").slice(0, 3)
+      : [],
+    learnings: Array.isArray(parsed.learnings)
+      ? parsed.learnings.filter((s): s is string => typeof s === "string").slice(0, 3)
+      : [],
+    memories: Array.isArray(parsed.memories)
+      ? parsed.memories.filter((s): s is string => typeof s === "string").slice(0, 3)
+      : [],
+    personalMessage: typeof parsed.personalMessage === "string" ? parsed.personalMessage : "",
+    source,
+  };
+}
+
 // Optional browser specialist APIs, authorized separately from Firebase model inference.
 // Keeping these adapters here preserves one auditable boundary for every AI feature.
 import type {

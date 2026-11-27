@@ -21,6 +21,7 @@ import {
   Menu,
   ShieldAlert,
   Film,
+  BookHeart,
 } from "lucide-react";
 import { initializeServices, auth } from "./lib/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
@@ -50,6 +51,7 @@ import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
 import ExplainForFamily from "./components/ExplainForFamily";
 import MediaVault from "./components/MediaVault";
+import PrivateDiary from "./components/PrivateDiary";
 import ScaredPanel from "./components/ScaredPanel";
 import KnowYourRights from "./components/KnowYourRights";
 import TokenVaultPreview from "./components/TokenVaultPreview";
@@ -131,7 +133,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media" | "diary">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -598,6 +600,7 @@ export default function App() {
     { id: "check", icon: ScanLine, label: t("Check something") },
     { id: "docs", icon: FileText, label: t("Document Vault") },
     { id: "media", icon: Film, label: t("Media Vault") },
+    { id: "diary", icon: BookHeart, label: t("Private Diary") },
     { id: "family", icon: Users, label: t("Family circle") },
   ] as const;
   return (
@@ -727,6 +730,7 @@ export default function App() {
               {tab === "check" && t("Safety Check")}
               {tab === "docs" && t("Document Vault")}
               {tab === "media" && t("Media Vault")}
+              {tab === "diary" && t("Private Diary")}
               {tab === "family" && t("Family Circle")}
               {tab === "privacy" && t("Privacy & Data")}
             </span>
@@ -1372,6 +1376,9 @@ export default function App() {
           </div>
           <div style={{ display: tab === "media" ? "block" : "none" }}>
             <MediaVault />
+          </div>
+          <div style={{ display: tab === "diary" ? "block" : "none" }}>
+            <PrivateDiary />
           </div>
           {tab === "privacy" && (
             <div className="privacy-page">

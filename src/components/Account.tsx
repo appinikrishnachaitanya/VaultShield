@@ -172,7 +172,7 @@ export default function Account() {
                     ? <img src={user.photoURL} alt="" />
                     : initials(name || user.email || "U")}
                 </span>
-                <div>
+                <div className="acct-identity-text">
                   <div className="acct-name">{name || t("My account")}</div>
                   <div className="acct-email">{emailLabel}</div>
                 </div>
@@ -252,7 +252,7 @@ export default function Account() {
                 <div className="acct-guest-icon"><UserRound size={28} /></div>
                 <div className="acct-signin-title">{t("Save your account")}</div>
                 <div className="acct-signin-sub">
-                  {t("Sign in to sync your family circle across devices.")}
+                  {t("Sign in to sync your private diary and family circle across devices.")}
                 </div>
               </div>
               <div className="acct-divider" />

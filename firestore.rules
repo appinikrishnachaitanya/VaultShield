@@ -19,6 +19,28 @@ service cloud.firestore {
    allow write: if false;
   }
 
+  // Private Diary — PIN lock config (salt + canary, never the PIN itself)
+  match /users/{uid}/settings/diaryLock {
+   allow read, delete: if request.auth != null && request.auth.uid == uid;
+   allow create, update: if request.auth != null && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(['salt', 'canaryIv', 'canaryData'])
+    && request.resource.data.salt is string
+    && request.resource.data.canaryIv is string
+    && request.resource.data.canaryData is string;
+  }
+
+  // Private Diary — encrypted entries (opaque ciphertext blobs only)
+  match /diary/{uid}/entries/{entryId} {
+   allow read, delete: if request.auth != null && request.auth.uid == uid;
+   allow create, update: if request.auth != null && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(['id', 'date', 'createdAt', 'iv', 'data'])
+    && request.resource.data.id is string
+    && request.resource.data.date is string
+    && request.resource.data.createdAt is number
+    && request.resource.data.iv is string
+    && request.resource.data.data is string;
+  }
+
   // Deny everything else
   match /{document=**} { allow read, write: if false; }
  }
