@@ -38,8 +38,9 @@ export default function SettingsPage({ onNavigate }: { onNavigate: (tab: "diary"
   useEffect(() => {
     if (!auth) return;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setSignedIn(Boolean(user));
-      if (!user) { setDiaryPinSet(null); return; }
+      const realUser = Boolean(user) && !user!.isAnonymous;
+      setSignedIn(realUser);
+      if (!realUser) { setDiaryPinSet(null); return; }
       setDiaryUnlocked(isUnlocked());
       void hasPinSet().then((set) => {
         setDiaryPinSet(set);
