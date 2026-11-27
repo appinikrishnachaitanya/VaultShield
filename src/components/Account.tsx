@@ -152,7 +152,8 @@ export default function Account() {
           )
         ) : (
           <span className="avatar-guest">
-            <UserRound size={16} />
+            <span className="avatar-guest-head" />
+            <span className="avatar-guest-body" />
           </span>
         )}
       </button>

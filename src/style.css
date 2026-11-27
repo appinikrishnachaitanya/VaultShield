@@ -2546,19 +2546,37 @@ html[lang="hi"] h3 {
   user-select: none;
 }
 .avatar-guest {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
+  display: block;
   width: 34px;
   height: 34px;
   border-radius: 50%;
   background: #e2e8f0;
   color: #64748b;
+  overflow: hidden;
 }
-.avatar-guest svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+/* Drawn with plain shapes, not an SVG icon -- some Android WebView
+   builds clip/mis-render this icon's <circle> element inside a
+   small overflow:hidden button; CSS shapes always render correctly. */
+.avatar-guest-head {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.avatar-guest-body {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 10px;
+  border-radius: 10px 10px 0 0;
+  background: currentColor;
 }
 
 /* Dropdown panel */
