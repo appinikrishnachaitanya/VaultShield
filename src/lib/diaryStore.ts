@@ -4,11 +4,16 @@
  *
  * The encryption key is derived from the PIN via PBKDF2 with a random
  * per-user salt (stored, not secret — a salt only needs to be unique, not
- * hidden). Firebase stores only the salt and the encrypted entry blobs: it
- * never sees the PIN, the derived key, or plaintext entry content. Unlike an
- * identity-derived key (e.g. from the Firebase UID), the PIN is never stored
- * anywhere in recoverable form, so this is real protection against anyone
- * with read access to the database — including VaultShield's own backend.
+ * hidden). When cloud backup is on, Firebase stores only the salt and the
+ * encrypted entry blobs: it never sees the PIN, the derived key, or
+ * plaintext entry content. Unlike an identity-derived key (e.g. from the
+ * Firebase UID), the PIN is never stored anywhere in recoverable form, so
+ * this is real protection against anyone with read access to the database —
+ * including VaultShield's own backend.
+ *
+ * Storage mode is per-account and defaults to "local" (device-only): nothing
+ * about the diary leaves the device until the user opts into "local+cloud"
+ * in Settings. See getStorageMode()/setStorageMode().
  *
  * Tradeoff: if the PIN is forgotten, entries are cryptographically
  * unrecoverable by design. The only recovery path is resetDiary(), which
@@ -85,6 +90,58 @@ function localConfigKey(uid: string): string {
 function localEntriesKey(uid: string): string {
   return `vs_diary_enc_${uid}`;
 }
+function storageModeKey(uid: string): string {
+  return `vs_diary_storage_mode_${uid}`;
+}
+
+export type DiaryStorageMode = "local" | "local+cloud";
+
+/** Per-account preference, defaulting to device-only until the user opts in. */
+export function getStorageMode(): DiaryStorageMode {
+  const uid = currentUid();
+  return localStorage.getItem(storageModeKey(uid)) === "local+cloud" ? "local+cloud" : "local";
+}
+
+/**
+ * Switch between local-only and local+cloud storage. Switching to cloud
+ * backfills every existing entry and the lock config to Firestore so cloud
+ * catches up with what's already on the device; switching back to
+ * local-only deletes the cloud copy — the device copy is never touched.
+ */
+export async function setStorageMode(mode: DiaryStorageMode): Promise<void> {
+  const uid = currentUid();
+  const previous = getStorageMode();
+  localStorage.setItem(storageModeKey(uid), mode);
+  if (mode === previous) return;
+  if (mode === "local+cloud") await pushAllToFirestore(uid);
+  else await wipeCloudCopy(uid);
+}
+
+async function pushAllToFirestore(uid: string): Promise<void> {
+  const firestore = db;
+  if (!firestore) return;
+  try {
+    const raw = localStorage.getItem(localConfigKey(uid));
+    if (raw) await setDoc(doc(firestore, "users", uid, "settings", "diaryLock"), JSON.parse(raw));
+    const blobs = getStoredBlobs(uid);
+    await Promise.all(blobs.map((b) => setDoc(doc(firestore, "diary", uid, "entries", b.id), b)));
+  } catch {
+    // offline — individual saves will retry now that the mode is cloud
+  }
+}
+
+async function wipeCloudCopy(uid: string): Promise<void> {
+  const firestore = db;
+  if (!firestore) return;
+  try {
+    await deleteDoc(doc(firestore, "users", uid, "settings", "diaryLock"));
+    const ref = collection(firestore, "diary", uid, "entries");
+    const snap = await getDocs(ref);
+    await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+  } catch {
+    // ignore — can retry from Settings later
+  }
+}
 
 function currentUid(): string {
   const uid = auth?.currentUser?.uid;
@@ -139,6 +196,9 @@ async function readLockConfig(uid: string): Promise<LockConfig | null> {
     const cfg: unknown = snap.data();
     if (!isValidLockConfig(cfg)) return null;
     localStorage.setItem(localConfigKey(uid), JSON.stringify(cfg));
+    // Found in Firestore => this account had cloud backup on (from another
+    // device, or before a reinstall). Recognize that so future saves keep syncing.
+    localStorage.setItem(storageModeKey(uid), "local+cloud");
     return cfg;
   } catch {
     return null;
@@ -147,7 +207,7 @@ async function readLockConfig(uid: string): Promise<LockConfig | null> {
 
 async function writeLockConfig(uid: string, cfg: LockConfig): Promise<void> {
   localStorage.setItem(localConfigKey(uid), JSON.stringify(cfg));
-  if (!db) return;
+  if (!db || getStorageMode() !== "local+cloud") return;
   try {
     await setDoc(doc(db, "users", uid, "settings", "diaryLock"), cfg);
   } catch {
@@ -254,6 +314,7 @@ export async function resetDiary(): Promise<void> {
   const uid = currentUid();
   localStorage.removeItem(localConfigKey(uid));
   localStorage.removeItem(localEntriesKey(uid));
+  localStorage.removeItem(storageModeKey(uid));
   lock();
   if (!db) return;
   try {
@@ -337,13 +398,13 @@ export async function saveEntry(entry: DiaryEntry): Promise<void> {
   const uid = currentUid();
   const blob = await encryptEntry(entry);
   putStoredBlob(uid, blob);
-  void syncBlobToFirestore(uid, blob);
+  if (getStorageMode() === "local+cloud") void syncBlobToFirestore(uid, blob);
 }
 
 export async function deleteEntry(id: string): Promise<void> {
   const uid = currentUid();
   removeStoredBlob(uid, id);
-  void removeFromFirestore(uid, id);
+  if (getStorageMode() === "local+cloud") void removeFromFirestore(uid, id);
 }
 
 // ── Firestore sync ────────────────────────────────────────────────────────────
@@ -374,6 +435,7 @@ export async function syncFromFirestore(): Promise<void> {
     const ref = collection(db, "diary", uid, "entries");
     const snap = await getDocs(query(ref, orderBy("createdAt", "asc")));
     const remote = snap.docs.map((d) => d.data() as StoredEntry);
+    if (remote.length > 0) localStorage.setItem(storageModeKey(uid), "local+cloud");
     const merged = new Map<string, StoredEntry>();
     for (const b of getStoredBlobs(uid)) merged.set(b.id, b);
     for (const b of remote) merged.set(b.id, b);
