@@ -1,7 +1,7 @@
 // Keep one worker for PWA installation, private share intake, and family push.
 importScripts("/firebase-messaging-sw.js");
 
-const SHELL_CACHE = "vaultshield-shell-v1";
+const SHELL_CACHE = "vaultshield-shell-v2";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(SHELL_CACHE).then((cache) => cache.addAll(["/", "/shield.svg"])),

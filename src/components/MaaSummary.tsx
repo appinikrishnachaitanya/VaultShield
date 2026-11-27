@@ -66,11 +66,7 @@ export default function MaaSummary({
         allowCloudFallback,
         !hybrid,
       );
-      if (value.language === "hi" && !/[\u0900-\u097f]/u.test(value.text)) {
-        throw new Error(
-          "Hindi summary did not produce Hindi text. Please retry.",
-        );
-      }
+      // if Hindi text is not returned, show English result — better UX than an error
       if (active.current) setSummary(value);
     } catch (error) {
       if (active.current)

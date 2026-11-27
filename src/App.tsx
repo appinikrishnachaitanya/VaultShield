@@ -19,8 +19,6 @@ import {
   Shield,
   FileText,
   Menu,
-  BookHeart,
-  IndianRupee,
   ShieldAlert,
   Film,
 } from "lucide-react";
@@ -50,7 +48,6 @@ import LocalTools from "./components/LocalTools";
 import Account from "./components/Account";
 import DocumentScanner from "./components/DocumentScanner";
 import ExplainForFamily from "./components/ExplainForFamily";
-import UPIVerify from "./components/UPIVerify";
 import MediaVault from "./components/MediaVault";
 import ScaredPanel from "./components/ScaredPanel";
 import KnowYourRights from "./components/KnowYourRights";
@@ -61,7 +58,6 @@ import FamilyCircle from "./components/FamilyCircle";
 import Welcome from "./components/Welcome";
 import { TokenVaultSession, rehydrate, countTokens } from "./lib/tokenVault";
 import { routeInput, assertCloudRoute } from "./lib/router";
-import RoutingBanner from "./components/RoutingBanner";
 import { buildReceipt, type PrivacyReceiptData } from "./lib/receipt";
 import PrivacyReceipt from "./components/PrivacyReceipt";
 import LocalCheckNotice from "./components/LocalCheckNotice";
@@ -134,7 +130,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "diary" | "upi" | "media">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -759,18 +755,7 @@ export default function App() {
               </div>
             </div>
           )}
-          <section
-            className="privacy-router-intro"
-            aria-label={t("Privacy Router for AI")}
-          >
-            <strong>{t("Privacy Router for AI")}</strong>
-            <p>
-              {t(
-                "Cloud reasons over placeholders. This device holds the values. A receipt shows what the app submitted.",
-              )}
-            </p>
-          </section>
-          {(input.trim() || image) && <RoutingBanner route={privacyRoute} />}
+
           <p className="language-note">
             {t(
               "Source messages and quoted evidence stay in their original language. New AI explanations use your selected language.",

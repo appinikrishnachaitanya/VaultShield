@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 :root {
   font-family:
     Inter,
@@ -271,6 +271,7 @@ h1 span {
 .card-title p {
   font-size: 0.8rem;
   margin-top: 3px;
+  color: #64748b;
 }
 label.input-label {
   font-size: 0.875rem;
@@ -762,6 +763,26 @@ textarea::placeholder {
   background: #ecfdf5;
   color: #047857;
 }
+.doc-translate-banner {
+  background: #f0fdf9;
+  border: 1px solid #99f6e4;
+  flex-wrap: wrap;
+}
+.doc-translate-banner span {
+  flex: 1;
+  min-width: 180px;
+  color: #0f172a;
+}
+.doc-translate-banner .primary {
+  white-space: nowrap;
+  margin-left: 0;
+  background: #0f766e;
+  color: white;
+  border: 0;
+}
+.doc-translate-banner .primary:hover:not(:disabled) {
+  background: #115e59;
+}
 .banner button {
   margin-left: auto;
   background: none;
@@ -1101,12 +1122,29 @@ blockquote {
     height: 36px;
   }
 }
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+}
 .consent input {
   width: 19px;
   height: 19px;
   flex-shrink: 0;
   margin-top: 3px;
   accent-color: #0f766e;
+}
+.community-signal {
+  display: flex;
+  flex-direction: column;
+}
+.community-signal .consent {
+  margin-bottom: 0;
+}
+.community-signal > button {
+  align-self: flex-start;
+  margin-top: 4px;
 }
 .image-preview {
   display: flex;
@@ -1275,7 +1313,7 @@ blockquote {
   display: none;
 }
 @media (max-width: 768px) {
-  /* â”€â”€ Mobile: hide sidebar entirely; topbar + drawer take over â”€â”€ */
+  /* ── Mobile: hide sidebar entirely; topbar + drawer take over ── */
   .sidebar {
     display: none;
   }
@@ -1283,7 +1321,7 @@ blockquote {
     margin-left: 0 !important;
   }
 
-  /* â”€â”€ Slide-out drawer â”€â”€ */
+  /* ── Slide-out drawer ── */
   .drawer-overlay {
     display: none;
     position: fixed;
@@ -2348,7 +2386,7 @@ html[lang="hi"] h3 {
   --control-height: 44px;
   --workspace-gutter: clamp(20px, 3vw, 48px);
 }
-/* â”€â”€ Enterprise Topbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Enterprise Topbar ───────────────────────────────────────────────────── */
 .topbar {
   display: flex;
   align-items: center;
@@ -2467,7 +2505,7 @@ html[lang="hi"] h3 {
   color: #0f172a;
   background: #fff;
 }
-/* â”€â”€ Account avatar + dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Account avatar + dropdown ───────────────────────────────────────────── */
 .account-control {
   position: relative;
   flex-shrink: 0;
@@ -2753,7 +2791,7 @@ html[lang="hi"] h3 {
   flex-shrink: 0;
 }
 .network-proof[open] summary::before {
-  content: "âˆ’";
+  content: "−";
 }
 .network-proof > .card {
   position: absolute;
@@ -3635,7 +3673,7 @@ html[lang="hi"] h3 {
   }
 }
 
-/* â”€â”€ Token Vault Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Token Vault Preview ───────────────────────────────────── */
 .vault-preview {
   margin-top: 10px;
   border: 1px solid #e2e8f0;
@@ -3699,7 +3737,7 @@ html[lang="hi"] h3 {
 .tok-ref     { background: #f5f3ff; color: #5b21b6; }
 .tok-private { background: #fef9c3; color: #854d0e; }
 
-/* â”€â”€ Vault scanning state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Vault scanning state ──────────────────────────────────── */
 .vault-scanning-box {
   animation: fadeSlideIn 0.15s ease;
 }
@@ -3732,7 +3770,7 @@ html[lang="hi"] h3 {
   100% { content: ''; }
 }
 
-/* â”€â”€ Detected category chips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Detected category chips ───────────────────────────────── */
 .vault-detected-row {
   display: flex;
   flex-wrap: wrap;
@@ -3751,7 +3789,7 @@ html[lang="hi"] h3 {
 }
 .chip-count { opacity: 0.75; }
 
-/* â”€â”€ Explain For Family â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Explain For Family ───────────────────────────────────── */
 .explain-family {
   border: 1px solid #e2e8f0;
   border-radius: 14px;
@@ -3846,7 +3884,7 @@ html[lang="hi"] h3 {
   text-underline-offset: 3px;
 }
 
-/* â”€â”€ Privacy Stats Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Privacy Stats Bar ───────────────────────────────────── */
 .privacy-stats-bar {
   margin: 0 0 16px;
   padding: 10px 12px;
@@ -3909,12 +3947,24 @@ html[lang="hi"] h3 {
   100% { transform: scale(1) translateY(0); opacity: 1; color: inherit; }
 }
 
-/* â”€â”€ Document Scanner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Document Scanner ───────────────────────────────────── */
 .doc-scanner .page-heading { margin-bottom: 32px; }
 
 .doc-scanner .workspace {
   grid-template-columns: 1fr;
   max-width: 760px;
+}
+.doc-scanner .workspace.has-result {
+  grid-template-columns: 1fr 360px;
+  max-width: 1200px;
+  align-items: start;
+}
+.doc-scanner .doc-chat-column {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  position: sticky;
+  top: 20px;
+  align-self: start;
 }
 .doc-scanner .check-column {
   display: flex;
@@ -4148,7 +4198,7 @@ html[lang="hi"] h3 {
 }
 .doc-privacy-stats svg { color: #0f766e; }
 
-/* â”€â”€ Private Diary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Private Diary ───────────────────────────────────────────────────────── */
 .diary-page {
   max-width: 680px;
   margin: 0 auto;
@@ -4703,7 +4753,7 @@ html[lang="hi"] h3 {
 .diary-detail-privacy.cloud { background: #eff6ff; color: #1e40af; }
 .diary-detail-privacy.cloud svg { color: #2563eb; }
 
-/* â”€â”€â”€ I'm Scared trigger button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── I'm Scared trigger button ─────────────────────────────────────────── */
 .scared-trigger-btn {
   display: inline-flex;
   align-items: center;
@@ -4721,7 +4771,7 @@ html[lang="hi"] h3 {
 }
 .scared-trigger-btn:hover { background: #fee2e2; transform: scale(1.02); }
 
-/* â”€â”€â”€ Scared Panel overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Scared Panel overlay ───────────────────────────────────────────────── */
 .scared-overlay {
   position: fixed; inset: 0; z-index: 900;
   background: rgba(0,0,0,0.65);
@@ -4779,7 +4829,7 @@ html[lang="hi"] h3 {
 }
 .scared-facts { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; }
 .scared-facts li { font-size: 14px; color: #334155; padding-left: 20px; position: relative; }
-.scared-facts li::before { content: "âœ“"; position: absolute; left: 0; color: #22c55e; font-weight: 700; }
+.scared-facts li::before { content: "✓"; position: absolute; left: 0; color: #22c55e; font-weight: 700; }
 .scared-action-row { display: flex; gap: 10px; margin-top: 20px; }
 .scared-call-btn {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -4795,7 +4845,7 @@ html[lang="hi"] h3 {
 }
 .scared-family-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* â”€â”€â”€ UPI Verify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── UPI Verify ─────────────────────────────────────────────────────────── */
 .upi-page { padding: 0 0 80px; }
 .upi-card {
   background: #fff; border-radius: 16px;
@@ -4858,7 +4908,7 @@ html[lang="hi"] h3 {
 }
 .upi-local-note svg { color: #22c55e; }
 
-/* â”€â”€â”€ Know Your Rights â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Know Your Rights ───────────────────────────────────────────────────── */
 .rights-section { margin: 24px 0 0; }
 .rights-header {
   display: flex; align-items: center; gap: 12px;
@@ -4910,7 +4960,7 @@ html[lang="hi"] h3 {
   margin-left: auto;
 }
 
-/* â”€â”€â”€ Day Memory Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Day Memory Card ────────────────────────────────────────────────────── */
 .day-memory-overlay {
   position: fixed; inset: 0; z-index: 800;
   background: rgba(0,0,0,0.75);
@@ -4961,7 +5011,7 @@ html[lang="hi"] h3 {
 }
 .day-memory-continue:hover { opacity: 0.9; }
 
-/* â”€â”€ Document Chat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Document Chat ───────────────────────────────────────────────────────── */
 .doc-chat { margin-top: 0; }
 .doc-chat-messages {
   min-height: 60px;
@@ -4969,50 +5019,65 @@ html[lang="hi"] h3 {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   margin: 12px 0;
-  padding: 4px 0;
+  padding: 10px 8px;
+  background: #ECE5DD;
+  border-radius: 10px;
 }
 .doc-chat-empty {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #94a3b8;
+  color: #667781;
   font-size: 0.85rem;
   padding: 8px 0;
 }
 .doc-chat-bubble {
-  max-width: 85%;
-  padding: 10px 13px;
-  border-radius: 12px;
+  max-width: 82%;
+  padding: 7px 12px 9px;
+  border-radius: 8px;
   font-size: 0.875rem;
-  line-height: 1.55;
+  line-height: 1.5;
+  position: relative;
 }
+/* sent bubble — WhatsApp-green */
 .doc-chat-bubble.user {
   align-self: flex-end;
-  background: #0f766e;
-  color: #fff;
-  border-bottom-right-radius: 4px;
+  background: #D9FDD3;
+  color: #111B21;
+  border-bottom-right-radius: 2px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
 }
+/* received bubble — white */
 .doc-chat-bubble.ai {
   align-self: flex-start;
-  background: #f1f5f9;
-  color: #1e293b;
-  border-bottom-left-radius: 4px;
+  background: #FFFFFF;
+  color: #111B21;
+  border-bottom-left-radius: 2px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+}
+.doc-chat-bubble.ai p {
+  color: #111B21;
+  margin: 0;
+}
+.doc-chat-bubble.user p {
+  color: #111B21;
+  margin: 0;
 }
 .doc-chat-bubble.loading {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #64748b;
+  color: #667781;
 }
 .doc-chat-ai-label {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.7rem;
-  color: #64748b;
-  margin-bottom: 4px;
+  font-size: 0.68rem;
+  color: #0f766e;
+  margin-bottom: 3px;
   font-weight: 600;
   letter-spacing: 0.03em;
 }
@@ -5035,7 +5100,7 @@ html[lang="hi"] h3 {
   background: #fff;
   color: #1e293b;
 }
-.doc-chat-textarea:focus { outline: none; border-color: var(--accent, #0f4c75); }
+.doc-chat-textarea:focus { outline: none; border-color: #0f766e; }
 .doc-chat-send {
   flex-shrink: 0;
   width: 40px;
@@ -5047,7 +5112,7 @@ html[lang="hi"] h3 {
   border-radius: 10px;
 }
 
-/* â”€â”€ Call Vault â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Call Vault ──────────────────────────────────────────────────────────── */
 .call-vault-flow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -5067,7 +5132,7 @@ html[lang="hi"] h3 {
   font-size: 0.75rem;
   color: #64748b;
 }
-.call-vault-step svg { color: var(--accent, #0f4c75); margin-bottom: 2px; }
+.call-vault-step svg { color: #0f766e; margin-bottom: 2px; }
 .call-vault-step strong { font-size: 0.8rem; color: #1e293b; }
 @media (max-width: 540px) {
   .call-vault-flow { grid-template-columns: repeat(2, 1fr); }

@@ -1,4 +1,5 @@
-﻿import { useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { t, useAppLanguage } from "../lib/i18n";
 import {
   ScanLine,
   Upload,
@@ -37,17 +38,17 @@ import { extractPdfContent } from "../lib/pdfExtractor";
 const SAFETY_CONFIG = {
   safe: {
     icon: CheckCircle,
-    label: "No concerns",
+    label: t("No concerns"),
     className: "doc-safety safe",
   },
   review: {
     icon: AlertCircle,
-    label: "Review carefully",
+    label: t("Review carefully"),
     className: "doc-safety review",
   },
   concern: {
     icon: AlertTriangle,
-    label: "Concerns found",
+    label: t("Concerns found"),
     className: "doc-safety concern",
   },
 };
@@ -63,6 +64,7 @@ type PipelineStep = {
 export default function DocumentScanner() {
   const vault = useRef(new TokenVaultSession());
   const fileRef = useRef<HTMLInputElement>(null);
+  const language = useAppLanguage();
   const [rawText, setRawText] = useState("");
   const [image, setImage] = useState<{
     data: string;
@@ -76,6 +78,7 @@ export default function DocumentScanner() {
   const [steps, setSteps] = useState<PipelineStep[]>([]);
   const [result, setResult] = useState<DocumentAnalysisResult | null>(null);
   const [receipt, setReceipt] = useState<PrivacyReceiptData | null>(null);
+  const [pdfImages, setPdfImages] = useState<Array<{ data: string; mimeType: string; name: string; url: string }>>([]);
   const [ocrText, setOcrText] = useState("");
   const [error, setError] = useState("");
   type ChatMessage = { role: "user" | "ai"; text: string };
@@ -84,21 +87,24 @@ export default function DocumentScanner() {
   const [chatBusy, setChatBusy] = useState(false);
   const [tokenizedDocText, setTokenizedDocText] = useState("");
 
-  function buildSteps(hasImage: boolean, hasPdfText: boolean): PipelineStep[] {
+  function buildSteps(hasImage: boolean, hasPdfText: boolean, pdfImageCount = 0): PipelineStep[] {
+    const ocrLabel = pdfImageCount > 1
+      ? `On-device OCR - ${pdfImageCount} pages`
+      : hasPdfText ? "PDF text extracted" : "On-device OCR";
     return [
       {
         id: "ocr",
-        label: hasPdfText ? "PDF text extracted" : "On-device OCR",
+        label: ocrLabel,
         detail: hasPdfText
-          ? "Text layer parsed on-device — nothing sent to cloud"
-          : "Extract text from image — nothing sent to cloud",
+          ? "Text layer parsed on-device - nothing sent to cloud"
+          : "Extract text from image - nothing sent to cloud",
         icon: Cpu,
-        status: hasImage || hasPdfText ? "pending" : "skipped",
+        status: hasImage || hasPdfText || pdfImageCount > 0 ? "pending" : "skipped",
       },
       {
         id: "vault",
         label: "Token vault",
-        detail: "Mask all identifiers — stays on this device",
+        detail: "Mask all identifiers - stays on this device",
         icon: Lock,
         status: "pending",
       },
@@ -112,7 +118,7 @@ export default function DocumentScanner() {
       {
         id: "cloud",
         label: "Cloud analysis",
-        detail: "AI sees tokens only — never original values",
+        detail: "AI sees tokens only - never original values",
         icon: Cloud,
         status: "pending",
       },
@@ -144,7 +150,7 @@ export default function DocumentScanner() {
     setChatMessages((prev) => [...prev, { role: "user", text: q }]);
     setChatBusy(true);
     try {
-      const { answer } = await chatWithDocument(q, tokenizedDocText || "(no document scanned)", vault.current);
+      const { answer } = await chatWithDocument(q, tokenizedDocText || "(no document scanned)", vault.current, language);
       setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
     } catch {
       setChatMessages((prev) => [...prev, { role: "ai", text: "Sorry, couldn't get an answer. Please try again." }]);
@@ -156,6 +162,7 @@ export default function DocumentScanner() {
   function clearFile() {
     if (image) URL.revokeObjectURL(image.url);
     setImage(null);
+    setPdfImages([]);
     setPdfMeta(null);
     setOcrText("");
     setResult(null);
@@ -184,12 +191,11 @@ export default function DocumentScanner() {
       extractPdfContent(f)
         .then((extracted) => {
           setPdfMeta({ name: f.name, pageCount: extracted.pageCount });
-          if (extracted.method === "text-layer" && extracted.text.length > 30) {
-            setRawText(extracted.text);
-          } else if (extracted.images.length > 0) {
-            // Use first rendered page image for OCR
-            setImage(extracted.images[0]);
-          } else {
+          if (extracted.text.length > 30) setRawText(extracted.text);
+          if (extracted.images.length > 0) {
+            // Store all rendered page images for multi-page OCR
+            setPdfImages(extracted.images);
+          } else if (extracted.text.length <= 30) {
             setError("Could not extract text from this PDF. Try pasting the text manually.");
           }
         })
@@ -222,17 +228,30 @@ export default function DocumentScanner() {
     setOcrText("");
     vault.current.clear();
 
-    const hasPdfText = Boolean(pdfMeta && rawText && !image);
-    const pipeline = buildSteps(Boolean(image), hasPdfText);
+    const hasPdfText = Boolean(pdfMeta && rawText);
+    const hasPdfImages = pdfImages.length > 0;
+    const pipeline = buildSteps(Boolean(image), hasPdfText && !hasPdfImages, hasPdfImages ? pdfImages.length : 0);
     setSteps(pipeline);
 
     try {
       let textToAnalyze = rawText;
 
-      // Step 1: on-device OCR (images only) or PDF text-layer mark-done
-      if (hasPdfText) {
-        setSteps((s) => advanceStep(s, "ocr"));  // ocr: running
-        setSteps((s) => advanceStep(s, "vault")); // ocr: done, vault: running
+      // Step 1: on-device OCR
+      if (hasPdfImages) {
+        // Multi-page image PDF (or mixed): OCR each rendered page, combine with any text-layer text
+        setSteps((s) => advanceStep(s, "ocr"));
+        const pageTexts: string[] = rawText ? [rawText] : [];
+        for (const pageImg of pdfImages) {
+          const pageText = await extractTextFromDocument(pageImg, category, () => {});
+          if (pageText) pageTexts.push(pageText);
+        }
+        const combined = pageTexts.join("\n\n");
+        setOcrText(combined);
+        textToAnalyze = combined;
+        setSteps((s) => advanceStep(s, "vault"));
+      } else if (hasPdfText) {
+        setSteps((s) => advanceStep(s, "ocr"));
+        setSteps((s) => advanceStep(s, "vault"));
       } else if (image) {
         setSteps((s) => advanceStep(s, "ocr"));
         const extracted = await extractTextFromDocument(
@@ -272,6 +291,8 @@ export default function DocumentScanner() {
         tokenized.text as SanitizedText,
         category,
         vault.current,
+        undefined,
+        language,
       );
 
       // Build privacy receipt
@@ -291,7 +312,7 @@ export default function DocumentScanner() {
         if (analysisResult.source === "ON_DEVICE") {
           return done.map((step) =>
             step.id === "cloud"
-              ? { ...step, label: "On-device analysis", detail: "Gemma4 / Nano — your data never left this device", icon: Cpu }
+              ? { ...step, label: "On-device analysis", detail: "Gemma4 / Nano - your data never left this device", icon: Cpu }
               : step,
           );
         }
@@ -322,19 +343,18 @@ export default function DocumentScanner() {
       <div className="page-heading">
         <span className="eyebrow">
           <span className="tiny-line" />
-          DOCUMENT VAULT
+          {t("DOCUMENT VAULT")}
         </span>
         <h1>
-          AI reads the doc.{" "}
-          <span>Not your identity.</span>
+          {t("AI reads the doc.")}{" "}
+          <span>{t("Not your identity.")}</span>
         </h1>
         <p>
-          Every identifier is masked on this device before any AI sees the
-          document.
+          {t("Every identifier is masked on this device before any AI sees the document.")}
         </p>
       </div>
 
-      <div className="workspace">
+      <div className={result ? "workspace has-result" : "workspace"}>
         <section className="check-column">
           {/* Input card */}
           <div className="card input-card">
@@ -343,14 +363,14 @@ export default function DocumentScanner() {
                 <ScanLine size={23} />
               </div>
               <div>
-                <h2>Upload or paste your document</h2>
-                <p>Medical report, land deed, loan notice, court summons…</p>
+                <h2>{t("Upload or paste your document")}</h2>
+                <p>{t("Medical report, land deed, loan notice, court summons...")}</p>
               </div>
             </div>
 
             {/* Category selector */}
             <div className="doc-categories">
-              <span className="input-label">Document type</span>
+              <span className="input-label">{t("Document type")}</span>
               <div className="doc-cat-pills">
                 {DOCUMENT_CATEGORIES.map((cat) => (
                   <button
@@ -361,7 +381,7 @@ export default function DocumentScanner() {
                     title={cat.hint}
                     disabled={busy}
                   >
-                    {cat.label}
+                    {t(cat.label)}
                   </button>
                 ))}
               </div>
@@ -385,7 +405,7 @@ export default function DocumentScanner() {
                 <FileText size={28} />
                 <div className="pdf-preview-info">
                   <span className="pdf-name">{pdfMeta.name}</span>
-                  <span className="pdf-pages">{pdfMeta.pageCount} page{pdfMeta.pageCount !== 1 ? "s" : ""} · text extracted on-device</span>
+                  <span className="pdf-pages">{pdfMeta.pageCount} page{pdfMeta.pageCount !== 1 ? "s" : ""}  - text extracted on-device</span>
                 </div>
                 <button aria-label="Remove PDF" disabled={busy} onClick={clearFile}>
                   <X size={20} />
@@ -412,38 +432,42 @@ export default function DocumentScanner() {
                 }}
               >
                 <Upload size={24} />
-                <span>Upload document</span>
+                <span>{t("Upload document")}</span>
                 <span className="doc-upload-hint">
-                  PDF · JPEG · PNG · processed on-device · nothing uploaded to cloud
+                  {t("PDF / JPEG / PNG / processed on-device - nothing uploaded to cloud")}
                 </span>
               </button>
             )}
 
-            <div className="divider">
-              <span>or paste document text</span>
-            </div>
+            {!pdfMeta && !image && (
+              <div className="divider">
+                <span>{t("or paste document text")}</span>
+              </div>
+            )}
 
-            <label htmlFor="doc-text" className="input-label">
-              Paste extracted text
-            </label>
-            <textarea
-              id="doc-text"
-              value={rawText}
-              maxLength={32000}
-              disabled={busy || Boolean(image)}
-              onChange={(e) => {
-                setRawText(e.target.value);
-                setResult(null);
-                setReceipt(null);
-              }}
-              placeholder="Paste lab report, deed, notice or any document text here…"
-              rows={6}
-            />
+            {!image && (
+              <>
+                <label htmlFor="doc-text" className="input-label" style={{ marginTop: pdfMeta ? 14 : 0 }}>
+                  {pdfMeta ? t("Extracted text") : t("Paste extracted text")}
+                </label>
+                <textarea
+                  id="doc-text"
+                  value={rawText}
+                  maxLength={32000}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setRawText(e.target.value);
+                    setResult(null);
+                    setReceipt(null);
+                  }}
+                  placeholder={t("Paste lab report, deed, notice or any document text here...")}
+                  rows={6}
+                />
+              </>
+            )}
             {ocrText && (
               <details className="ocr-preview">
-                <summary>
-                  <Cpu size={14} /> On-device OCR extracted text
-                </summary>
+                <summary><Cpu size={14} /> {t("On-device OCR extracted text")}</summary>
                 <pre>{ocrText}</pre>
               </details>
             )}
@@ -455,11 +479,11 @@ export default function DocumentScanner() {
               onClick={() => void analyze()}
             >
               {busy ? (
-                <>Analyzing privately…</>
+                <>{t("Analyzing privately...")}</>
               ) : (
                 <>
                   <ShieldCheck size={16} />
-                  Analyze privately
+                  {t("Analyze privately")}
                 </>
               )}
             </button>
@@ -468,7 +492,7 @@ export default function DocumentScanner() {
           {/* Pipeline progress */}
           {steps.length > 0 && (
             <div className="card doc-pipeline">
-              <h3>Privacy pipeline</h3>
+              <h3>{t("Privacy pipeline")}</h3>
               <ol className="pipeline-steps">
                 {steps
                   .filter((s) => s.status !== "skipped")
@@ -528,6 +552,23 @@ export default function DocumentScanner() {
               </span>
             </div>
 
+            {language === "hi" && !/[ऀ-ॿ]/.test(result.summary) && (
+              <div className="banner info doc-translate-banner">
+                <span>भाषा हिंदी में बदली - हिंदी में परिणाम पाने के लिए फिर से Analyze करें।</span>
+                <button type="button" className="primary" onClick={() => void analyze()} disabled={busy}>
+                  हिंदी में विश्लेषण करें
+                </button>
+              </div>
+            )}
+            {language === "en" && /[ऀ-ॿ]/.test(result.summary) && (
+              <div className="banner info doc-translate-banner">
+                <span>Language switched to English - re-analyze to get results in English.</span>
+                <button type="button" className="primary" onClick={() => void analyze()} disabled={busy}>
+                  Analyze in English
+                </button>
+              </div>
+            )}
+
             {/* Summary */}
             <div className="card doc-result-card">
               <div className="card-title">
@@ -535,7 +576,7 @@ export default function DocumentScanner() {
                   <FileText size={20} />
                 </div>
                 <div>
-                  <h2>Summary</h2>
+                  <h2>{t("Summary")}</h2>
                 </div>
               </div>
               <p className="doc-summary">{result.summary}</p>
@@ -549,7 +590,7 @@ export default function DocumentScanner() {
                     <AlertTriangle size={20} />
                   </div>
                   <div>
-                    <h2>Red flags</h2>
+                    <h2>{t("Red flags")}</h2>
                   </div>
                 </div>
                 <ul className="doc-list">
@@ -571,7 +612,7 @@ export default function DocumentScanner() {
                     <CheckCircle size={20} />
                   </div>
                   <div>
-                    <h2>Key facts</h2>
+                    <h2>{t("Key facts")}</h2>
                   </div>
                 </div>
                 <ul className="doc-list">
@@ -593,7 +634,7 @@ export default function DocumentScanner() {
                     <AlertCircle size={20} />
                   </div>
                   <div>
-                    <h2>What's missing</h2>
+                    <h2>{t("What's missing")}</h2>
                   </div>
                 </div>
                 <ul className="doc-list">
@@ -615,7 +656,7 @@ export default function DocumentScanner() {
                     <ChevronRight size={20} />
                   </div>
                   <div>
-                    <h2>What to do</h2>
+                    <h2>{t("What to do")}</h2>
                   </div>
                 </div>
                 <ol className="doc-steps-list">
@@ -645,70 +686,80 @@ export default function DocumentScanner() {
 
             {/* Full privacy receipt */}
             {receipt && <PrivacyReceipt receipt={receipt} original="" entries={[]} />}
-            {/* Doc chat */}
-            {result && (
-              <div className="card doc-chat">
-                <div className="card-title">
-                  <div className="icon-tile">
-                    <MessageSquare size={20} />
-                  </div>
-                  <div>
-                    <h2>Ask about this document</h2>
-                    <p>Questions are tokenized — your PII stays on this device.</p>
-                  </div>
+          </section>
+        )}
+        {result && (
+          <section className="doc-chat-column">
+            <div className="card doc-chat">
+              <div className="card-title">
+                <div className="icon-tile">
+                  <MessageSquare size={20} />
                 </div>
-                <div className="doc-chat-messages" aria-live="polite">
-                  {chatMessages.length === 0 && (
-                    <div className="doc-chat-empty">
-                      <Bot size={20} />
-                      <span>Ask anything about the scanned document.</span>
-                    </div>
-                  )}
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className={`doc-chat-bubble ${msg.role}`}>
-                      {msg.role === "ai" && (
-                        <span className="doc-chat-ai-label">
-                          <Lock size={10} /> AI · PII masked
-                        </span>
-                      )}
-                      <p>{msg.text}</p>
-                    </div>
-                  ))}
-                  {chatBusy && (
-                    <div className="doc-chat-bubble ai loading">
-                      <span className="step-spinner" aria-hidden="true" />
-                      <span>Thinking…</span>
-                    </div>
-                  )}
-                </div>
-                <div className="doc-chat-input-row">
-                  <textarea
-                    className="doc-chat-textarea"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        void handleChat();
-                      }
-                    }}
-                    placeholder="Ask a question about the document…"
-                    rows={2}
-                    disabled={chatBusy}
-                    maxLength={1000}
-                  />
-                  <button
-                    type="button"
-                    className="primary doc-chat-send"
-                    disabled={!chatInput.trim() || chatBusy}
-                    onClick={() => void handleChat()}
-                    aria-label="Send"
-                  >
-                    <Send size={16} />
-                  </button>
+                <div>
+                  <h2>{t("Ask about this document")}</h2>
+                  <p>{t("Questions are tokenized - your PII stays on this device.")}</p>
                 </div>
               </div>
-            )}
+              {language === "hi" && chatMessages.length > 0 && chatMessages.some(m => m.role === "ai" && !/[ऀ-ॿ]/.test(m.text)) && (
+                <div className="banner info doc-translate-banner" style={{ marginBottom: 8, fontSize: "0.82rem" }}>
+                  <span>भाषा हिंदी में बदली — अगले सवाल का जवाब हिंदी में होगा।</span>
+                  <button type="button" className="primary" style={{ fontSize: "0.78rem", padding: "5px 10px" }}
+                    onClick={() => setChatMessages([])}>
+                    हिंदी में शुरू करें
+                  </button>
+                </div>
+              )}
+              <div className="doc-chat-messages" aria-live="polite">
+                {chatMessages.length === 0 && (
+                  <div className="doc-chat-empty">
+                    <Bot size={20} />
+                    <span>{t("Ask anything about the scanned document.")}</span>
+                  </div>
+                )}
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`doc-chat-bubble ${msg.role}`}>
+                    {msg.role === "ai" && (
+                      <span className="doc-chat-ai-label">
+                        <Lock size={10} /> AI - {t("PII masked")}
+                      </span>
+                    )}
+                    <p>{msg.text}</p>
+                  </div>
+                ))}
+                {chatBusy && (
+                  <div className="doc-chat-bubble ai loading">
+                    <span className="step-spinner" aria-hidden="true" />
+                    <span>{t("Thinking...")}</span>
+                  </div>
+                )}
+              </div>
+              <div className="doc-chat-input-row">
+                <textarea
+                  className="doc-chat-textarea"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleChat();
+                    }
+                  }}
+                  placeholder={t("Ask a question about the document...")}
+                  rows={2}
+                  disabled={chatBusy}
+                  maxLength={1000}
+                />
+                <button
+                  type="button"
+                  className="primary doc-chat-send"
+                  disabled={!chatInput.trim() || chatBusy}
+                  onClick={() => void handleChat()}
+                  aria-label="Send"
+                >
+                  <Send size={16} />
+                </button>
+              </div>
+            </div>
           </section>
         )}
       </div>

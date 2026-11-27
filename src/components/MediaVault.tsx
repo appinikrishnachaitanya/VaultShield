@@ -1,4 +1,5 @@
-﻿import { useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { t, useAppLanguage } from "../lib/i18n";
 import {
   Film,
   Upload,
@@ -46,6 +47,7 @@ function fileToBase64(file: File): Promise<string> {
 export default function MediaVault() {
   const vault = useRef(new TokenVaultSession());
   const fileRef = useRef<HTMLInputElement>(null);
+  const language = useAppLanguage();
 
   const [mediaFile, setMediaFile] = useState<{
     name: string; size: number; mimeType: string; url: string;
@@ -109,9 +111,9 @@ export default function MediaVault() {
         audio: "Transcribe this audio recording verbatim. Note any suspicious patterns.",
         video: "Transcribe all speech from this video verbatim. Note any suspicious visual or audio patterns.",
       };
-      setProcessStatus(`Sending ${mediaFile.kind} to cloud Gemini…`);
+      setProcessStatus(`Sending ${mediaFile.kind} to cloud Gemini...`);
       const b64 = await fileToBase64(mediaFile.file);
-      const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, instructions[mediaFile.kind]);
+      const { text } = await analyzeMediaFile(b64, mediaFile.mimeType, instructions[mediaFile.kind], language);
       const raw = text;
       setSource("IN_CLOUD");
       setAnalysis(raw);
@@ -138,7 +140,7 @@ export default function MediaVault() {
     setChatMessages((prev) => [...prev, { role: "user", text: q }]);
     setChatBusy(true);
     try {
-      const { answer } = await chatWithDocument(q, tokenizedAnalysis, vault.current);
+      const { answer } = await chatWithDocument(q, tokenizedAnalysis, vault.current, language);
       setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
@@ -158,29 +160,28 @@ export default function MediaVault() {
   const KindIcon = kind === "image" ? Image : kind === "video" ? Video : FileAudio;
 
   const flowSteps = [
-    { icon: Upload, label: "Upload file", sub: "Stays local until sent" },
-    { icon: Cloud, label: "Cloud AI reads", sub: "Gemini · sent once" },
-    { icon: Lock, label: "PII masked", sub: "TokenVault on-device" },
-    { icon: MessageSquare, label: "Chat privately", sub: "Tokens only to cloud" },
+    { icon: Upload, label: t("Upload file"), sub: t("Stays local until sent") },
+    { icon: Cloud, label: t("Cloud AI reads"), sub: t("Gemini - sent once") },
+    { icon: Lock, label: t("PII masked"), sub: t("TokenVault on-device") },
+    { icon: MessageSquare, label: t("Chat privately"), sub: t("Tokens only to cloud") },
   ];
 
   const quickQuestions = kind === "image"
-    ? ["What does this image show?", "Any red flags?", "Extract all text", "Summarise in 3 points"]
-    : ["Was this a scam call?", "What did the caller want?", "Are there red flags?", "Summarise in 3 points"];
+    ? [t("What does this image show?"), t("Any red flags?"), t("Extract all text"), t("Summarise in 3 points")]
+    : [t("Was this a scam call?"), t("What did the caller want?"), t("Are there red flags?"), t("Summarise in 3 points")];
 
   return (
     <div className="call-vault">
       <div className="page-heading">
         <span className="eyebrow">
           <span className="tiny-line" />
-          MEDIA VAULT — PRIVATE MEDIA ANALYSIS
+          {t("MEDIA VAULT / PRIVATE MEDIA ANALYSIS")}
         </span>
         <h1>
-          Your file. <span>Your analysis.</span>
+          {t("Your file.")} <span>{t("Your analysis.")}</span>
         </h1>
         <p>
-          All media analyzed by cloud Gemini — file sent once, not stored.
-          Follow-up chat always masks PII before any cloud request.
+          {t("All media analyzed by cloud Gemini - file sent once, not stored. Follow-up chat always masks PII before any cloud request.")}
         </p>
       </div>
 
@@ -200,8 +201,8 @@ export default function MediaVault() {
             <div className="card-title">
               <div className="icon-tile"><Film size={23} /></div>
               <div>
-                <h2>Upload media file</h2>
-                <p>Audio · Image · Video — max {MAX_MB} MB</p>
+                <h2>{t("Upload media file")}</h2>
+                <p>{t("Audio / Image / Video - max 25 MB")}</p>
               </div>
             </div>
 
@@ -219,7 +220,7 @@ export default function MediaVault() {
                 <div className="call-vault-file-info">
                   <span className="call-vault-fname">{mediaFile.name}</span>
                   <span className="call-vault-fsize">
-                    {(mediaFile.size / 1024 / 1024).toFixed(1)} MB · {mediaFile.kind}
+                    {(mediaFile.size / 1024 / 1024).toFixed(1)} MB / {mediaFile.kind}
                   </span>
                 </div>
                 {mediaFile.kind === "audio" && (
@@ -242,8 +243,8 @@ export default function MediaVault() {
                 onDrop={(e) => { e.preventDefault(); pickFile(e.dataTransfer.files[0]); }}
               >
                 <Film size={24} />
-                <span>Upload audio, image, or video</span>
-                <span className="doc-upload-hint">MP3 · WAV · MP4 · JPG · PNG · max {MAX_MB} MB</span>
+                <span>{t("Upload audio, image, or video")}</span>
+                <span className="doc-upload-hint">MP3 / WAV / MP4 / JPG / PNG - max {MAX_MB} MB</span>
               </button>
             )}
 
@@ -251,7 +252,7 @@ export default function MediaVault() {
               <>
                 <div className="call-vault-cloud-note" style={{ background: "#fefce8", border: "1px solid #fde68a", color: "#854d0e" }}>
                   <Cloud size={14} />
-                  <span>File sent once to cloud Gemini for analysis — not stored. All follow-up chat masks PII before leaving your device.</span>
+                  <span>File sent once to cloud Gemini for analysis - not stored. All follow-up chat masks PII before leaving your device.</span>
                 </div>
                 <button
                   type="button"
@@ -260,7 +261,7 @@ export default function MediaVault() {
                   onClick={() => void process()}
                 >
                   <Cloud size={18} />
-                  {processing ? "Analyzing…" : "Analyze with Gemini"}
+                  {processing ? "Analyzing..." : "Analyze with Gemini"}
                   {processing && <span className="step-spinner" aria-hidden="true" />}
                 </button>
                 {processing && processStatus && (
@@ -272,7 +273,7 @@ export default function MediaVault() {
             {processed && (
               <div className="call-vault-done-badge">
                 <CheckCircle size={16} />
-                {kind === "image" ? "Image analyzed" : "Transcribed"} · PII masked
+                {kind === "image" ? t("Image analyzed") : t("Transcribed")} - {t("PII masked")}
                 {source === "IN_CLOUD" && (
                   <span className="call-vault-src-badge cloud"><Cloud size={10} /> Cloud AI</span>
                 )}
@@ -291,23 +292,40 @@ export default function MediaVault() {
             )}
           </div>
 
+          {analysis && language === "hi" && !/[ऀ-ॿ]/.test(analysis) && (
+            <div className="banner info doc-translate-banner">
+              <span>भाषा हिंदी में बदली - हिंदी में परिणाम पाने के लिए फिर से विश्लेषण करें।</span>
+              <button type="button" className="primary" onClick={() => void process()} disabled={processing}>
+                हिंदी में विश्लेषण करें
+              </button>
+            </div>
+          )}
+          {analysis && language === "en" && /[ऀ-ॿ]/.test(analysis) && (
+            <div className="banner info doc-translate-banner">
+              <span>Language switched to English - re-analyze to get results in English.</span>
+              <button type="button" className="primary" onClick={() => void process()} disabled={processing}>
+                Analyze in English
+              </button>
+            </div>
+          )}
+
           {analysis && (
             <div className="card call-vault-transcript-card">
               <div className="card-title">
                 <div className="icon-tile"><KindIcon size={20} /></div>
                 <div>
-                  <h2>{kind === "image" ? "Analysis" : "Transcript"}</h2>
-                  <p>Stored only on this device</p>
+                  <h2>{kind === "image" ? t("Analysis") : t("Transcript")}</h2>
+                  <p>{t("Stored only on this device")}</p>
                 </div>
               </div>
               <pre className="call-vault-transcript">{analysis}</pre>
               <details className="call-vault-xray" open>
-                <summary><Lock size={13} /> Privacy X-Ray — what cloud sees when you chat</summary>
+                <summary><Lock size={13} /> {t("Privacy X-Ray - what cloud sees when you chat")}</summary>
                 <div className="call-vault-xray-body">
                   <TokenVaultPreview input={analysis} onCountChange={setPiiCount} />
                   {piiCount > 0 && (
                     <p className="call-vault-xray-note">
-                      {piiCount} identifier{piiCount !== 1 ? "s" : ""} masked — cloud only receives tokens like [PERSON_1].
+                      {piiCount} identifier{piiCount !== 1 ? "s" : ""} masked - cloud only receives tokens like [PERSON_1].
                     </p>
                   )}
                 </div>
@@ -315,7 +333,7 @@ export default function MediaVault() {
               {analysis.toLowerCase().includes("english translation:") && (
                 <div className="call-vault-translate-badge">
                   <Languages size={14} />
-                  Non-English content detected — English translation included.
+                  Non-English content detected - English translation included.
                 </div>
               )}
             </div>
@@ -328,21 +346,30 @@ export default function MediaVault() {
               <div className="card-title">
                 <div className="icon-tile"><MessageSquare size={20} /></div>
                 <div>
-                  <h2>Chat about this {kind}</h2>
-                  <p>Questions PII-masked · Cloud sees tokens only</p>
+                  <h2>{t("Chat about this")} {kind}</h2>
+                  <p>{t("Questions PII-masked - Cloud sees tokens only")}</p>
                 </div>
               </div>
+              {language === "hi" && chatMessages.length > 0 && chatMessages.some(m => m.role === "ai" && !/[ऀ-ॿ]/.test(m.text)) && (
+                <div className="banner info doc-translate-banner" style={{ marginBottom: 8, fontSize: "0.82rem" }}>
+                  <span>भाषा हिंदी में बदली — अगले सवाल का जवाब हिंदी में होगा।</span>
+                  <button type="button" className="primary" style={{ fontSize: "0.78rem", padding: "5px 10px" }}
+                    onClick={() => setChatMessages([])}>
+                    हिंदी में शुरू करें
+                  </button>
+                </div>
+              )}
               <div className="doc-chat-messages" aria-live="polite">
                 {chatMessages.length === 0 && (
                   <div className="doc-chat-empty">
                     <Bot size={20} />
-                    <span>Ask anything about the {kind}.</span>
+                    <span>{t("Ask anything about the")} {kind}.</span>
                   </div>
                 )}
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`doc-chat-bubble ${msg.role}`}>
                     {msg.role === "ai" && (
-                      <span className="doc-chat-ai-label"><Lock size={10} /> AI · PII masked</span>
+                      <span className="doc-chat-ai-label"><Lock size={10} /> AI - PII masked</span>
                     )}
                     <p>{msg.text}</p>
                   </div>
@@ -350,7 +377,7 @@ export default function MediaVault() {
                 {chatBusy && (
                   <div className="doc-chat-bubble ai loading">
                     <span className="step-spinner" aria-hidden="true" />
-                    <span>Thinking…</span>
+                    <span>Thinking...</span>
                   </div>
                 )}
               </div>
@@ -367,7 +394,7 @@ export default function MediaVault() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendChat(); } }}
-                  placeholder={`Ask about this ${kind}…`}
+                  placeholder={`Ask about this ${kind}...`}
                   rows={2}
                   disabled={chatBusy}
                   maxLength={1000}
