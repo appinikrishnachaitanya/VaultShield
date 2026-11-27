@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   Film,
   BookHeart,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { initializeServices, auth } from "./lib/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
@@ -52,6 +53,7 @@ import DocumentScanner from "./components/DocumentScanner";
 import ExplainForFamily from "./components/ExplainForFamily";
 import MediaVault from "./components/MediaVault";
 import PrivateDiary from "./components/PrivateDiary";
+import SettingsPage from "./components/SettingsPage";
 import ScaredPanel from "./components/ScaredPanel";
 import KnowYourRights from "./components/KnowYourRights";
 import TokenVaultPreview from "./components/TokenVaultPreview";
@@ -133,7 +135,7 @@ export default function App() {
     document.documentElement.lang = appLanguage;
   }, [appLanguage]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media" | "diary">(() =>
+  const [tab, setTab] = useState<"check" | "family" | "privacy" | "docs" | "media" | "diary" | "settings">(() =>
     new URLSearchParams(location.search).get("view") === "family"
       ? "family"
       : "check",
@@ -602,6 +604,7 @@ export default function App() {
     { id: "media", icon: Film, label: t("Media Vault") },
     { id: "diary", icon: BookHeart, label: t("Private Diary") },
     { id: "family", icon: Users, label: t("Family circle") },
+    { id: "settings", icon: SettingsIcon, label: t("Settings") },
   ] as const;
   return (
     <div className="app">
@@ -732,6 +735,7 @@ export default function App() {
               {tab === "media" && t("Media Vault")}
               {tab === "diary" && t("Private Diary")}
               {tab === "family" && t("Family Circle")}
+              {tab === "settings" && t("Settings")}
               {tab === "privacy" && t("Privacy & Data")}
             </span>
           </div>
@@ -1381,6 +1385,9 @@ export default function App() {
           <div style={{ display: tab === "diary" ? "block" : "none" }}>
             <PrivateDiary />
           </div>
+          {tab === "settings" && (
+            <SettingsPage onNavigate={(next) => setTab(next)} />
+          )}
           {tab === "privacy" && (
             <div className="privacy-page">
               <div className="page-heading">

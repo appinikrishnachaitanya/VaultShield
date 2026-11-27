@@ -210,7 +210,7 @@ function PinUnlockScreen({ onDone, onNoPinFound }: { onDone: () => void; onNoPin
   );
 }
 
-function ChangePinDialog({ onClose }: { onClose: () => void }) {
+export function ChangePinDialog({ onClose }: { onClose: () => void }) {
   const [oldPin, setOldPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirm, setConfirm] = useState("");
