@@ -522,8 +522,16 @@ export async function verifyWithCloud(
           };
         })
     : getGenerativeModel(ai, {
+        // "hybrid" already only ever receives reviewed, masked, consented
+        // text (checked above) and the UI promises it tries the device
+        // first - PREFER_ON_DEVICE is the correct mode here, unlike the raw-
+        // content paths in checkLocally/extractTextFromDocument. Google
+        // Search grounding ("public-sources") has no on-device equivalent,
+        // so that purpose must stay cloud-only.
         mode:
-          InferenceMode.ONLY_IN_CLOUD,
+          purpose === "public-sources"
+            ? InferenceMode.ONLY_IN_CLOUD
+            : InferenceMode.PREFER_ON_DEVICE,
         inCloudParams: {
           model: cfg.model,
           generationConfig: { maxOutputTokens: 1200 },
