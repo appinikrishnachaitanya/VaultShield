@@ -109,12 +109,11 @@ export default function Account() {
         }
       } else {
         const code = (error as { code?: string }).code;
+        const nativeMessage = error instanceof Error ? error.message : "";
         setMessage(
-          t(
-            code === "auth/operation-not-allowed"
-              ? "Enable Google sign-in in Firebase Authentication first."
-              : "Could not complete this action. Please try again.",
-          ),
+          code === "auth/operation-not-allowed"
+            ? t("Enable Google sign-in in Firebase Authentication first.")
+            : nativeMessage || t("Could not complete this action. Please try again."),
         );
       }
     } finally {
