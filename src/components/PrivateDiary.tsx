@@ -578,7 +578,7 @@ function NewEntry({
       await new Promise((r) => setTimeout(r, 400));
       advanceSteps("ai");
 
-      const result = await analyzeDiaryEntry(tokenized.text, language);
+      const result = await analyzeDiaryEntry(tokenized.text, vault.current, language);
       advanceSteps("save");
 
       const entry: DiaryEntry = {

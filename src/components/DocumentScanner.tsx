@@ -723,12 +723,12 @@ export default function DocumentScanner() {
                 )}
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`doc-chat-bubble ${msg.role}`}>
+                    <p>{msg.text}</p>
                     {msg.role === "ai" && (
                       <span className="doc-chat-ai-label">
-                        <Lock size={10} /> AI - {t("PII masked")}
+                        <Lock size={10} /> {t("PII masked")}
                       </span>
                     )}
-                    <p>{msg.text}</p>
                   </div>
                 ))}
                 {chatBusy && (

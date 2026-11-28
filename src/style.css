@@ -89,6 +89,8 @@ small {
   display: flex;
   flex-direction: column;
   padding: 32px 22px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .brand {
   display: flex;
@@ -3924,6 +3926,7 @@ html[lang="hi"] h3 {
   border: 1px solid #bbf7d0;
   border-radius: 10px;
   overflow: hidden;
+  flex-shrink: 0;
   animation: fadeSlideIn 0.3s ease;
 }
 .stats-bar-label {
@@ -4493,72 +4496,68 @@ html[lang="hi"] h3 {
 /* ── Document Chat ───────────────────────────────────────────────────────── */
 .doc-chat { margin-top: 0; }
 .doc-chat-messages {
-  min-height: 60px;
+  min-height: 0;
   max-height: 320px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   margin: 12px 0;
   padding: 10px 8px;
-  background: #ECE5DD;
+  background: #f8fafc;
   border-radius: 10px;
 }
 .doc-chat-empty {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #667781;
+  color: #64748b;
   font-size: 0.85rem;
   padding: 8px 0;
 }
 .doc-chat-bubble {
   max-width: 82%;
-  padding: 7px 12px 9px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
   font-size: 0.875rem;
   line-height: 1.5;
   position: relative;
 }
-/* sent bubble — WhatsApp-green */
 .doc-chat-bubble.user {
   align-self: flex-end;
-  background: #D9FDD3;
-  color: #111B21;
-  border-bottom-right-radius: 2px;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+  background: #edf7f5;
+  color: #0f172a;
+  border-radius: 12px 12px 2px 12px;
 }
-/* received bubble — white */
 .doc-chat-bubble.ai {
   align-self: flex-start;
-  background: #FFFFFF;
-  color: #111B21;
-  border-bottom-left-radius: 2px;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e6ebef;
+  border-radius: 2px 12px 12px 12px;
 }
 .doc-chat-bubble.ai p {
-  color: #111B21;
+  color: #0f172a;
   margin: 0;
 }
 .doc-chat-bubble.user p {
-  color: #111B21;
+  color: #0f172a;
   margin: 0;
 }
 .doc-chat-bubble.loading {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #667781;
+  color: #64748b;
 }
 .doc-chat-ai-label {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 0.68rem;
-  color: #0f766e;
-  margin-bottom: 3px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  color: #94a3b8;
+  margin-top: 4px;
+  font-weight: 500;
 }
 .doc-chat-bubble p { margin: 0; }
 .doc-chat-input-row {

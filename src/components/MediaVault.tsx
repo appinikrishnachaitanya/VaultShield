@@ -140,7 +140,7 @@ export default function MediaVault() {
     setChatMessages((prev) => [...prev, { role: "user", text: q }]);
     setChatBusy(true);
     try {
-      const { answer } = await chatWithDocument(q, tokenizedAnalysis, vault.current, language);
+      const { answer } = await chatWithDocument(q, tokenizedAnalysis, vault.current, language, "media");
       setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
@@ -368,10 +368,10 @@ export default function MediaVault() {
                 )}
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`doc-chat-bubble ${msg.role}`}>
-                    {msg.role === "ai" && (
-                      <span className="doc-chat-ai-label"><Lock size={10} /> AI - PII masked</span>
-                    )}
                     <p>{msg.text}</p>
+                    {msg.role === "ai" && (
+                      <span className="doc-chat-ai-label"><Lock size={10} /> {t("PII masked")}</span>
+                    )}
                   </div>
                 ))}
                 {chatBusy && (

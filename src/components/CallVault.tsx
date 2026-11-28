@@ -101,7 +101,7 @@ export default function CallVault() {
     setChatMessages((prev) => [...prev, { role: "user", text: q }]);
     setChatBusy(true);
     try {
-      const { answer } = await chatWithDocument(q, tokenizedTranscript, vault.current);
+      const { answer } = await chatWithDocument(q, tokenizedTranscript, vault.current, undefined, "recording");
       setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
     } catch {
       setChatMessages((prev) => [

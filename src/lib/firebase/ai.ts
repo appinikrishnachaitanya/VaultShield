@@ -926,9 +926,11 @@ const diaryResponseSchema = {
  */
 export async function analyzeDiaryEntry(
   tokenizedText: string,
+  vault: TokenVaultSession,
   language: "en" | "hi" | "fr" = "en",
 ): Promise<DiaryAnalysisResult> {
   if (!ai) throw new Error("Firebase AI not configured.");
+  assertNoKnownLeak(tokenizedText, vault);
   const { model: modelName } = settings();
   const diaryLanguageNames: Record<"en" | "hi" | "fr", string> = {
     en: "English",
@@ -1177,6 +1179,14 @@ async function specialistSession<T extends { destroy(): void }>(
     );
   } catch (error) {
     controller.abort();
+    const message = error instanceof Error ? error.message : String(error);
+    const cancelled =
+      (error instanceof Error && error.name === "AbortError") ||
+      /request (?:was )?cancelled|request (?:was )?canceled/i.test(message);
+    if (cancelled)
+      throw new Error(
+        `Chrome cancelled local ${name.toLowerCase()} preparation. Retry, or restart Chrome if this keeps happening. No cloud request was made.`,
+      );
     throw error;
   }
 }
@@ -1586,12 +1596,13 @@ export async function startLocalDictation(
   };
 }
 
-/** Chat about a scanned document — question is tokenized before cloud, answer is rehydrated. */
+/** Chat about scanned document or media content — question is tokenized before cloud, answer is rehydrated. */
 export async function chatWithDocument(
   question: string,
   tokenizedDocText: string,
   vault: TokenVaultSession,
   language?: "en" | "hi" | "fr",
+  contentKind: "document" | "recording" | "media" = "document",
 ): Promise<{ answer: string; masked: number }> {
   if (!ai) throw new Error("Firebase AI not configured.");
   const tokenized = vault.tokenize(question);
@@ -1602,14 +1613,22 @@ export async function chatWithDocument(
     onDeviceParams: { createOptions: chromeModelOptions(false) },
     inCloudParams: { model: modelName },
   });
-  const prompt = `You are a document assistant. Personal identifiers have been replaced with privacy tokens ([PERSON_1], [PHONE_1], etc.) to protect identity. Answer based only on the document content below.
+  const noun =
+    contentKind === "recording"
+      ? "audio or video recording's transcript"
+      : contentKind === "media"
+        ? "media file's analysis"
+        : "document";
+  const label =
+    contentKind === "recording" ? "Transcript" : contentKind === "media" ? "Analysis" : "Document";
+  const prompt = `You are an assistant answering questions about a ${noun}. Personal identifiers have been replaced with privacy tokens ([PERSON_1], [PHONE_1], etc.) to protect identity. Answer based only on the content below.
 
-Document:
+${label}:
 ${tokenizedDocText}
 
 Question: ${tokenized.text}
 
-Answer concisely and helpfully. If the document does not contain enough information to answer the question, say so clearly.${language === "hi" ? " Respond in Hindi (Devanagari script)." : language === "fr" ? " Respond in French." : ""}`;
+Answer concisely and helpfully. If the ${noun} does not contain enough information to answer the question, say so clearly.${language === "hi" ? " Respond in Hindi (Devanagari script)." : language === "fr" ? " Respond in French." : ""}`;
   const raw = await boundedWait(
     model.generateContent(prompt),
     30_000,

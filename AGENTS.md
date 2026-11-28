@@ -14,7 +14,8 @@ npm run build   # production build
 npm run dev     # vite dev server
 ```
 
-> There is **no test suite** — `npm test` was removed. CI runs `npm ci` + `npm run build` only.
+> `npm test` runs a small vitest suite (`tests/`). CI runs `npm ci` + `npm run build` only —
+> it does not run tests.
 
 ---
 
@@ -38,7 +39,8 @@ don't advertise JSON output mode support. Parse structured output from plain tex
 
 Exceptions (correctly kept as `ONLY_IN_CLOUD`):
 - `runCloudDocumentAnalysis` — cloud-only helper, explicit JSON output mode
-- `verifyScamFindings` — requires Google Search grounding (cloud-only feature)
+- `verifyWithCloud` (public-sources purpose only) — requires Google Search grounding
+  (cloud-only feature); its "hybrid" purpose stays `PREFER_ON_DEVICE`
 - `analyzeMediaFile`, `transcribeCallRecording` — media files can't run on-device
 
 ### Privacy / TokenVault (`src/lib/tokenVault.ts`)
@@ -99,8 +101,12 @@ it before sending tokenized text to cloud.
 
 5. **No Co-Authored-By attribution** in git commit messages.
 
-6. **No diary feature** — `PrivateDiary`, `DayMemoryCard`, `diaryStore`, and
-   `analyzeDiaryEntry` have been removed. Do not reintroduce them.
+6. **Private Diary is a real, maintained feature** — `PrivateDiary.tsx`, `DayMemoryCard.tsx`,
+   `diaryStore.ts`, and `analyzeDiaryEntry` are live and sign-in-gated. (It was removed once
+   then deliberately restored with real PIN-based encryption — don't re-delete it on sight.)
+   It follows the same rules as everything else here: `analyzeDiaryEntry` must stay
+   `PREFER_ON_DEVICE` with no `responseMimeType`, and must call `assertNoKnownLeak` on the
+   tokenized entry before it can reach the cloud fallback.
 
 7. **Brand teal** is `#0f766e`. Not `#0f4c75` (that's an off-brand navy).
 
